@@ -1,0 +1,29 @@
+{% load i18n %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+
+{% if breadcrumbs %}
+<nav class="flex py-4 px-margin-mobile md:px-margin-desktop bg-surface-container-low border-b border-outline-variant w-full max-w-container-max-width mx-auto mb-6 text-label-sm font-medium" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-3 space-x-reverse">
+        <li class="inline-flex items-center">
+            <a href="{% url 'news:article_list' %}" class="inline-flex items-center text-on-surface-variant hover:text-primary">
+                <span class="material-symbols-outlined text-[16px] margin-inline-end-1" style="vertical-align: middle; margin-inline-end: 4px;">home</span>
+                {% trans "الرئيسية" %}
+            </a>
+        </li>
+        {% for item in breadcrumbs %}
+            <li>
+                <div class="flex items-center">
+                    <span class="material-symbols-outlined text-[16px] text-outline mx-2" style="vertical-align: middle;">
+                        {% if LANGUAGE_BIDI %}chevron_left{% else %}chevron_right{% endif %}
+                    </span>
+                    {% if forloop.last or not item.url %}
+                        <span class="text-on-surface-variant cursor-default">{{ item.name }}</span>
+                    {% else %}
+                        <a href="{{ item.url }}" class="text-on-surface-variant hover:text-primary">{{ item.name }}</a>
+                    {% endif %}
+                </div>
+            </li>
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}

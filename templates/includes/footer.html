@@ -1,0 +1,63 @@
+{% load i18n %}
+
+<footer class="w-full py-12 px-margin-mobile md:px-margin-desktop grid grid-cols-1 md:grid-cols-4 gap-gutter bg-primary border-t-4 border-secondary text-on-primary">
+    <!-- Column 1: Brand & Description -->
+    <div class="md:col-span-1">
+        <div class="text-headline-md font-headline-md font-bold text-on-primary mb-4">
+            {{ site_settings.site_name|default:"Al-Maghrib Al-Arabi" }}
+        </div>
+        <p class="text-body-md opacity-70 mb-6">
+            {% trans "الصحافة المغربية الرائدة في المنطقة. تغطية شاملة، تحليلات عميقة، ورؤية موحدة للمغرب الكبير." %}
+        </p>
+    </div>
+
+    <!-- Column 2: Categories -->
+    {% load cache %}
+    {% cache 600 global_footer_cats LANGUAGE_CODE %}
+    <div>
+        <h4 class="font-bold mb-6 text-secondary-fixed">{% trans "الأقسام الرئيسية" %}</h4>
+        <ul class="space-y-4 text-label-sm">
+            {% for cat in global_categories|slice:":5" %}
+                <li>
+                    <a class="text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="{% url 'news:category_list' cat.slug %}">
+                        {{ cat.name }}
+                    </a>
+                </li>
+            {% empty %}
+                <li><a class="text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">{% trans "السياسة" %}</a></li>
+                <li><a class="text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">{% trans "الاقتصاد" %}</a></li>
+                <li><a class="text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">{% trans "الثقافة" %}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endcache %}
+
+    <!-- Column 3: Legal & Corporate -->
+    <div>
+        <h4 class="font-bold mb-6 text-secondary-fixed">{% trans "القوانين والاتفاقيات" %}</h4>
+        <ul class="space-y-4 text-label-sm">
+            <li><a class="text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">{% trans "سياسة الخصوصية (Privacy)" %}</a></li>
+            <li><a class="text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">{% trans "شروط الخدمة والاستخدام" %}</a></li>
+            <li><a class="text-on-primary-container hover:text-secondary-fixed-dim transition-colors" href="#">{% trans "هيئة التحرير (Editorial Guidelines)" %}</a></li>
+        </ul>
+    </div>
+
+    <!-- Column 4: Newsletter -->
+    <div>
+        <h4 class="font-bold mb-6 text-secondary-fixed">{% trans "اشترك في النشرة الإخبارية" %}</h4>
+        <p class="text-xs opacity-70 mb-4">{% trans "انضم لقائمتنا البريدية للحصول على آخر التطورات والأخبار العاجلة في المغرب العربي." %}</p>
+        <!-- Form to post newsletter subscription -->
+        <form method="post" action="{% url 'core:newsletter_subscribe' %}" class="flex gap-2">
+            {% csrf_token %}
+            <input class="bg-primary-container border border-outline px-4 py-2 text-sm w-full outline-none focus:border-secondary-fixed text-on-primary" placeholder="{% trans "بريدك الإلكتروني" %}" type="email" name="email" required/>
+            <button type="submit" class="bg-secondary text-on-secondary px-4 py-2 font-bold transition-all hover:bg-on-secondary-container">
+                {% trans "انضم" %}
+            </button>
+        </form>
+    </div>
+
+    <!-- Bottom copyright -->
+    <div class="md:col-span-4 mt-12 pt-8 border-t border-on-primary/10 text-center opacity-60 text-label-sm">
+        © {% now "Y" %} {{ site_settings.site_name|default:"Al-Maghrib Al-Arabi" }}. {% trans "الصحافة المميزة والتحليلات العميقة للمغرب الكبير." %}
+    </div>
+</footer>

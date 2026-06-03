@@ -1,0 +1,366 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load thumbnail %}
+
+{% block title %}{{ site_settings.site_name }} - {% trans "الرئيسية" %}{% endblock %}
+
+{% block content %}
+<!-- Breaking News Bar -->
+{% if breaking_articles %}
+<div class="w-full bg-primary-container text-on-primary-container py-3 overflow-hidden border-b border-outline-variant">
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop flex items-center gap-4">
+        <span class="bg-on-tertiary-container text-white px-2.5 py-1 text-xs font-bold rounded flex items-center gap-1 shrink-0 select-none">
+            <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+            {% trans "مباشر" %}
+        </span>
+        <div class="flex-grow overflow-hidden relative h-5">
+            <div class="absolute inset-0 whitespace-nowrap animate-marquee flex items-center gap-12 font-medium text-sm">
+                {% for art in breaking_articles %}
+                    <a href="{{ art.get_absolute_url }}" class="hover:underline flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span>
+                        {{ art.title }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+    @keyframes marquee {
+        0% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
+    }
+    .animate-marquee {
+        animation: marquee 30s linear infinite;
+    }
+    [dir="ltr"] .animate-marquee {
+        animation: marquee-ltr 30s linear infinite;
+    }
+    @keyframes marquee-ltr {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+</style>
+{% endif %}
+
+<!-- Top Area: Image Slider & Featured Article Cards -->
+<section class="py-12 bg-surface">
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop space-y-12">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+            
+            <!-- Image Slider (Left/Main block - 8 Cols) -->
+            <div class="lg:col-span-8 flex flex-col">
+                {% if slider_articles %}
+                    <div class="relative overflow-hidden aspect-video md:aspect-[21/9] rounded-xl border border-outline-variant bg-surface-container-high shadow-sm group" id="image-slider">
+                        {% for art in slider_articles %}
+                            <div class="absolute inset-0 transition-opacity duration-1000 ease-in-out {% if forloop.first %}opacity-100 z-10{% else %}opacity-0 z-0{% endif %} slider-slide">
+                                {% if art.cover_image %}
+                                    {% thumbnail art.cover_image "1200x675" crop="center" as im %}
+                                        <img src="{{ im.url }}" alt="{{ art.title }}" class="w-full h-full object-cover" loading="lazy">
+                                    {% empty %}
+                                        <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1200" alt="Default Cover" class="w-full h-full object-cover" loading="lazy">
+                                    {% endthumbnail %}
+                                {% else %}
+                                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1200" alt="Default Cover" class="w-full h-full object-cover" loading="lazy">
+                                {% endif %}
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-10 text-white">
+                                    <span class="bg-secondary text-on-secondary px-3 py-1 text-xs font-bold uppercase rounded w-fit mb-3">
+                                        {{ art.category.name }}
+                                    </span>
+                                    <h2 class="text-headline-md md:text-headline-lg font-bold leading-tight mb-3">
+                                        <a href="{{ art.get_absolute_url }}" class="hover:underline text-white">{{ art.title }}</a>
+                                    </h2>
+                                    <p class="text-xs md:text-sm opacity-80 max-w-2xl line-clamp-2">
+                                        {{ art.excerpt|default:art.body|truncatewords:20 }}
+                                    </p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        
+                        <!-- Controls -->
+                        <button onclick="prevSlide()" class="absolute start-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full glass-panel flex items-center justify-center text-primary hover:bg-white transition-all z-20" title="{% trans "السابق" %}">
+                            <span class="material-symbols-outlined">chevron_right</span>
+                        </button>
+                        <button onclick="nextSlide()" class="absolute end-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full glass-panel flex items-center justify-center text-primary hover:bg-white transition-all z-20" title="{% trans "التالي" %}">
+                            <span class="material-symbols-outlined">chevron_left</span>
+                        </button>
+                        
+                        <!-- Dots -->
+                        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20" id="slider-dots">
+                            {% for art in slider_articles %}
+                                <button onclick="goToSlide({{ forloop.counter0 }})" class="w-2.5 h-2.5 rounded-full bg-white/50 hover:bg-white transition-all slider-dot {% if forloop.first %}bg-white{% endif %}"></button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="flex items-center justify-center p-12 bg-surface-container-low border border-dashed border-outline rounded-lg">
+                        <p class="text-on-surface-variant">{% trans "لا يوجد أخبار في المعرض حالياً" %}</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Main Featured/Editor Highlight Article (Right block - 4 Cols) -->
+            <div class="lg:col-span-4 flex flex-col justify-between bg-surface-container-low border border-outline-variant p-6 rounded-xl shadow-sm">
+                <h3 class="text-label-sm font-bold tracking-widest text-secondary uppercase border-b border-outline-variant pb-3 mb-4">
+                    {% trans "تحليل مميز" %}
+                </h3>
+                {% if featured_articles %}
+                    {% with main_art=featured_articles.0 %}
+                    <div class="group flex-grow flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-semibold text-secondary uppercase block mb-1">
+                                {{ main_art.category.name }}
+                            </span>
+                            <h4 class="text-headline-md font-bold text-primary leading-snug group-hover:text-secondary transition-colors duration-200 mb-3">
+                                <a href="{{ main_art.get_absolute_url }}">{{ main_art.title }}</a>
+                            </h4>
+                            <p class="text-on-surface-variant text-sm line-clamp-4 leading-relaxed mb-6">
+                                {{ main_art.excerpt|default:main_art.body|truncatewords:25 }}
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-3 pt-4 border-t border-outline-variant mt-auto">
+                            <div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center font-bold text-on-secondary-container">
+                                {{ main_art.author.username|slice:":2"|upper }}
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-primary">{{ main_art.author.author_profile.display_name|default:main_art.author.username }}</p>
+                                <p class="text-[10px] text-on-surface-variant">{{ main_art.published_at|date:"Y-m-d" }} | {{ main_art.read_time }} {% trans "دقائق" %}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endwith %}
+                {% else %}
+                    <p class="text-on-surface-variant text-sm">{% trans "لا توجد تحليلات مميزة حالياً" %}</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- Sub Featured Grid (4 cards horizontally) -->
+{% if featured_articles|length > 1 %}
+<section class="py-6 bg-surface border-y border-outline-variant">
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {% for art in featured_articles|slice:"1:4" %}
+                <div class="group flex gap-4 items-start pb-6 md:pb-0 border-b md:border-b-0 md:border-e border-outline-variant last:border-0 last:pb-0 pe-4">
+                    <div class="flex-grow">
+                        <span class="text-[10px] text-secondary font-bold uppercase block mb-1">{{ art.category.name }}</span>
+                        <h4 class="font-bold text-primary group-hover:text-secondary transition-colors text-sm leading-snug">
+                            <a href="{{ art.get_absolute_url }}">{{ art.title }}</a>
+                        </h4>
+                        <span class="text-[10px] text-outline block mt-2">
+                            {{ art.published_at|date:"Y-m-d" }} | {{ art.read_time }} {% trans "دقائق" %}
+                        </span>
+                    </div>
+                    {% if art.cover_image %}
+                        <a href="{{ art.get_absolute_url }}" class="w-20 h-20 rounded overflow-hidden shrink-0 border border-outline-variant">
+                            {% thumbnail art.cover_image "160x160" crop="center" as im %}
+                                <img src="{{ im.url }}" alt="{{ art.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+                            {% empty %}
+                                <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+                            {% endthumbnail %}
+                        </a>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Main Body: Categorized News List & Sidebar -->
+<div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-12">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+        
+        <!-- Categorized Latest News (8 Cols) -->
+        <main class="lg:col-span-8 space-y-12">
+            
+            {% for cat_data in categories_data %}
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center border-b border-outline-variant pb-3">
+                        <h3 class="font-headline-md text-headline-md text-primary flex items-center gap-2">
+                            <span class="w-2.5 h-6 bg-secondary inline-block rounded-sm"></span>
+                            {{ cat_data.category.name }}
+                        </h3>
+                        <a href="{{ cat_data.category.get_absolute_url }}" class="text-secondary text-label-sm font-bold hover:underline">
+                            {% trans "المزيد" %} →
+                        </a>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% for art in cat_data.articles %}
+                            <div class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col group hover:shadow-sm transition-all duration-300">
+                                {% if forloop.first %}
+                                    <!-- First article in category lists with image -->
+                                    <a href="{{ art.get_absolute_url }}" class="relative overflow-hidden aspect-video border-b border-outline-variant block">
+                                        {% if art.cover_image %}
+                                            {% thumbnail art.cover_image "600x400" crop="center" as im %}
+                                                <img src="{{ im.url }}" alt="{{ art.title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                            {% empty %}
+                                                <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                            {% endthumbnail %}
+                                        {% else %}
+                                            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                        {% endif %}
+                                    </a>
+                                {% endif %}
+                                <div class="p-5 flex flex-col flex-grow">
+                                    <span class="text-[10px] text-outline font-semibold mb-2 block">
+                                        {{ art.published_at|date:"Y-m-d" }} | {{ art.read_time }} {% trans "دقائق" %}
+                                    </span>
+                                    <h4 class="font-bold text-primary group-hover:text-secondary transition-colors text-sm leading-snug">
+                                        <a href="{{ art.get_absolute_url }}">{{ art.title }}</a>
+                                    </h4>
+                                    {% if forloop.first %}
+                                        <p class="text-on-surface-variant text-xs mt-3 leading-relaxed line-clamp-2">
+                                            {{ art.excerpt|default:art.body|truncatewords:15 }}
+                                        </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-on-surface-variant">{% trans "لا يوجد مقالات مصنفة حالياً" %}</p>
+            {% endfor %}
+
+        </main>
+
+        <!-- Sidebar (4 Cols) -->
+        <aside class="lg:col-span-4 space-y-12">
+            
+            <!-- Most Popular / Trending Widget -->
+            <div class="bg-surface p-6 border border-outline-variant rounded-xl shadow-sm">
+                <h3 class="text-headline-md font-headline-md text-primary mb-6 flex items-center gap-2 border-b-2 border-secondary pb-3">
+                    <span class="material-symbols-outlined text-secondary">trending_up</span>
+                    {% trans "الأكثر تداولاً" %}
+                </h3>
+                <div class="flex flex-col gap-6">
+                    {% for art in popular_articles %}
+                        <div class="group cursor-pointer flex gap-4 items-start">
+                            <span class="text-secondary font-display-lg text-headline-lg font-bold leading-none w-8 shrink-0">
+                                {{ forloop.counter|stringformat:"02d" }}
+                            </span>
+                            <div>
+                                <span class="text-[10px] text-outline font-semibold uppercase">{{ art.category.name }}</span>
+                                <h4 class="font-bold text-body-md group-hover:text-secondary transition-colors mt-1 leading-snug">
+                                    <a href="{{ art.get_absolute_url }}">{{ art.title }}</a>
+                                </h4>
+                                <span class="text-[10px] text-on-surface-variant block mt-1">
+                                    {{ art.views_count }} {% trans "مشاهدة" %}
+                                </span>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-on-surface-variant text-xs">{% trans "لا تتوفر إحصائيات" %}</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Sponsored Advertisement Slot -->
+            <div class="space-y-3">
+                <span class="text-[10px] font-bold text-outline uppercase tracking-wider block text-center">- {% trans "إعلان ممول" %} -</span>
+                {% if sidebar_ad %}
+                    <div class="bg-surface border border-outline-variant overflow-hidden rounded-xl">
+                        {% if sidebar_ad.script_html %}
+                            {{ sidebar_ad.script_html|safe }}
+                        {% elif sidebar_ad.image %}
+                             <a href="{{ sidebar_ad.link_url|default:"#" }}" target="_blank" class="block w-full">
+                                {% thumbnail sidebar_ad.image "350x250" crop="center" as im %}
+                                    <img src="{{ im.url }}" alt="{{ sidebar_ad.title }}" class="w-full object-cover hover:opacity-90 transition-opacity" loading="lazy">
+                                {% empty %}
+                                    <img src="{{ sidebar_ad.image.url }}" alt="{{ sidebar_ad.title }}" class="w-full object-cover hover:opacity-90 transition-opacity" loading="lazy">
+                                {% endthumbnail %}
+                            </a>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <!-- Premium Fallback Ad Slot -->
+                    <div class="bg-surface-container-low border border-outline-variant p-8 rounded-xl text-center h-64 flex flex-col justify-center items-center group">
+                        <span class="material-symbols-outlined text-outline text-[48px] mb-2 group-hover:text-secondary transition-colors">campaign</span>
+                        <h5 class="text-sm font-bold text-primary mb-1">{% trans "مساحة إعلانية شاغرة" %}</h5>
+                        <p class="text-xs text-on-surface-variant mb-5 max-w-[200px] mx-auto leading-relaxed">
+                            {% trans "أعلن معنا للوصول إلى جمهورك المستهدف في المغرب الكبير." %}
+                        </p>
+                        <a href="{% url 'core:contact' %}" class="bg-primary text-on-primary px-5 py-2 text-xs font-bold hover:opacity-90 transition-opacity rounded">
+                            {% trans "اتصل بنا الآن" %}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Newsletter Subscribe Widget -->
+            <div class="relative rounded-xl overflow-hidden bg-primary text-on-primary p-6 h-64 flex flex-col justify-end group border-t-4 border-secondary">
+                <div class="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-secondary via-transparent to-transparent"></div>
+                <h3 class="relative z-10 text-headline-md font-bold mb-2">{% trans "النشرة البريدية" %}</h3>
+                <p class="relative z-10 text-label-sm mb-4 text-white/80">{% trans "احصل على أهم التحليلات الاقتصادية مباشرة في بريدك." %}</p>
+                <form action="{% url 'core:newsletter_subscribe' %}" method="post" class="relative z-10 w-full">
+                    {% csrf_token %}
+                    <div class="flex gap-2">
+                        <input type="email" name="email" placeholder="email@example.com" class="bg-primary-container border border-outline px-4 py-2.5 text-xs w-full outline-none focus:border-secondary-fixed text-on-primary rounded" required>
+                        <button type="submit" class="bg-secondary text-white px-4 py-2.5 text-xs font-bold hover:scale-[1.02] transition-transform rounded shrink-0">
+                            {% trans "اشترك" %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </aside>
+    </div>
+</div>
+
+<!-- JavaScript slider integration -->
+<script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slider-slide');
+    const dots = document.querySelectorAll('.slider-dot');
+    const totalSlides = slides.length;
+
+    function updateSlider() {
+        slides.forEach((slide, idx) => {
+            if (idx === currentSlide) {
+                slide.classList.remove('opacity-0', 'z-0');
+                slide.classList.add('opacity-100', 'z-10');
+            } else {
+                slide.classList.remove('opacity-100', 'z-10');
+                slide.classList.add('opacity-0', 'z-0');
+            }
+        });
+        dots.forEach((dot, idx) => {
+            if (idx === currentSlide) {
+                dot.classList.add('bg-white');
+                dot.classList.remove('bg-white/50');
+            } else {
+                dot.classList.remove('bg-white');
+                dot.classList.add('bg-white/50');
+            }
+        });
+    }
+
+    function nextSlide() {
+        if (totalSlides > 0) {
+            currentSlide = (currentSlide + 1) % totalSlides;
+            updateSlider();
+        }
+    }
+
+    function prevSlide() {
+        if (totalSlides > 0) {
+            currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+            updateSlider();
+        }
+    }
+
+    function goToSlide(idx) {
+        currentSlide = idx;
+        updateSlider();
+    }
+
+    if (totalSlides > 0) {
+        setInterval(nextSlide, 6000);
+    }
+</script>
+{% endblock %}

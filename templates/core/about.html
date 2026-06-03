@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "من نحن" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block breadcrumbs %}
+    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="relative bg-primary text-on-primary py-24 overflow-hidden">
+    <div class="absolute inset-0 opacity-10 pointer-events-none">
+        <img alt="" class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1495020689067-958852a6565d?q=80&w=1200" loading="lazy"/>
+    </div>
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop relative z-10 text-center">
+        <h1 class="font-display-lg text-display-lg mb-6">{% trans "من نحن | صوت المغرب العربي" %}</h1>
+        <p class="font-body-lg text-body-lg max-w-3xl mx-auto opacity-80 leading-relaxed">
+            {% trans "نحن مؤسسة صحفية إلكترونية مستقلة، تسعى لتقديم تغطية إخبارية شاملة وتحليلات عميقة حول التطورات السياسية والاقتصادية والاجتماعية والثقافية في منطقة المغرب العربي الكبير." %}
+        </p>
+    </div>
+</section>
+
+<!-- Values & Mission -->
+<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-16 mb-24">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-center">
+        <!-- Text Columns -->
+        <div class="lg:col-span-7 space-y-6">
+            <h2 class="font-headline-md text-headline-md text-primary">{% trans "رؤيتنا ورسالتنا الصحفية" %}</h2>
+            <p class="text-on-surface-variant text-body-md leading-relaxed">
+                {% trans "نؤمن في جريدة المغرب العربي بأن القارئ يستحق صحافة متميزة تلتزم بأعلى معايير المهنية والموضوعية. فريقنا المتكامل من الصحفيين والمحللين يغطي الأحداث من قلب الميدان لنقل الحقيقة كاملة وبكل أبعادها الإقليمية والدولية." %}
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                <div class="border-s-4 border-secondary ps-4">
+                    <h4 class="font-bold text-primary mb-2">{% trans "الموضوعية والاستقلالية" %}</h4>
+                    <p class="text-sm text-on-surface-variant">{% trans "ننقل الخبر دون انحياز، مع تمكين جميع الأطراف من التعبير عن آرائهم وفق مبادئ التعددية." %}</p>
+                </div>
+                <div class="border-s-4 border-secondary ps-4">
+                    <h4 class="font-bold text-primary mb-2">{% trans "العمق الإقليمي" %}</h4>
+                    <p class="text-sm text-on-surface-variant">{% trans "نربط الأحداث المحلية ببعدها المغاربي، لنرسم صورة متكاملة تلبي تطلعات مواطني المنطقة." %}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visual / Graphic Block -->
+        <div class="lg:col-span-5">
+            <div class="bg-surface-container-low border border-outline-variant p-8 rounded-lg shadow-sm">
+                <h3 class="font-headline-md text-headline-md text-primary mb-6">{% trans "حقائق وأرقام" %}</h3>
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center border-b border-outline-variant pb-4">
+                        <span class="text-on-surface-variant text-sm">{% trans "المكاتب الإقليمية" %}</span>
+                        <span class="font-display-lg text-headline-lg font-bold text-secondary">5</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-outline-variant pb-4">
+                        <span class="text-on-surface-variant text-sm">{% trans "محرر ومراسل في الميدان" %}</span>
+                        <span class="font-display-lg text-headline-lg font-bold text-secondary">50+</span>
+                    </div>
+                    <div class="flex justify-between items-center pb-2">
+                        <span class="text-on-surface-variant text-sm">{% trans "معدل القراءات الشهري" %}</span>
+                        <span class="font-display-lg text-headline-lg font-bold text-secondary">2M+</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

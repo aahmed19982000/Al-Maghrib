@@ -1,0 +1,199 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "إدارة المقالات" %}{% endblock %}
+
+{% block header_title %}
+    <h1>{% trans "إدارة المقالات" %}</h1>
+    <p>{% trans "تصفية وتعديل وإجراء عمليات جماعية على المقالات" %}</p>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h2>{% trans "قائمة المقالات" %}</h2>
+    <a href="{% url 'dashboard:article_create' %}" class="btn btn-primary">
+        <span class="icon">add</span>
+        <span>{% trans "إضافة مقال جديد" %}</span>
+    </a>
+</div>
+
+<!-- Search & Filters Card -->
+<div class="table-container" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <form method="get" action="" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <!-- Search Input -->
+        <div style="flex-grow: 1; min-width: 250px;">
+            <input type="text" name="q" value="{{ q }}" placeholder="{% trans "ابحث في العنوان أو المحتوى..." %}" class="search-input" style="width: 100%;">
+        </div>
+        
+        <!-- Category Filter -->
+        <div>
+            <select name="category" class="filter-select">
+                <option value="">{% trans "كل الأقسام" %}</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if selected_category == category.id|stringformat:"i" %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div>
+            <select name="status" class="filter-select">
+                <option value="">{% trans "كل الحالات" %}</option>
+                {% for code, name in status_choices %}
+                    <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>
+                        {{ name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Submit & Reset -->
+        <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">
+            <span class="icon">search</span> {% trans "تصفية" %}
+        </button>
+        <a href="{% url 'dashboard:articles' %}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+            {% trans "إعادة تعيين" %}
+        </a>
+    </form>
+</div>
+
+<!-- Bulk Action Form -->
+<form id="bulk-action-form" method="post" action="{% url 'dashboard:article_bulk_action' %}">
+    {% csrf_token %}
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem;">
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <span class="icon" style="color: var(--text-secondary);">rule</span>
+            <span style="font-weight: 600;">{% trans "العمليات الجماعية للمقالات المحددة:" %}</span>
+            <select name="action" class="filter-select" style="padding: 0.4rem 0.8rem; background-color: var(--bg-primary);" required>
+                <option value="">{% trans "اختر الإجراء..." %}</option>
+                <option value="publish">{% trans "نشر" %}</option>
+                <option value="draft">{% trans "تحويل إلى مسودة" %}</option>
+                <option value="review">{% trans "إرسال للمراجعة" %}</option>
+                <option value="archive">{% trans "أرشفة" %}</option>
+                <option value="delete">{% trans "حذف مؤقت (سلة المحذوفات)" %}</option>
+            </select>
+            <button type="submit" class="btn btn-primary" style="padding: 0.4rem 1rem;">
+                {% trans "تطبيق الإجراء" %}
+            </button>
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.875rem;">
+            {% trans "مجموع المقالات المعروضة" %}: {{ paginator.count }}
+        </div>
+    </div>
+
+    <!-- Articles Table -->
+    <div class="table-container">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px; text-align: center;">
+                        <input type="checkbox" id="select-all-checkbox" style="transform: scale(1.2); cursor: pointer;">
+                    </th>
+                    <th>{% trans "المقال" %}</th>
+                    {% if request.user.is_staff or request.user.is_superuser %}
+                        <th>{% trans "الكاتب" %}</th>
+                    {% endif %}
+                    <th>{% trans "القسم" %}</th>
+                    <th>{% trans "الحالة" %}</th>
+                    <th style="text-align: center;">{% trans "المشاهدات" %}</th>
+                    <th>{% trans "تاريخ الإنشاء" %}</th>
+                    <th style="text-align: center;">{% trans "العمليات" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in articles %}
+                <tr>
+                    <td style="text-align: center;">
+                        <input type="checkbox" name="selected_articles" value="{{ article.id }}" class="article-checkbox" style="transform: scale(1.2); cursor: pointer;">
+                    </td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                            <span style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">{{ article.title }}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">
+                                {% if article.title_ar %}عربي: {{ article.title_ar|truncatechars:30 }}{% endif %}
+                                {% if article.title_en %} | English: {{ article.title_en|truncatechars:30 }}{% endif %}
+                            </span>
+                        </div>
+                    </td>
+                    {% if request.user.is_staff or request.user.is_superuser %}
+                        <td>{{ article.author.username }}</td>
+                    {% endif %}
+                    <td>
+                        <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: var(--accent-color);">
+                            {{ article.category.name }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ article.status }}">
+                            {% if article.status == 'published' %}{% trans "منشور" %}
+                            {% elif article.status == 'draft' %}{% trans "مسودة" %}
+                            {% elif article.status == 'review' %}{% trans "مراجعة" %}
+                            {% else %}{% trans "مؤرشف" %}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td style="text-align: center; font-family: var(--font-english);">{{ article.views_count }}</td>
+                    <td>{{ article.created_at|date:"Y-m-d H:i" }}</td>
+                    <td style="text-align: center;">
+                        <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                            <a href="{% url 'dashboard:article_edit' article.pk %}" class="btn btn-secondary" style="padding: 0.35rem 0.65rem;" title="{% trans "تعديل" %}">
+                                <span class="icon" style="font-size: 16px;">edit</span>
+                            </a>
+                            <a href="{% url 'dashboard:article_preview' article.pk %}" class="btn btn-secondary" style="padding: 0.35rem 0.65rem;" title="{% trans "معاينة مباشرة" %}">
+                                <span class="icon" style="font-size: 16px;">visibility</span>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{% if request.user.is_staff or request.user.is_superuser %}8{% else %}7{% endif %}" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                        {% trans "لا يوجد مقالات تطابق خيارات التصفية الحالية." %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+            {% trans "السابق" %}
+        </a>
+    {% endif %}
+    
+    <span class="btn btn-secondary" style="padding: 0.5rem 1rem; border-color: var(--accent-color); cursor: default;">
+        {% trans "الصفحة" %} {{ page_obj.number }} {% trans "من" %} {{ page_obj.paginator.num_pages }}
+    </span>
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+            {% trans "التالي" %}
+        </a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Checkbox select-all functionality
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const articleCheckboxes = document.querySelectorAll('.article-checkbox');
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            articleCheckboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+        });
+    }
+</script>
+{% endblock %}

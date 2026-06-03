@@ -1,0 +1,407 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load thumbnail %}
+
+{% block title %}{{ article.title }} | {{ site_settings.site_name }}{% endblock %}
+
+{% block meta_description %}{{ article.meta_desc|default:article.excerpt|default:article.body|truncatewords:25 }}{% endblock %}
+
+{% block og_type %}article{% endblock %}
+{% block og_title %}{{ article.title }}{% endblock %}
+{% block og_description %}{{ article.meta_desc|default:article.excerpt|default:article.body|truncatewords:25 }}{% endblock %}
+{% block og_image %}{% if article.cover_image %}{{ request.scheme }}://{{ request.get_host }}{{ article.cover_image.url }}{% endif %}{% endblock %}
+
+{% block twitter_title %}{{ article.title }}{% endblock %}
+{% block twitter_description %}{{ article.meta_desc|default:article.excerpt|default:article.body|truncatewords:25 }}{% endblock %}
+{% block twitter_image %}{% if article.cover_image %}{{ request.scheme }}://{{ request.get_host }}{{ article.cover_image.url }}{% endif %}{% endblock %}
+
+{% block extra_head %}
+    {% if article.meta_title or article.meta_desc %}
+        <meta name="title" content="{{ article.meta_title|default:article.title }}">
+        <meta name="description" content="{{ article.meta_desc|default:article.excerpt }}">
+    {% endif %}
+    <style>
+        .reading-progress-bar { height: 4px; background: #146c3c; width: 0%; transition: width 0.1s ease-out; }
+    </style>
+    <!-- Schema.org Article Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "NewsArticle",
+      "headline": "{{ article.title|escapejs }}",
+      "image": [
+        "{% if article.cover_image %}{{ request.scheme }}://{{ request.get_host }}{{ article.cover_image.url }}{% else %}https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1200{% endif %}"
+      ],
+      "datePublished": "{{ article.published_at|date:'c' }}",
+      "dateModified": "{{ article.updated_at|date:'c' }}",
+      "author": {
+        "@type": "Person",
+        "name": "{{ article.author.author_profile.display_name|default:article.author.username|escapejs }}",
+        "url": "{{ request.scheme }}://{{ request.get_host }}{{ article.author.author_profile.get_absolute_url }}"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "{{ site_settings.site_name|escapejs }}",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "{{ request.scheme }}://{{ request.get_host }}{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}/static/images/logo.png{% endif %}"
+        }
+      },
+      "description": "{{ article.excerpt|default:article.body|truncatewords:30|escapejs }}"
+    }
+    </script>
+{% endblock %}
+
+{% block breadcrumbs %}
+    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+{% endblock %}
+
+{% block content %}
+<!-- Sticky Reading Progress Bar -->
+<div class="fixed top-0 left-0 w-full z-[100]">
+    <div class="reading-progress-bar" id="progress"></div>
+</div>
+
+<article class="py-12 bg-surface">
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop">
+        
+        <!-- Header Info -->
+        <div class="max-w-3xl mx-auto mb-10 text-center">
+            <a href="{{ article.category.get_absolute_url }}" class="bg-secondary-container text-on-secondary-container px-4 py-1.5 text-xs font-bold uppercase rounded-full inline-block mb-4 hover:opacity-90">
+                {{ article.category.name }}
+            </a>
+            
+            <h1 class="text-headline-lg md:text-[40px] font-bold text-primary mb-6 leading-tight">
+                {{ article.title }}
+            </h1>
+            
+            <!-- Metadata & Author details -->
+            <div class="flex flex-wrap items-center justify-center gap-6 text-sm text-on-surface-variant font-medium">
+                <a href="{{ article.author.author_profile.get_absolute_url }}" class="flex items-center gap-2 group hover:text-secondary">
+                    <div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs shrink-0 group-hover:border-secondary border transition-all">
+                        {{ article.author.username|slice:":2"|upper }}
+                    </div>
+                    <span>{{ article.author.author_profile.display_name|default:article.author.username }}</span>
+                </a>
+                <span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+                <span>{{ article.published_at|date:"Y-m-d H:i" }}</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+                <div class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[18px]">schedule</span>
+                    <span>{{ article.read_time }} {% trans "دقائق قراءة" %}</span>
+                </div>
+                <span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
+                <div class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    <span>{{ article.views_count }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cover Image -->
+        <div class="max-w-5xl mx-auto mb-12 rounded-xl overflow-hidden border border-outline-variant aspect-video relative bg-surface-container-high">
+            {% if article.cover_image %}
+                {% thumbnail article.cover_image "1200x675" crop="center" as im %}
+                    <img src="{{ im.url }}" alt="{{ article.title }}" class="w-full h-full object-cover" loading="lazy">
+                {% empty %}
+                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1200" alt="Default Cover" class="w-full h-full object-cover" loading="lazy">
+                {% endthumbnail %}
+            {% else %}
+                <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1200" alt="Default Cover" class="w-full h-full object-cover" loading="lazy">
+            {% endif %}
+        </div>
+
+        <!-- Layout: Article Body & Sharing -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter max-w-5xl mx-auto">
+            
+            <!-- Left Side / Toolbar for Desktop (1 Col) -->
+            <div class="lg:col-span-1 hidden lg:flex flex-col gap-6 items-center sticky top-28 h-fit">
+                <span class="text-[10px] font-bold text-outline uppercase tracking-wider">{% trans "تفاعل" %}</span>
+                
+                <!-- Like form -->
+                <form method="post" action="{% url 'news:like_article' article.slug %}" class="w-full text-center">
+                    {% csrf_token %}
+                    <button type="submit" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 mx-auto {% if user_has_liked %}bg-error text-white border-error{% else %}hover:bg-error hover:text-white text-primary{% endif %}" title="{% trans "إعجاب" %}">
+                        <span class="material-symbols-outlined" {% if user_has_liked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>favorite</span>
+                    </button>
+                    <span class="text-xs text-on-surface-variant font-bold mt-1 block">{{ likes_count }}</span>
+                </form>
+
+                <!-- Bookmark form -->
+                <form method="post" action="{% url 'news:bookmark_article' article.slug %}" class="w-full text-center">
+                    {% csrf_token %}
+                    <button type="submit" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 mx-auto {% if user_has_bookmarked %}bg-secondary text-white border-secondary{% else %}hover:bg-secondary hover:text-white text-primary{% endif %}" title="{% trans "حفظ" %}">
+                        <span class="material-symbols-outlined" {% if user_has_bookmarked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>bookmark</span>
+                    </button>
+                    <span class="text-xs text-on-surface-variant font-bold mt-1 block">{{ bookmarks_count }}</span>
+                </form>
+
+                <div class="h-px w-6 bg-outline-variant my-2"></div>
+
+                <span class="text-[10px] font-bold text-outline uppercase tracking-wider">{% trans "مشاركة" %}</span>
+                
+                <button onclick="copyToClipboard()" class="w-10 h-10 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors" title="{% trans "نسخ الرابط" %}">
+                    <span class="material-symbols-outlined text-[20px]">link</span>
+                </button>
+                <a href="https://twitter.com/intent/tweet?url={{ request.build_absolute_uri }}&text={{ article.title }}" target="_blank" class="w-10 h-10 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors" title="Twitter">
+                    <span>𝕏</span>
+                </a>
+                <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}" target="_blank" class="w-10 h-10 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors" title="Facebook">
+                    <span>fb</span>
+                </a>
+            </div>
+
+            <!-- Body text (8 Cols) -->
+            <div class="lg:col-span-8 space-y-8">
+                {% if messages %}
+                    <div class="mb-6">
+                        {% for message in messages %}
+                            <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-error-container text-on-error-container{% else %}bg-secondary-container text-on-secondary-container{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Content -->
+                <div class="prose max-w-none text-primary leading-relaxed text-body-md font-body-md" style="font-size: 18px;">
+                    {{ article.body|safe }}
+                </div>
+
+                <!-- Tags / Keywords -->
+                {% if article.tags.all %}
+                    <div class="flex flex-wrap gap-2 pt-6 border-t border-outline-variant">
+                        <span class="text-xs font-bold text-primary flex items-center">{% trans "الوسوم" %}:</span>
+                        {% for tag in article.tags.all %}
+                            <span class="bg-surface-container-high border border-outline px-3 py-1 text-xs font-medium rounded-lg">
+                                #{{ tag.name }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Mobile Share Bar -->
+                <div class="flex lg:hidden items-center justify-between gap-4 py-4 border-t border-b border-outline-variant">
+                    <div class="flex items-center gap-4">
+                        <!-- Mobile Like -->
+                        <form method="post" action="{% url 'news:like_article' article.slug %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 {% if user_has_liked %}bg-error text-white border-error{% else %}hover:bg-error hover:text-white text-primary{% endif %}" title="{% trans "إعجاب" %}">
+                                <span class="material-symbols-outlined text-[16px]" {% if user_has_liked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>favorite</span>
+                            </button>
+                        </form>
+                        <span class="text-xs font-bold text-primary">{{ likes_count }}</span>
+
+                        <!-- Mobile Bookmark -->
+                        <form method="post" action="{% url 'news:bookmark_article' article.slug %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 {% if user_has_bookmarked %}bg-secondary text-white border-secondary{% else %}hover:bg-secondary hover:text-white text-primary{% endif %}" title="{% trans "حفظ" %}">
+                                <span class="material-symbols-outlined text-[16px]" {% if user_has_bookmarked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>bookmark</span>
+                            </button>
+                        </form>
+                        <span class="text-xs font-bold text-primary">{{ bookmarks_count }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-primary">{% trans "مشاركة" %}:</span>
+                        <button onclick="copyToClipboard()" class="w-8 h-8 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors" title="{% trans "نسخ الرابط" %}">
+                            <span class="material-symbols-outlined text-[16px]">link</span>
+                        </button>
+                        <a href="https://twitter.com/intent/tweet?url={{ request.build_absolute_uri }}&text={{ article.title }}" target="_blank" class="w-8 h-8 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors">𝕏</a>
+                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}" target="_blank" class="w-8 h-8 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors">fb</a>
+                    </div>
+                </div>
+
+                <!-- Comments Thread Section -->
+                {% if article.allow_comments %}
+                <section class="pt-12 border-t border-outline-variant space-y-8">
+                    <h3 class="font-headline-md text-headline-md text-primary">
+                        {% trans "التعليقات" %} ({{ comments.count }})
+                    </h3>
+
+                    <!-- Comments List -->
+                    <div class="space-y-6">
+                        {% for comment in comments %}
+                            <div class="bg-surface-container-low border border-outline-variant p-6 rounded-lg">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container font-bold flex items-center justify-center text-xs">
+                                            {{ comment.user.username|slice:":2"|upper }}
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-bold text-primary">{{ comment.user.username }}</p>
+                                            <p class="text-[10px] text-on-surface-variant">{{ comment.created_at|date:"Y-m-d H:i" }}</p>
+                                        </div>
+                                    </div>
+                                    <button onclick="toggleReplyForm({{ comment.id }})" class="text-xs text-secondary font-bold hover:underline flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[14px]">reply</span>
+                                        {% trans "رد" %}
+                                    </button>
+                                </div>
+                                <p class="text-on-surface-variant text-sm whitespace-pre-wrap leading-relaxed">
+                                    {{ comment.body }}
+                                </p>
+
+                                <!-- Nesting replies -->
+                                {% if comment.replies.all %}
+                                    <div class="mt-6 border-s-2 border-outline-variant ps-6 space-y-6">
+                                        {% for reply in comment.replies.all %}
+                                            {% if reply.is_approved %}
+                                                <div class="bg-surface-container p-4 rounded-lg">
+                                                    <div class="flex items-center gap-2 mb-2">
+                                                        <div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container font-bold flex items-center justify-center text-[10px]">
+                                                            {{ reply.user.username|slice:":2"|upper }}
+                                                        </div>
+                                                        <div>
+                                                            <p class="text-xs font-bold text-primary">{{ reply.user.username }}</p>
+                                                            <p class="text-[9px] text-on-surface-variant">{{ reply.created_at|date:"Y-m-d H:i" }}</p>
+                                                        </div>
+                                                    </div>
+                                                    <p class="text-on-surface-variant text-xs whitespace-pre-wrap">
+                                                        {{ reply.body }}
+                                                    </p>
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                <!-- Hidden Reply Form -->
+                                <div id="reply-form-{{ comment.id }}" class="hidden mt-6 pt-4 border-t border-outline-variant">
+                                    <form method="post" action="{% url 'news:submit_comment' article.slug %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                        <textarea name="body" rows="3" placeholder="{% trans "اكتب ردك هنا..." %}" class="w-full bg-surface border border-outline px-4 py-2 text-xs outline-none focus:border-secondary text-primary mb-3" required></textarea>
+                                        <div class="flex justify-end gap-2">
+                                            <button type="button" onclick="toggleReplyForm({{ comment.id }})" class="bg-surface-container border border-outline px-3 py-1.5 text-xs hover:bg-surface-container-high font-bold transition-all">
+                                                {% trans "إلغاء" %}
+                                            </button>
+                                            <button type="submit" class="bg-primary text-on-primary px-4 py-1.5 text-xs hover:opacity-90 font-bold transition-all">
+                                                {% trans "إرسال الرد" %}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+
+                            </div>
+                        {% empty %}
+                            <p class="text-on-surface-variant text-sm py-4 text-center">{% trans "كن أول من يعلق على هذا المقال." %}</p>
+                        {% endfor %}
+                    </div>
+
+                    <!-- New Comment Submission -->
+                    <div class="bg-surface-container-low border border-outline-variant p-6 rounded-lg mt-8">
+                        <h4 class="font-bold text-primary mb-4 text-sm">{% trans "أضف تعليقاً" %}</h4>
+                        {% if request.user.is_authenticated %}
+                            <form method="post" action="{% url 'news:submit_comment' article.slug %}" class="space-y-4">
+                                {% csrf_token %}
+                                <textarea name="body" rows="4" placeholder="{% trans "اكتب تعليقك هنا..." %}" class="w-full bg-surface border border-outline px-4 py-3 text-sm outline-none focus:border-secondary text-primary" required></textarea>
+                                <button type="submit" class="bg-primary text-on-primary px-6 py-2.5 font-bold text-sm hover:opacity-90 transition-all">
+                                    {% trans "إرسال التعليق" %}
+                                </button>
+                            </form>
+                        {% else %}
+                            <div class="text-center py-6">
+                                <p class="text-on-surface-variant text-sm mb-4">{% trans "يرجى تسجيل الدخول لتتمكن من التعليق على المقال." %}</p>
+                                <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="bg-primary text-on-primary px-6 py-2.5 text-sm font-bold hover:opacity-90 inline-block transition-opacity">
+                                    {% trans "تسجيل الدخول" %}
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
+                {% endif %}
+
+            </div>
+
+            <!-- Right Sidebar / Author Bio & Related Articles (3 Cols) -->
+            <aside class="lg:col-span-3 space-y-8">
+                <!-- Author Widget -->
+                <div class="bg-surface-container-low border border-outline-variant p-6 rounded-lg text-center">
+                    <h4 class="text-[10px] font-bold text-outline uppercase tracking-wider mb-4">{% trans "الكاتب" %}</h4>
+                    <a href="{{ article.author.author_profile.get_absolute_url }}" class="group">
+                        <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-outline-variant group-hover:border-secondary mx-auto mb-4 transition-colors">
+                            {% if article.author.author_profile.avatar %}
+                                {% thumbnail article.author.author_profile.avatar "150x150" crop="center" as im %}
+                                    <img src="{{ im.url }}" alt="{{ article.author }}" class="w-full h-full object-cover" loading="lazy">
+                                {% empty %}
+                                    <img src="https://ui-avatars.com/api/?name={{ article.author }}&background=146c3c&color=fff" alt="{{ article.author }}" class="w-full h-full object-cover" loading="lazy">
+                                {% endthumbnail %}
+                            {% else %}
+                                <img src="https://ui-avatars.com/api/?name={{ article.author }}&background=146c3c&color=fff" alt="{{ article.author }}" class="w-full h-full object-cover" loading="lazy">
+                            {% endif %}
+                        </div>
+                        <h5 class="font-bold text-primary group-hover:text-secondary transition-colors text-sm">
+                            {{ article.author.author_profile.display_name|default:article.author.username }}
+                        </h5>
+                    </a>
+                    <span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 text-[10px] font-bold rounded mt-2 inline-block">
+                        {{ article.author.author_profile.get_role_display }}
+                    </span>
+                    <p class="text-on-surface-variant text-xs mt-4 line-clamp-3 leading-relaxed">
+                        {{ article.author.author_profile.bio|default:"" }}
+                    </p>
+                </div>
+
+                <!-- Related Articles -->
+                <div class="bg-surface border border-outline-variant p-6 rounded-lg">
+                    <h4 class="font-bold text-primary mb-6 text-label-sm tracking-widest uppercase border-b-2 border-secondary pb-2">
+                        {% trans "مقالات ذات صلة" %}
+                    </h4>
+                    <div class="space-y-6">
+                        {% for r_art in related_articles %}
+                            <div class="group flex flex-col gap-2">
+                                {% if r_art.cover_image %}
+                                    <a href="{{ r_art.get_absolute_url }}" class="aspect-video rounded overflow-hidden border border-outline-variant block">
+                                        {% thumbnail r_art.cover_image "400x225" crop="center" as im %}
+                                            <img src="{{ im.url }}" alt="{{ r_art.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+                                        {% empty %}
+                                            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+                                        {% endthumbnail %}
+                                    </a>
+                                {% endif %}
+                                <h5 class="font-bold text-primary text-xs leading-snug group-hover:text-secondary transition-colors">
+                                    <a href="{{ r_art.get_absolute_url }}">{{ r_art.title }}</a>
+                                </h5>
+                                <span class="text-[10px] text-on-surface-variant block">
+                                    {{ r_art.published_at|date:"Y-m-d" }}
+                                </span>
+                            </div>
+                        {% empty %}
+                            <p class="text-on-surface-variant text-xs">{% trans "لا يوجد مقالات ذات صلة حالياً" %}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </aside>
+
+        </div>
+    </div>
+</article>
+
+<script>
+    function copyToClipboard() {
+        navigator.clipboard.writeText(window.location.href);
+        alert("{% trans "تم نسخ الرابط بنجاح!" %}");
+    }
+
+    function toggleReplyForm(commentId) {
+        const form = document.getElementById(`reply-form-${commentId}`);
+        if (form.classList.contains('hidden')) {
+            form.classList.remove('hidden');
+        } else {
+            form.classList.add('hidden');
+        }
+    }
+
+    // Reading Progress Logic
+    window.addEventListener('scroll', () => {
+        const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+        const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scrolled = (winScroll / height) * 100;
+        const prog = document.getElementById('progress');
+        if (prog) {
+            prog.style.width = scrolled + '%';
+        }
+    });
+</script>
+{% endblock %}

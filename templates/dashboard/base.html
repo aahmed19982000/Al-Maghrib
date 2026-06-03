@@ -1,0 +1,248 @@
+{% load static %}
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% trans "لوحة التحكم" %}{% endblock %} - المغرب</title>
+    <!-- Fonts -->
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <!-- Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        /* Add some specific overrides or helpers if necessary */
+        .icon {
+            font-family: 'Material Symbols Outlined';
+            font-size: 20px;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .header-title h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        .header-title p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        .lang-switch {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-family: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .lang-switch:hover {
+            border-color: var(--border-hover);
+        }
+        .alert-messages {
+            margin-bottom: 2rem;
+        }
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-weight: 500;
+            animation: fadeIn 0.3s ease;
+        }
+        .alert-success {
+            background-color: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-success);
+        }
+        .alert-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: var(--accent-warning);
+        }
+        .alert-danger {
+            background-color: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--accent-danger);
+        }
+        .alert-info {
+            background-color: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--accent-color);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Direction adjustments */
+        {% if LANGUAGE_BIDI %}
+        .sidebar-link.active {
+            border-inline-start: none;
+            border-right: 4px solid #3b82f6;
+        }
+        {% else %}
+        body {
+            font-family: var(--font-english);
+        }
+        .search-input, .filter-select, .btn, .form-control {
+            font-family: var(--font-english);
+        }
+        {% endif %}
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body {% if LANGUAGE_BIDI %}dir="rtl"{% else %}dir="ltr"{% endif %}>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                AL MAGHRIB
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="{% url 'dashboard:home' %}" class="sidebar-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                        <span class="icon">dashboard</span>
+                        <span>{% trans "لوحة التحكم" %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'dashboard:articles' %}" class="sidebar-link {% if 'article' in request.resolver_match.url_name %}active{% endif %}">
+                        <span class="icon">article</span>
+                        <span>{% trans "المقالات" %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'dashboard:categories' %}" class="sidebar-link {% if request.resolver_match.url_name == 'categories' %}active{% endif %}">
+                        <span class="icon">category</span>
+                        <span>{% trans "الأقسام" %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'dashboard:stats' %}" class="sidebar-link {% if request.resolver_match.url_name == 'stats' %}active{% endif %}">
+                        <span class="icon">monitoring</span>
+                        <span>{% trans "إحصائيات الكاتب" %}</span>
+                    </a>
+                </li>
+                {% if request.user.is_staff or request.user.is_superuser %}
+                <li>
+                    <a href="{% url 'dashboard:authors_list' %}" class="sidebar-link {% if 'authors_list' in request.resolver_match.url_name or 'author_detail_mgmt' in request.resolver_match.url_name %}active{% endif %}">
+                        <span class="icon">group</span>
+                        <span>{% trans "إدارة الكتاب" %}</span>
+                    </a>
+                </li>
+                {% endif %}
+                <li>
+                    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 1rem 0;">
+                </li>
+                <li>
+                    <a href="{% url 'core:home' %}" class="sidebar-link" target="_blank">
+                        <span class="icon">open_in_new</span>
+                        <span>{% trans "زيارة الموقع" %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'accounts:logout' %}" class="sidebar-link" style="color: var(--accent-danger);">
+                        <span class="icon" style="color: var(--accent-danger);">logout</span>
+                        <span>{% trans "تسجيل الخروج" %}</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Panel -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-left">
+                    <div class="header-title">
+                        {% block header_title %}
+                        <h1>{% trans "مرحباً بك" %}, {{ request.user.username }}</h1>
+                        <p>{% trans "هذه هي لوحة التحكم المخصصة لإدارة المحتوى" %}</p>
+                        {% endblock %}
+                    </div>
+                </div>
+                
+                <div class="user-profile">
+                    <!-- Language Switcher -->
+                    {% if LANGUAGE_CODE == 'ar' %}
+                        <a href="/en/dashboard/{{ request.path|slice:'4:' }}" class="lang-switch">
+                            <span class="icon">language</span> English
+                        </a>
+                    {% else %}
+                        <a href="/ar/dashboard/{{ request.path|slice:'4:' }}" class="lang-switch">
+                            <span class="icon">language</span> عربي
+                        </a>
+                    {% endif %}
+
+                    <!-- Profile Information -->
+                    <div class="avatar-container">
+                        {% if request.user.author_profile.avatar %}
+                            <img src="{{ request.user.author_profile.avatar.url }}" alt="{{ request.user.username }}">
+                        {% elif request.user.profile.avatar %}
+                            <img src="{{ request.user.profile.avatar.url }}" alt="{{ request.user.username }}">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ request.user.username }}&background=3b82f6&color=fff" alt="{{ request.user.username }}">
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; flex-direction: column;">
+                        <span style="font-weight: 600;">
+                            {% if request.user.author_profile %}
+                                {{ request.user.author_profile }}
+                            {% else %}
+                                {{ request.user.username }}
+                            {% endif %}
+                        </span>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">
+                            {% if request.user.is_superuser %}
+                                {% trans "مدير الموقع" %}
+                            {% elif request.user.is_staff %}
+                                {% trans "محرر" %}
+                            {% else %}
+                                {% trans "كاتب" %}
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Django Messages -->
+            {% if messages %}
+                <div class="alert-messages">
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">
+                            <span class="icon">
+                                {% if message.tags == 'success' %}check_circle
+                                {% elif message.tags == 'warning' %}warning
+                                {% elif message.tags == 'error' %}error
+                                {% else %}info
+                                {% endif %}
+                            </span>
+                            <div>{{ message }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

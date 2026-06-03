@@ -1,0 +1,299 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}
+    {% if object %}{% trans "تعديل مقال" %}{% else %}{% trans "إضافة مقال جديد" %}{% endblock %}
+{% block extra_head %}
+    <!-- Load CKEditor 5 assets -->
+    {{ form.media }}
+    <style>
+        /* Modernized Form Design Details */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 1.25rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .form-section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+        .form-checkbox-group {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+            background-color: rgba(255,255,255,0.02);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .checkbox-label input[type="checkbox"] {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+        /* Custom Styling for CKEditor inside Dark Mode */
+        .ck-editor__main .ck-content {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+            border-color: var(--border-color) !important;
+            min-height: 250px;
+        }
+        .ck-editor__top {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+        }
+        .ck.ck-toolbar {
+            background: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+        }
+        .ck.ck-button {
+            color: var(--text-primary) !important;
+            cursor: pointer;
+        }
+        .ck.ck-button:hover {
+            background: var(--bg-tertiary) !important;
+        }
+        .ck.ck-button.ck-on {
+            background: var(--accent-color) !important;
+            color: white !important;
+        }
+        .ck.ck-dropdown__panel {
+            background: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+        }
+    </style>
+{% endblock %}
+
+{% block header_title %}
+    <h1>{% if object %}{% trans "تعديل مقال" %}{% else %}{% trans "إضافة مقال جديد" %}{% endif %}</h1>
+    <p>{% if object %}{% trans "تحديث محتوى المقال الحالي وإعدادات النشر" %}{% else %}{% trans "اكتب مقالاً جديداً وقم بتعبئة بيانات اللغتين العربية والإنجليزية" %}{% endif %}</p>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" style="max-width: 1200px;">
+    {% csrf_token %}
+
+    <!-- Section 1: Main Content (Titles & Slugs) -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">edit_note</span>
+            <span>{% trans "محتوى المقال الرئيسي (عربي وإنجليزي)" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.title_ar.id_for_label }}">{{ form.title_ar.label }}</label>
+                {{ form.title_ar }}
+                {% if form.title_ar.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.title_ar.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.title_en.id_for_label }}">{{ form.title_en.label }}</label>
+                {{ form.title_en }}
+                {% if form.title_en.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.title_en.errors }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.slug.id_for_label }}">
+                    {% trans "الرابط الفرعي (Slug)" %}
+                </label>
+                {{ form.slug }}
+                <small style="color: var(--text-secondary);">{% trans "اتركه فارغاً ليتم إنشاؤه تلقائياً من العنوان" %}</small>
+                {% if form.slug.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.slug.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.category.id_for_label }}">
+                    {% trans "القسم" %}
+                </label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.category.errors }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Metadata & Uploads -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">settings</span>
+            <span>{% trans "إعدادات النشر والوسائط" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.status.id_for_label }}">{% trans "حالة النشر" %}</label>
+                {{ form.status }}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="{{ form.tags.id_for_label }}">{% trans "الوسوم (مفصولة بفاصلة)" %}</label>
+                {{ form.tags }}
+                <small style="color: var(--text-secondary);">{% trans "مثال: سياسة, اقتصاد, عاجل" %}</small>
+            </div>
+
+            {% if form.author %}
+            <div class="form-group">
+                <label class="form-label" for="{{ form.author.id_for_label }}">{{ form.author.label }}</label>
+                {{ form.author }}
+                {% if form.author.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.author.errors }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Checkbox Options -->
+        <div class="form-group" style="margin-bottom: 2rem;">
+            <label class="form-label">{% trans "خيارات إضافية" %}</label>
+            <div class="form-checkbox-group">
+                <label class="checkbox-label">
+                    {{ form.is_featured }}
+                    <span>{% trans "مقال مميز (Featured)" %}</span>
+                </label>
+                <label class="checkbox-label">
+                    {{ form.is_breaking }}
+                    <span>{% trans "خبر عاجل (Breaking)" %}</span>
+                </label>
+                <label class="checkbox-label">
+                    {{ form.allow_comments }}
+                    <span>{% trans "السماح بالتعليقات" %}</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Cover Image -->
+        <div class="form-group">
+            <label class="form-label" for="{{ form.cover_image.id_for_label }}">{% trans "صورة الغلاف" %}</label>
+            {% if object and object.cover_image %}
+                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; background-color: rgba(255,255,255,0.02); padding: 1rem; border-radius: 0.75rem;">
+                    <img src="{{ object.cover_image.url }}" alt="Cover Image" style="width: 120px; height: 80px; object-fit: cover; border-radius: 0.5rem; border: 1px solid var(--border-color);">
+                    <div>
+                        <span style="font-size: 0.85rem; display: block; margin-bottom: 0.25rem;">{% trans "الصورة الحالية" %}</span>
+                        {{ form.cover_image }}
+                    </div>
+                </div>
+            {% else %}
+                {{ form.cover_image }}
+            {% endif %}
+            {% if form.cover_image.errors %}
+                <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.cover_image.errors }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Section 3: Excerpt & Bodies (Translation inputs) -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">subject</span>
+            <span>{% trans "المقتطف والمحتوى الكامل" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.excerpt_ar.id_for_label }}">{{ form.excerpt_ar.label }}</label>
+                {{ form.excerpt_ar }}
+                {% if form.excerpt_ar.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.excerpt_ar.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.excerpt_en.id_for_label }}">{{ form.excerpt_en.label }}</label>
+                {{ form.excerpt_en }}
+                {% if form.excerpt_en.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.excerpt_en.errors }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 2rem;">
+            <label class="form-label" for="{{ form.body_ar.id_for_label }}">{{ form.body_ar.label }}</label>
+            <div style="margin-top: 0.5rem;">
+                {{ form.body_ar }}
+            </div>
+            {% if form.body_ar.errors %}
+                <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.body_ar.errors }}</span>
+            {% endif %}
+        </div>
+
+        <div class="form-group" style="margin-top: 2.5rem;">
+            <label class="form-label" for="{{ form.body_en.id_for_label }}">{{ form.body_en.label }}</label>
+            <div style="margin-top: 0.5rem;">
+                {{ form.body_en }}
+            </div>
+            {% if form.body_en.errors %}
+                <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.body_en.errors }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Section 4: SEO Configurations -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">travel_explore</span>
+            <span>{% trans "إعدادات محركات البحث (SEO)" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_title_ar.id_for_label }}">{{ form.meta_title_ar.label }}</label>
+                {{ form.meta_title_ar }}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_title_en.id_for_label }}">{{ form.meta_title_en.label }}</label>
+                {{ form.meta_title_en }}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_desc_ar.id_for_label }}">{{ form.meta_desc_ar.label }}</label>
+                {{ form.meta_desc_ar }}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_desc_en.id_for_label }}">{{ form.meta_desc_en.label }}</label>
+                {{ form.meta_desc_en }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Panel -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 4rem;">
+        <button type="submit" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">
+            <span class="icon">save</span>
+            <span>{% trans "حفظ التغييرات" %}</span>
+        </button>
+        <a href="{% url 'dashboard:articles' %}" class="btn btn-secondary" style="padding: 0.8rem 2rem; font-size: 1rem;">
+            {% trans "إلغاء وتراجع" %}
+        </a>
+    </div>
+</form>
+{% endblock %}

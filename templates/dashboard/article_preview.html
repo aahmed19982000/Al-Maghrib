@@ -1,0 +1,232 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "معاينة المقال" %} - {{ article.title }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .preview-card {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 1.25rem;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-lg);
+    }
+    .preview-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background-color: rgba(255, 255, 255, 0.02);
+        border-radius: 1rem;
+        border: 1px solid var(--border-color);
+    }
+    .meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    .meta-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    .meta-value {
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    .preview-cover {
+        width: 100%;
+        max-height: 450px;
+        object-fit: cover;
+        border-radius: 1rem;
+        margin-bottom: 2.5rem;
+        border: 1px solid var(--border-color);
+    }
+    .lang-section-title {
+        color: var(--accent-color);
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        font-weight: 700;
+        font-size: 1.3rem;
+    }
+    .article-body-content {
+        line-height: 1.8;
+        font-size: 1.1rem;
+        color: #e5e7eb;
+    }
+    .article-body-content p {
+        margin-bottom: 1.25rem;
+    }
+    .preview-tabs {
+        display: flex;
+        gap: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 2rem;
+    }
+    .tab-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        font-family: inherit;
+        transition: all 0.2s ease;
+    }
+    .tab-btn:hover, .tab-btn.active {
+        color: var(--text-primary);
+    }
+    .tab-btn.active {
+        border-bottom-color: var(--accent-color);
+    }
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+    .tab-content.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block header_title %}
+    <h1>{% trans "معاينة مباشرة للمقال" %}</h1>
+    <p>{% trans "استعرض كيف سيظهر المقال للقراء باللغتين العربية والإنجليزية" %}</p>
+{% endblock %}
+
+{% block content %}
+<div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+    <a href="{% url 'dashboard:article_edit' article.pk %}" class="btn btn-primary">
+        <span class="icon">edit</span>
+        <span>{% trans "تعديل هذا المقال" %}</span>
+    </a>
+    <a href="{% url 'dashboard:articles' %}" class="btn btn-secondary">
+        {% trans "العودة للقائمة" %}
+    </a>
+</div>
+
+<div class="preview-card">
+    <!-- Cover Image -->
+    {% if article.cover_image %}
+        <img src="{{ article.cover_image.url }}" alt="{{ article.title }}" class="preview-cover">
+    {% endif %}
+
+    <!-- Meta Data Grid -->
+    <div class="preview-meta-grid">
+        <div class="meta-item">
+            <span class="meta-label">{% trans "حالة المقال" %}</span>
+            <span class="meta-value">
+                <span class="badge badge-{{ article.status }}" style="font-size: 0.85rem;">
+                    {% if article.status == 'published' %}{% trans "منشور" %}
+                    {% elif article.status == 'draft' %}{% trans "مسودة" %}
+                    {% elif article.status == 'review' %}{% trans "مراجعة" %}
+                    {% else %}{% trans "مؤرشف" %}
+                    {% endif %}
+                </span>
+            </span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">{% trans "الكاتب" %}</span>
+            <span class="meta-value">{{ article.author.username }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">{% trans "القسم" %}</span>
+            <span class="meta-value">{{ article.category.name }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">{% trans "المشاهدات" %}</span>
+            <span class="meta-value" style="font-family: var(--font-english);">{{ article.views_count }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">{% trans "وقت القراءة" %}</span>
+            <span class="meta-value">{{ article.read_time }} {% trans "دقائق" %}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">{% trans "تاريخ النشر" %}</span>
+            <span class="meta-value">{{ article.published_at|date:"Y-m-d H:i"|default:"-" }}</span>
+        </div>
+    </div>
+
+    <!-- Bilingual Tab Switcher -->
+    <div class="preview-tabs">
+        <button class="tab-btn active" onclick="switchTab(event, 'preview-arabic')">{% trans "المسودة العربية" %}</button>
+        <button class="tab-btn" onclick="switchTab(event, 'preview-english')">{% trans "English Draft" %}</button>
+    </div>
+
+    <!-- Arabic Draft -->
+    <div id="preview-arabic" class="tab-content active" dir="rtl">
+        <h1 style="font-size: 2.25rem; font-weight: 800; line-height: 1.4; margin-bottom: 1.5rem; font-family: var(--font-arabic);">
+            {{ article.title_ar }}
+        </h1>
+        {% if article.excerpt_ar %}
+            <div style="font-size: 1.2rem; color: var(--text-secondary); line-height: 1.6; border-right: 4px solid var(--accent-color); padding-right: 1.5rem; margin-bottom: 2.5rem; font-family: var(--font-arabic);">
+                {{ article.excerpt_ar }}
+            </div>
+        {% endif %}
+        <div class="article-body-content" style="font-family: var(--font-arabic);">
+            {{ article.body_ar|safe }}
+        </div>
+        
+        <!-- Arabic SEO details -->
+        <div style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border-color); font-family: var(--font-arabic);">
+            <h4 style="color: var(--text-secondary); margin-bottom: 0.75rem;">{% trans "بيانات السيو (RTL SEO)" %}</h4>
+            <p><strong>{% trans "عنوان SEO:" %}</strong> {{ article.meta_title_ar|default:"-" }}</p>
+            <p><strong>{% trans "وصف SEO:" %}</strong> {{ article.meta_desc_ar|default:"-" }}</p>
+        </div>
+    </div>
+
+    <!-- English Draft -->
+    <div id="preview-english" class="tab-content" dir="ltr">
+        <h1 style="font-size: 2.25rem; font-weight: 800; line-height: 1.4; margin-bottom: 1.5rem; font-family: var(--font-english);">
+            {{ article.title_en }}
+        </h1>
+        {% if article.excerpt_en %}
+            <div style="font-size: 1.2rem; color: var(--text-secondary); line-height: 1.6; border-left: 4px solid var(--accent-color); padding-left: 1.5rem; margin-bottom: 2.5rem; font-family: var(--font-english);">
+                {{ article.excerpt_en }}
+            </div>
+        {% endif %}
+        <div class="article-body-content" style="font-family: var(--font-english);">
+            {{ article.body_en|safe }}
+        </div>
+
+        <!-- English SEO details -->
+        <div style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border-color); font-family: var(--font-english);">
+            <h4 style="color: var(--text-secondary); margin-bottom: 0.75rem;">LTR SEO Meta Details</h4>
+            <p><strong>SEO Title:</strong> {{ article.meta_title_en|default:"-" }}</p>
+            <p><strong>SEO Description:</strong> {{ article.meta_desc_en|default:"-" }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchTab(evt, tabId) {
+        // Declare all variables
+        var i, tabcontent, tablinks;
+
+        // Get all elements with class="tab-content" and hide them
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+
+        // Get all elements with class="tab-btn" and remove the class "active"
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+
+        // Show the current tab, and add an "active" class to the button that opened the tab
+        document.getElementById(tabId).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+</script>
+{% endblock %}

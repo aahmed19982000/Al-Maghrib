@@ -1,0 +1,328 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "الرئيسية" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 250px;
+        width: 100%;
+    }
+    .grid-2col {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+    @media (max-width: 768px) {
+        .grid-2col {
+            grid-template-columns: 1fr;
+        }
+    }
+    .cmt-item {
+        background-color: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block header_title %}
+    <h1>{% trans "لوحة القيادة والتحكم" %}</h1>
+    <p>{% trans "نظرة عامة على أداء المحتوى والنشاطات الأخيرة" %}</p>
+{% endblock %}
+
+{% block content %}
+<!-- Metrics Grid -->
+<div class="metrics-grid">
+    <!-- Card 1: Unique Visitors (Mock GA stats) -->
+    <div class="metric-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="metric-title">{% trans "الزوار الفريدين (تقديري)" %}</span>
+            <span class="icon" style="color: #a855f7; font-size: 28px;">analytics</span>
+        </div>
+        <span class="metric-value">{{ mock_visitors }}</span>
+        <span style="font-size: 0.75rem; color: var(--text-secondary);">{% trans "معدل تفاعل الزوار اليومي" %}</span>
+    </div>
+
+    <!-- Card 2: Page Views -->
+    <div class="metric-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="metric-title">{% trans "إجمالي مشاهدات المقالات" %}</span>
+            <span class="icon" style="color: var(--accent-color); font-size: 28px;">visibility</span>
+        </div>
+        <span class="metric-value">{{ total_views }}</span>
+        <span style="font-size: 0.75rem; color: var(--accent-success);">+12% {% trans "مقارنة بالشهر الماضي" %}</span>
+    </div>
+
+    <!-- Card 3: Articles Created (Today / This Week) -->
+    <div class="metric-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="metric-title">{% trans "المقالات الجديدة" %}</span>
+            <span class="icon" style="color: var(--accent-success); font-size: 28px;">article</span>
+        </div>
+        <span class="metric-value">{{ articles_this_week }}</span>
+        <span style="font-size: 0.75rem; color: var(--text-primary);">
+            {% trans "اليوم" %}: <strong>{{ articles_today }}</strong> | {% trans "هذا الأسبوع" %}: <strong>{{ articles_this_week }}</strong>
+        </span>
+    </div>
+
+    <!-- Card 4: Total Comments -->
+    <div class="metric-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="metric-title">{% trans "التعليقات" %}</span>
+            <span class="icon" style="color: var(--accent-warning); font-size: 28px;">forum</span>
+        </div>
+        <span class="metric-value">{{ total_comments }}</span>
+        <span style="font-size: 0.75rem; color: var(--text-secondary);">{% trans "تفاعل القراء مع منشوراتك" %}</span>
+    </div>
+</div>
+
+<!-- Charts Container Row -->
+<div class="grid-2col">
+    <!-- Chart A: Line Chart for daily publishing -->
+    <div class="metric-card">
+        <span class="metric-title" style="font-weight: 700; margin-bottom: 1rem; display: block;">{% trans "معدل نشر المقالات (آخر 7 أيام)" %}</span>
+        <div class="chart-container">
+            <canvas id="pubChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Chart B: Doughnut Chart for category distribution -->
+    <div class="metric-card">
+        <span class="metric-title" style="font-weight: 700; margin-bottom: 1rem; display: block;">{% trans "توزيع المقالات حسب الأقسام" %}</span>
+        <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Lower Grid: Most Viewed Articles and Pending Comments -->
+<div class="grid-2col">
+    <!-- Table: Most Viewed Articles -->
+    <div class="metric-card" style="padding: 1.5rem;">
+        <span class="metric-title" style="font-weight: 700; margin-bottom: 1rem; display: block;">{% trans "المقالات الأكثر قراءة" %}</span>
+        <table class="custom-table" style="font-size: 0.875rem;">
+            <thead>
+                <tr>
+                    <th>{% trans "المقال" %}</th>
+                    <th>{% trans "القسم" %}</th>
+                    <th style="text-align: center;">{% trans "المشاهدات" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in most_viewed_articles %}
+                <tr>
+                    <td style="font-weight: 600;">
+                        <a href="{% url 'dashboard:article_preview' article.pk %}" style="color: var(--text-primary); hover: underline;">
+                            {{ article.title }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: var(--accent-color);">
+                            {{ article.category.name }}
+                        </span>
+                    </td>
+                    <td style="text-align: center; font-family: var(--font-english); font-weight: bold; color: var(--accent-success);">
+                        {{ article.views_count }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                        {% trans "لا يوجد مقالات معروضة حالياً." %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Panel: Pending Comments Moderation -->
+    <div class="metric-card" style="padding: 1.5rem;">
+        <span class="metric-title" style="font-weight: 700; margin-bottom: 1rem; display: block;">{% trans "التعليقات المعلقة بانتظار المراجعة" %}</span>
+        
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for comment in pending_comments %}
+            <div class="cmt-item">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-secondary);">
+                    <span><strong>@{{ comment.user.username }}</strong> {% trans "على" %}: {{ comment.article.title|truncatechars:25 }}</span>
+                    <span style="font-family: var(--font-english);">{{ comment.created_at|date:"Y-m-d H:i" }}</span>
+                </div>
+                <p style="font-size: 0.9rem; color: var(--text-primary); font-style: italic;">
+                    "{{ comment.body|truncatechars:100 }}"
+                </p>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <!-- Approve Button -->
+                    <form method="post" action="{% url 'dashboard:comment_action' comment.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="btn btn-primary" style="padding: 0.3rem 0.75rem; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            <span class="icon" style="font-size: 14px;">check</span>
+                            <span>{% trans "موافقة" %}</span>
+                        </button>
+                    </form>
+                    <!-- Delete Button -->
+                    <form method="post" action="{% url 'dashboard:comment_action' comment.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="btn btn-danger" style="padding: 0.3rem 0.75rem; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            <span class="icon" style="font-size: 14px;">delete</span>
+                            <span>{% trans "حذف" %}</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align: center; color: var(--text-secondary); padding: 3rem 0;">
+                <span class="icon" style="font-size: 40px; margin-bottom: 0.5rem;">done_all</span>
+                <p>{% trans "كل التعليقات تمت مراجعتها والموافقة عليها!" %}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Real Time Activity logs -->
+<div class="metric-card" style="padding: 1.5rem; margin-top: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
+        <span class="metric-title" style="font-weight: 700; margin: 0;">{% trans "سجل النشاطات الأخيرة" %}</span>
+        <span class="icon" style="color: var(--text-secondary);">history</span>
+    </div>
+    
+    <ul style="list-style: none; display: flex; flex-direction: column; gap: 1rem;">
+        {% for log in recent_activities %}
+        <li style="display: flex; gap: 1rem; align-items: flex-start; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.03);">
+            <div style="background-color: var(--bg-tertiary); padding: 0.4rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <span class="icon" style="font-size: 16px; color: var(--accent-color);">
+                    {% if "إنشاء" in log.action_type or "Create" in log.action_type %}add_circle
+                    {% elif "تعديل" in log.action_type or "Update" in log.action_type %}edit
+                    {% else %}info
+                    {% endif %}
+                </span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.15rem; flex-grow: 1;">
+                <span style="font-weight: 500; font-size: 0.9rem;">{{ log.description }}</span>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">
+                    {{ log.timestamp|date:"Y-m-d H:i" }} {% if request.user.is_staff or request.user.is_superuser %} | {% trans "العملية بواسطة" %}: {{ log.user.username }} {% endif %}
+                </span>
+            </div>
+        </li>
+        {% empty %}
+        <li style="text-align: center; color: var(--text-secondary); padding: 1.5rem 0;">
+            {% trans "لا يوجد نشاطات مسجلة." %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Load Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Get charts context
+    const pubCtx = document.getElementById('pubChart').getContext('2d');
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    
+    // Theme configs for Charts
+    const gridColor = 'rgba(255, 255, 255, 0.05)';
+    const textColor = '#94a3b8';
+    
+    // Publication Chart Data
+    const pubLabels = {{ chart_pub_labels|safe }};
+    const pubData = {{ chart_pub_data|safe }};
+    
+    new Chart(pubCtx, {
+        type: 'line',
+        data: {
+            labels: pubLabels,
+            datasets: [{
+                label: '{% trans "المقالات المنشورة" %}',
+                data: pubData,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: textColor
+                    }
+                },
+                y: {
+                    grid: {
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: textColor,
+                        stepSize: 1
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Category Chart Data
+    const catLabels = {{ chart_cat_labels|safe }};
+    const catData = {{ chart_cat_data|safe }};
+    
+    new Chart(categoryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: catLabels,
+            datasets: [{
+                data: catData,
+                backgroundColor: [
+                    '#3b82f6',
+                    '#10b981',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#8b5cf6',
+                    '#ec4899'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: textColor,
+                        boxWidth: 12,
+                        font: {
+                            family: 'Cairo'
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

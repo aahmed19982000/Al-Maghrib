@@ -1,0 +1,224 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "إدارة الكاتب" %} - {{ author }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .author-mgmt-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 2rem;
+    }
+    @media (max-width: 992px) {
+        .author-mgmt-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .mgmt-card {
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 1.25rem;
+        padding: 2rem;
+        box-shadow: var(--shadow-md);
+    }
+    .mgmt-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.75rem;
+        color: var(--accent-color);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .stats-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block header_title %}
+    <h1>{% trans "إدارة صلاحيات وبيانات الكاتب" %}</h1>
+    <p>{% trans "تحرير الصلاحيات المخصصة واستعراض أداء مقالات الكاتب" %}: {{ author }}</p>
+{% endblock %}
+
+{% block content %}
+<!-- Action Back Buttons -->
+<div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+    <a href="{% url 'dashboard:authors_list' %}" class="btn btn-secondary">
+        <span class="icon">arrow_right_alt</span>
+        <span>{% trans "العودة لقائمة الكتاب" %}</span>
+    </a>
+    <a href="{% url 'news:author_detail' author.pk %}" target="_blank" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.25rem;">
+        <span class="icon">open_in_new</span>
+        <span>{% trans "الصفحة العامة للكاتب" %}</span>
+    </a>
+</div>
+
+<div class="author-mgmt-grid">
+    <!-- Left Panel: Stats and Articles List -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="metric-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="metric-title">{% trans "المقالات المكتوبة" %}</span>
+                    <span class="icon" style="color: var(--accent-success); font-size: 24px;">menu_book</span>
+                </div>
+                <span class="metric-value">{{ total_articles }}</span>
+            </div>
+            
+            <div class="metric-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="metric-title">{% trans "مشاهدات المقالات" %}</span>
+                    <span class="icon" style="color: var(--accent-color); font-size: 24px;">query_stats</span>
+                </div>
+                <span class="metric-value" style="font-family: var(--font-english);">{{ total_views }}</span>
+            </div>
+        </div>
+
+        <!-- Filter & Articles Container -->
+        <div class="mgmt-card">
+            <h3 class="mgmt-title">
+                <span class="icon">article</span>
+                <span>{% trans "مقالات الكاتب" %}</span>
+            </h3>
+            
+            <!-- Filters Form -->
+            <form method="get" action="" style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                <input type="text" name="q" value="{{ q }}" placeholder="{% trans "البحث في مقالات الكاتب..." %}" class="search-input" style="flex-grow: 1; min-width: 150px; font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                
+                <select name="category" class="filter-select" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                    <option value="">{% trans "كل الأقسام" %}</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"i" %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <select name="status" class="filter-select" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">
+                    <option value="">{% trans "كل الحالات" %}</option>
+                    {% for code, name in status_choices %}
+                        <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>
+                            {{ name }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                    {% trans "تصفية" %}
+                </button>
+            </form>
+
+            <!-- Articles Table -->
+            <table class="custom-table" style="font-size: 0.9rem;">
+                <thead>
+                    <tr>
+                        <th>{% trans "المقال" %}</th>
+                        <th>{% trans "القسم" %}</th>
+                        <th>{% trans "الحالة" %}</th>
+                        <th style="text-align: center;">{% trans "المشاهدات" %}</th>
+                        <th style="text-align: center;">{% trans "العمليات" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for article in page_obj %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600;">{{ article.title }}</div>
+                            <span style="font-size: 0.7rem; color: var(--text-secondary);">{{ article.created_at|date:"Y-m-d H:i" }}</span>
+                        </td>
+                        <td>{{ article.category.name }}</td>
+                        <td>
+                            <span class="badge badge-{{ article.status }}" style="font-size: 0.7rem;">
+                                {% if article.status == 'published' %}{% trans "منشور" %}
+                                {% elif article.status == 'draft' %}{% trans "مسودة" %}
+                                {% elif article.status == 'review' %}{% trans "مراجعة" %}
+                                {% else %}{% trans "مؤرشف" %}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td style="text-align: center; font-family: var(--font-english);">{{ article.views_count }}</td>
+                        <td style="text-align: center;">
+                            <div style="display: flex; gap: 0.25rem; justify-content: center;">
+                                <a href="{% url 'dashboard:article_edit' article.pk %}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;" title="{% trans "تعديل" %}">
+                                    <span class="icon" style="font-size: 14px;">edit</span>
+                                </a>
+                                <a href="{% url 'dashboard:article_preview' article.pk %}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem;" title="{% trans "معاينة" %}">
+                                    <span class="icon" style="font-size: 14px;">visibility</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            {% trans "لا يوجد مقالات مكتوبة مطابقة للبحث." %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div style="display: flex; justify-content: center; gap: 0.25rem; margin-top: 1.5rem;">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                        {% trans "السابق" %}
+                    </a>
+                {% endif %}
+                <span class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border-color: var(--accent-color); cursor: default;">
+                    {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                </span>
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                        {% trans "التالي" %}
+                    </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Panel: Edit Permissions Form -->
+    <div class="mgmt-card" style="height: fit-content;">
+        <h3 class="mgmt-title">
+            <span class="icon">admin_panel_settings</span>
+            <span>{% trans "البيانات والصلاحيات" %}</span>
+        </h3>
+        
+        <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1.25rem;">
+            {% csrf_token %}
+            
+            {% for field in form %}
+                {% if field.field.widget.input_type == 'checkbox' %}
+                    <div style="background-color: var(--bg-primary); padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.5rem;">
+                        {{ field }}
+                        <label for="{{ field.id_for_label }}" style="font-size: 0.85rem; font-weight: 500; cursor: pointer;">{{ field.label }}</label>
+                    </div>
+                {% else %}
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label" for="{{ field.id_for_label }}" style="font-size: 0.85rem;">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <span style="color: var(--accent-danger); font-size: 0.75rem;">{{ field.errors }}</span>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+            
+            <button type="submit" class="btn btn-primary" style="padding: 0.75rem; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <span class="icon">save</span>
+                <span>{% trans "تحديث الإعدادات والصلاحيات" %}</span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "إحصائيات الكاتب" %}{% endblock %}
+
+{% block header_title %}
+    <h1>{% trans "إحصائيات الكاتب" %}</h1>
+    <p>{% trans "استعرض تفاصيل ملفك المهني وإحصائيات قراءة مقالاتك" %}</p>
+{% endblock %}
+
+{% block content %}
+{% if error %}
+    <div class="alert alert-danger" style="margin-top: 2rem;">
+        <span class="icon">error</span>
+        <div>{{ error }}</div>
+    </div>
+{% else %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+        <!-- Author Profile Card -->
+        <div class="preview-card" style="padding: 2rem; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem; margin-bottom: 0;">
+            <div style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 3px solid var(--accent-color); margin-bottom: 1rem;">
+                {% if author.avatar %}
+                    <img src="{{ author.avatar.url }}" alt="{{ author }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    <img src="https://ui-avatars.com/api/?name={{ author }}&background=3b82f6&color=fff" alt="{{ author }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% endif %}
+            </div>
+            
+            <h2 style="font-size: 1.5rem; font-weight: 700;">{{ author }}</h2>
+            <span class="badge" style="background-color: rgba(139, 92, 246, 0.15); color: #8b5cf6; font-size: 0.85rem; font-weight: 600;">
+                {{ author.get_role_display }}
+            </span>
+            
+            {% if author.specialization %}
+                <p style="font-size: 0.9rem; color: var(--accent-color); font-weight: 500;">
+                    {% trans "التخصص" %}: {{ author.specialization }}
+                </p>
+            {% endif %}
+            
+            <p style="font-size: 0.9rem; color: var(--text-secondary); max-width: 400px; line-height: 1.6;">
+                {{ author.bio|default:"لا يوجد سيرة ذاتية مكتوبة حالياً." }}
+            </p>
+
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                {% if author.twitter %}
+                    <a href="{{ author.twitter }}" target="_blank" class="btn btn-secondary" style="padding: 0.5rem; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;" title="Twitter">
+                        <span class="icon">share</span>
+                    </a>
+                {% endif %}
+                {% if author.linkedin %}
+                    <a href="{{ author.linkedin }}" target="_blank" class="btn btn-secondary" style="padding: 0.5rem; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;" title="LinkedIn">
+                        <span class="icon">link</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Performance Stats Overview -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- Stat: Written Articles -->
+            <div class="metric-card" style="flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="metric-title">{% trans "إجمالي المقالات المكتوبة" %}</span>
+                    <span class="icon" style="color: var(--accent-success); font-size: 28px;">menu_book</span>
+                </div>
+                <span class="metric-value">{{ total_articles }}</span>
+                <span style="font-size: 0.85rem; color: var(--text-secondary);">{% trans "تتضمن المقالات المنشورة والمسودات والأرشيف" %}</span>
+            </div>
+
+            <!-- Stat: Total Views -->
+            <div class="metric-card" style="flex-grow: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="metric-title">{% trans "إجمالي مشاهدات مقالاتك" %}</span>
+                    <span class="icon" style="color: var(--accent-color); font-size: 28px;">query_stats</span>
+                </div>
+                <span class="metric-value" style="font-family: var(--font-english);">{{ total_views }}</span>
+                <span style="font-size: 0.85rem; color: var(--text-secondary);">{% trans "متوسط القراءات لكل مقال" %}: 
+                    {% if total_articles > 0 %}
+                        <span style="font-family: var(--font-english); font-weight: 600;">{% widthratio total_views total_articles 1 %}</span>
+                    {% else %}0{% endif %}
+                </span>
+            </div>
+
+            <!-- Joined Date Info -->
+            <div class="metric-card" style="padding: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; color: var(--text-secondary); font-size: 0.9rem;">
+                    <span class="icon" style="color: var(--accent-warning);">event</span>
+                    <span>{% trans "تاريخ الانضمام للفريق" %}: <strong>{{ author.joined_date|date:"Y-m-d" }}</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Author Articles List -->
+    <div class="table-container">
+        <div class="table-header-row">
+            <span style="font-weight: 700; font-size: 1.1rem;">{% trans "مقالاتك الأخيرة" %}</span>
+        </div>
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>{% trans "العنوان" %}</th>
+                    <th>{% trans "القسم" %}</th>
+                    <th>{% trans "الحالة" %}</th>
+                    <th style="text-align: center;">{% trans "المشاهدات" %}</th>
+                    <th>{% trans "تاريخ الإنشاء" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for article in articles|slice:":10" %}
+                <tr>
+                    <td style="font-weight: 600;">
+                        <a href="{% url 'dashboard:article_preview' article.pk %}" style="color: var(--text-primary); hover: underline;">
+                            {{ article.title }}
+                        </a>
+                    </td>
+                    <td>{{ article.category.name }}</td>
+                    <td>
+                        <span class="badge badge-{{ article.status }}">
+                            {% if article.status == 'published' %}{% trans "منشور" %}
+                            {% elif article.status == 'draft' %}{% trans "مسودة" %}
+                            {% elif article.status == 'review' %}{% trans "مراجعة" %}
+                            {% else %}{% trans "مؤرشف" %}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td style="text-align: center; font-family: var(--font-english);">{{ article.views_count }}</td>
+                    <td>{{ article.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--text-secondary);">
+                        {% trans "لم تقم بكتابة أي مقالات بعد." %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
+{% endblock %}

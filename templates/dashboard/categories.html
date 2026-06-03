@@ -1,0 +1,60 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "الأقسام والتصنيفات" %}{% endblock %}
+
+{% block header_title %}
+    <h1>{% trans "الأقسام والتصنيفات" %}</h1>
+    <p>{% trans "استعرض شجرة تصنيفات المقالات المتاحة في النظام" %}</p>
+{% endblock %}
+
+{% block content %}
+<div class="table-container" style="padding: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <h2>{% trans "شجرة الأقسام" %}</h2>
+        <span class="badge" style="background-color: var(--bg-tertiary); color: var(--text-primary); font-size: 0.9rem;">
+            {% trans "إجمالي الأقسام" %}: {{ categories.count }}
+        </span>
+    </div>
+
+    <!-- Visual Categories Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        {% for category in categories %}
+            <div class="metric-card" style="border-left: 4px solid {{ category.color|default:'#3b82f6' }};">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <!-- Category Color Dot/Icon -->
+                        <div style="width: 35px; height: 35px; border-radius: 50%; background-color: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;">
+                            <span class="icon" style="color: {{ category.color|default:'#3b82f6' }}; font-size: 20px;">
+                                {{ category.icon|default:'folder' }}
+                            </span>
+                        </div>
+                        <span style="font-weight: 700; font-size: 1.1rem;">{{ category.name }}</span>
+                    </div>
+                    <div>
+                        {% if category.is_active %}
+                            <span class="badge badge-published">{% trans "نشط" %}</span>
+                        {% else %}
+                            <span class="badge badge-archived">{% trans "معطل" %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
+                    <span><strong>Slug:</strong> <code style="color: var(--text-primary); background-color: rgba(255,255,255,0.02); padding: 0.1rem 0.3rem; border-radius: 0.25rem;">{{ category.slug }}</code></span>
+                    {% if category.parent %}
+                        <span><strong>{% trans "القسم الأب" %}:</strong> {{ category.parent.name }}</span>
+                    {% else %}
+                        <span><strong>{% trans "القسم الأب" %}:</strong> {% trans "رئيسي" %}</span>
+                    {% endif %}
+                    <span><strong>{% trans "ترتيب العرض" %}:</strong> {{ category.order }}</span>
+                </div>
+            </div>
+        {% empty %}
+            <div style="text-align: center; color: var(--text-secondary); grid-column: 1 / -1; padding: 3rem;">
+                {% trans "لا يوجد أقسام مسجلة في النظام حالياً." %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

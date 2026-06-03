@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load thumbnail %}
+
+{% block title %}{% trans "نتائج البحث" %} - {{ query }}{% endblock %}
+
+{% block breadcrumbs %}
+    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+{% endblock %}
+
+{% block content %}
+<section class="py-12 bg-surface">
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop">
+        
+        <!-- Search Header Info -->
+        <div class="mb-12 border-b border-outline-variant pb-6">
+            <h1 class="text-headline-lg font-headline-lg text-primary mb-2">
+                {% trans "نتائج البحث عن" %}: <span class="text-secondary">"{{ query }}"</span>
+            </h1>
+            <p class="text-on-surface-variant text-sm">
+                {% blocktrans with count=paginator.count %}تم العثور على {{ count }} نتيجة تطابق كلمات البحث.{% endblocktrans %}
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+            
+            <!-- Main Content Area: Results Grid -->
+            <main class="lg:col-span-8 space-y-12">
+                {% if articles %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {% for article in articles %}
+                            <article class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col group hover:shadow-md transition-all duration-300">
+                                <a href="{{ article.get_absolute_url }}" class="relative overflow-hidden aspect-video border-b border-outline-variant block">
+                                    {% if article.cover_image %}
+                                        {% thumbnail article.cover_image "600x400" crop="center" as im %}
+                                            <img src="{{ im.url }}" alt="{{ article.title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                        {% empty %}
+                                            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                        {% endthumbnail %}
+                                    {% else %}
+                                        <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                    {% endif %}
+                                    <div class="absolute top-3 start-3 bg-primary text-on-primary text-[10px] font-bold px-2 py-1 rounded">
+                                        {{ article.category.name }}
+                                    </div>
+                                </a>
+                                
+                                <div class="p-6 flex flex-col flex-grow">
+                                    <span class="text-xs text-outline font-semibold mb-2 block">
+                                        {{ article.published_at|date:"Y-m-d" }} | {{ article.read_time }} {% trans "دقائق" %}
+                                    </span>
+                                    <h3 class="font-bold text-primary group-hover:text-secondary transition-colors mb-3 leading-snug">
+                                        <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
+                                    </h3>
+                                    <p class="text-on-surface-variant text-sm leading-relaxed mb-6 flex-grow">
+                                        {{ article.excerpt|default:article.body|truncatewords:20 }}
+                                    </p>
+                                    <div class="flex items-center justify-between border-t border-outline-variant pt-4 mt-auto">
+                                        <span class="text-xs font-semibold text-primary">
+                                            {{ article.author.author_profile.display_name|default:article.author.username }}
+                                        </span>
+                                        <div class="flex items-center gap-1 text-on-surface-variant text-xs">
+                                            <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                            <span>{{ article.views_count }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                        <nav class="flex justify-center items-center gap-2 mt-12 pt-6 border-t border-outline-variant">
+                            {% if page_obj.has_previous %}
+                                <a href="?q={{ query }}&page={{ page_obj.previous_page_number }}" class="border border-outline-variant px-4 py-2 hover:bg-surface-container-low text-sm font-semibold rounded transition-colors">
+                                    {% trans "السابق" %}
+                                </a>
+                            {% endif %}
+                            
+                            <span class="bg-primary text-on-primary px-4 py-2 text-sm font-bold rounded">
+                                {{ page_obj.number }} / {{ paginator.num_pages }}
+                            </span>
+                            
+                            {% if page_obj.has_next %}
+                                <a href="?q={{ query }}&page={{ page_obj.next_page_number }}" class="border border-outline-variant px-4 py-2 hover:bg-surface-container-low text-sm font-semibold rounded transition-colors">
+                                    {% trans "التالي" %}
+                                </a>
+                            {% endif %}
+                        </nav>
+                    {% endif %}
+
+                {% else %}
+                    <!-- No Results Fallback -->
+                    <div class="text-center py-20 bg-surface-container-lowest border border-outline-variant rounded-lg">
+                        <span class="material-symbols-outlined text-outline text-[64px] mb-4">search_off</span>
+                        <h2 class="text-headline-md font-headline-md text-primary mb-2">{% trans "لم نجد أي نتائج للمقالات" %}</h2>
+                        <p class="text-on-surface-variant text-sm max-w-md mx-auto mb-8">
+                            {% trans "يرجى التحقق من صياغة كلمات البحث أو محاولة استخدام مصطلحات أعم وأشمل، أو تصفح الأقسام الرئيسية للموقع." %}
+                        </p>
+                        <a href="{% url 'news:article_list' %}" class="bg-primary text-on-primary px-6 py-3 font-bold hover:opacity-90 transition-opacity">
+                            {% trans "تصفح آخر الأخبار" %}
+                        </a>
+                    </div>
+                {% endif %}
+            </main>
+
+            <!-- Sidebar Info -->
+            <aside class="lg:col-span-4 space-y-8">
+                <!-- Search Again Widget -->
+                <div class="bg-surface-container-low p-6 border border-outline-variant rounded-lg">
+                    <h4 class="font-bold text-primary mb-4 text-label-sm tracking-widest uppercase">{% trans "بحث جديد" %}</h4>
+                    <form action="{% url 'core:search' %}" method="get" class="flex flex-col gap-3">
+                        <input type="text" name="q" value="{{ query }}" placeholder="{% trans "ابحث عن أخبار..." %}" class="w-full bg-surface border border-outline px-4 py-3 text-sm outline-none focus:border-secondary text-primary" required>
+                        <button type="submit" class="bg-primary text-on-primary w-full py-3 font-bold hover:opacity-90 flex items-center justify-center gap-2 text-sm">
+                            <span class="material-symbols-outlined text-[18px]">search</span>
+                            {% trans "ابحث الآن" %}
+                        </button>
+                    </form>
+                </div>
+            </aside>
+
+        </div>
+    </div>
+</section>
+{% endblock %}
