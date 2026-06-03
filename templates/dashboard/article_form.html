@@ -2,7 +2,8 @@
 {% load i18n %}
 
 {% block title %}
-    {% if object %}{% trans "تعديل مقال" %}{% else %}{% trans "إضافة مقال جديد" %}{% endblock %}
+    {% if object %}{% trans "تعديل مقال" %}{% else %}{% trans "إضافة مقال جديد" %}{% endif %}
+{% endblock %}
 {% block extra_head %}
     <!-- Load CKEditor 5 assets -->
     {{ form.media }}
@@ -94,6 +95,15 @@
 <form method="post" enctype="multipart/form-data" style="max-width: 1200px;">
     {% csrf_token %}
 
+    <!-- Auto-translation notice -->
+    <div style="display:flex; align-items:flex-start; gap:0.75rem; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:0.75rem; padding:1rem 1.25rem; margin-bottom:1.75rem;">
+        <span class="icon" style="color:var(--accent-color); font-size:22px; flex-shrink:0; margin-top:2px;">translate</span>
+        <div>
+            <strong style="color:var(--accent-color);">{% trans "الترجمة التلقائية مُفعّلة" %}</strong>
+            <p style="margin:0.25rem 0 0; font-size:0.875rem; color:var(--text-secondary);">{% trans "عند حفظ المقال، ستُترجَم الحقول الإنجليزية الفارغة تلقائياً من العربية. إذا أدخلت نصاً إنجليزياً يدوياً في أي حقل، فلن يتم استبداله." %}</p>
+        </div>
+    </div>
+
     <!-- Section 1: Main Content (Titles & Slugs) -->
     <div class="form-card">
         <h3 class="form-section-title">
@@ -110,7 +120,10 @@
                 {% endif %}
             </div>
             <div class="form-group">
-                <label class="form-label" for="{{ form.title_en.id_for_label }}">{{ form.title_en.label }}</label>
+                <label class="form-label" for="{{ form.title_en.id_for_label }}">
+                    {{ form.title_en.label }}
+                    <span style="font-size:0.75rem; font-weight:400; color:var(--accent-color); margin-inline-start:0.4rem;">({% trans "سيتم الترجمة تلقائياً إذا تُرك فارغاً" %})</span>
+                </label>
                 {{ form.title_en }}
                 {% if form.title_en.errors %}
                     <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.title_en.errors }}</span>
@@ -226,7 +239,10 @@
                 {% endif %}
             </div>
             <div class="form-group">
-                <label class="form-label" for="{{ form.excerpt_en.id_for_label }}">{{ form.excerpt_en.label }}</label>
+                <label class="form-label" for="{{ form.excerpt_en.id_for_label }}">
+                    {{ form.excerpt_en.label }}
+                    <span style="font-size:0.75rem; font-weight:400; color:var(--accent-color); margin-inline-start:0.4rem;">({% trans "سيتم الترجمة تلقائياً إذا تُرك فارغاً" %})</span>
+                </label>
                 {{ form.excerpt_en }}
                 {% if form.excerpt_en.errors %}
                     <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.excerpt_en.errors }}</span>
@@ -245,7 +261,10 @@
         </div>
 
         <div class="form-group" style="margin-top: 2.5rem;">
-            <label class="form-label" for="{{ form.body_en.id_for_label }}">{{ form.body_en.label }}</label>
+            <label class="form-label" for="{{ form.body_en.id_for_label }}">
+                {{ form.body_en.label }}
+                <span style="font-size:0.75rem; font-weight:400; color:var(--accent-color); margin-inline-start:0.4rem;">({% trans "سيتم الترجمة تلقائياً إذا تُرك فارغاً" %})</span>
+            </label>
             <div style="margin-top: 0.5rem;">
                 {{ form.body_en }}
             </div>

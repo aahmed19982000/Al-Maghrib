@@ -1,0 +1,206 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}
+    {% trans "تسجيل كاتب جديد" %}
+{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 1.25rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .form-section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+        .form-checkbox-group {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            padding: 1rem;
+            background-color: rgba(255,255,255,0.02);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .checkbox-label input[type="checkbox"] {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+    </style>
+{% endblock %}
+
+{% block header_title %}
+    <h1>{% trans "تسجيل كاتب جديد" %}</h1>
+    <p>{% trans "قم بإنشاء حساب مستخدم جديد ككاتب أو محرر وعيّن صلاحياته الفردية مباشرة" %}</p>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data" style="max-width: 1100px;">
+    {% csrf_token %}
+
+    <!-- Section 1: User Account Credentials -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">account_circle</span>
+            <span>{% trans "بيانات الحساب وتسجيل الدخول" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.username.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.email.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.password.errors }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}</label>
+                {{ form.first_name }}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}</label>
+                {{ form.last_name }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Author Profile & Socials -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">badge</span>
+            <span>{% trans "الملف التعريفي للكاتب (Public Profile)" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.display_name.id_for_label }}">{{ form.display_name.label }}</label>
+                {{ form.display_name }}
+                <small style="color: var(--text-secondary);">{% trans "الاسم الذي يظهر للقراء في المقالات" %}</small>
+                {% if form.display_name.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.display_name.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.specialization.id_for_label }}">{{ form.specialization.label }}</label>
+                {{ form.specialization }}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.avatar.id_for_label }}">{{ form.avatar.label }}</label>
+                {{ form.avatar }}
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label class="form-label" for="{{ form.bio.id_for_label }}">{{ form.bio.label }}</label>
+            {{ form.bio }}
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.email_public.id_for_label }}">{{ form.email_public.label }}</label>
+                {{ form.email_public }}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.twitter.id_for_label }}">{{ form.twitter.label }}</label>
+                {{ form.twitter }}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.linkedin.id_for_label }}">{{ form.linkedin.label }}</label>
+                {{ form.linkedin }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Roles & Permission Settings -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">admin_panel_settings</span>
+            <span>{% trans "إعدادات الدور والصلاحيات" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="{{ form.role.id_for_label }}">{{ form.role.label }}</label>
+                {{ form.role }}
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end; margin-bottom: 0.5rem;">
+                <div style="background-color: var(--bg-primary); padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border-color); display: inline-flex; align-items: center; gap: 0.5rem;">
+                    {{ form.is_active }}
+                    <label for="{{ form.is_active.id_for_label }}" style="font-weight: 500; cursor: pointer;">{{ form.is_active.label }}</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 2rem;">
+            <label class="form-label">{% trans "تحديد صلاحيات الكاتب الإضافية" %}</label>
+            <div class="form-checkbox-group">
+                <label class="checkbox-label">
+                    {{ form.can_publish_directly }}
+                    <span>{{ form.can_publish_directly.label }}</span>
+                </label>
+                <label class="checkbox-label">
+                    {{ form.can_edit_others }}
+                    <span>{{ form.can_edit_others.label }}</span>
+                </label>
+                <label class="checkbox-label">
+                    {{ form.can_delete_articles }}
+                    <span>{{ form.can_delete_articles.label }}</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 4rem;">
+        <button type="submit" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">
+            <span class="icon">person_add</span>
+            <span>{% trans "تسجيل كاتب جديد" %}</span>
+        </button>
+        <a href="{% url 'dashboard:authors_list' %}" class="btn btn-secondary" style="padding: 0.8rem 2rem; font-size: 1rem;">
+            {% trans "إلغاء" %}
+        </a>
+    </div>
+</form>
+{% endblock %}

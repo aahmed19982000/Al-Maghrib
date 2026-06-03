@@ -87,3 +87,62 @@ class ArticleForm(forms.ModelForm):
         self.fields['meta_desc_en'].label = "SEO Description (English)"
         self.fields['cover_image'].widget.attrs.update({'class': 'form-control'})
         self.fields['tags'].required = False
+
+class CategoryForm(forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = [
+            'name_ar', 'name_en',
+            'slug',
+            'icon',
+            'parent',
+            'is_active',
+            'order',
+            'color',
+            'meta_title_ar', 'meta_title_en',
+            'meta_description_ar', 'meta_description_en',
+            'meta_keywords_ar', 'meta_keywords_en'
+        ]
+        widgets = {
+            'name_ar': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'اسم القسم بالعربية'}),
+            'name_en': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Category name in English'}),
+            'slug': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'slug-url'}),
+            'icon': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. folder, article, info'}),
+            'parent': forms.Select(attrs={'class': 'form-control'}),
+            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
+            'color': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '#3b82f6 or class name'}),
+            'meta_title_ar': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'عنوان سيو بالعربية'}),
+            'meta_title_en': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'SEO Title in English'}),
+            'meta_description_ar': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'وصف سيو بالعربية'}),
+            'meta_description_en': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'SEO Description in English'}),
+            'meta_keywords_ar': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'كلمات مفتاحية بالعربية'}),
+            'meta_keywords_en': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Keywords in English'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['name_ar'].label = "اسم القسم (عربي)"
+        self.fields['name_en'].label = "Name (English)"
+        self.fields['slug'].label = "الرابط الفرعي (Slug)"
+        self.fields['icon'].label = "الأيقونة (Material Symbol / CSS class)"
+        self.fields['parent'].label = "القسم الأب (Parent Category)"
+        self.fields['is_active'].label = "نشط"
+        self.fields['order'].label = "ترتيب العرض"
+        self.fields['color'].label = "اللون المميز (Color)"
+        self.fields['meta_title_ar'].label = "عنوان SEO (عربي)"
+        self.fields['meta_title_en'].label = "SEO Title (English)"
+        self.fields['meta_description_ar'].label = "وصف SEO (عربي)"
+        self.fields['meta_description_en'].label = "SEO Description (English)"
+        self.fields['meta_keywords_ar'].label = "كلمات SEO الدلالية (عربي)"
+        self.fields['meta_keywords_en'].label = "SEO Keywords (English)"
+        
+        # Make parent, icon, color, etc. optional
+        self.fields['parent'].required = False
+        self.fields['icon'].required = False
+        self.fields['color'].required = False
+        self.fields['order'].required = False
+        
+        # Prevent circular parent relationships
+        if self.instance and self.instance.pk:
+            self.fields['parent'].queryset = Category.objects.exclude(pk=self.instance.pk)
+

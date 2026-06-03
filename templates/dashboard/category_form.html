@@ -1,0 +1,180 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}
+    {% if object %}{% trans "تعديل القسم" %}{% else %}{% trans "إضافة قسم جديد" %}{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+    <style>
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .form-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 1.25rem;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .form-section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+    </style>
+{% endblock %}
+
+{% block header_title %}
+    <h1>{% if object %}{% trans "تعديل القسم" %}{% else %}{% trans "إضافة قسم جديد" %}{% endif %}</h1>
+    <p>{% if object %}{% trans "تحديث بيانات القسم الحالي وإعدادات الأرشفة والترتيب" %}{% else %}{% trans "قم بإنشاء قسم مقالات جديد وتعبئة البيانات باللغتين العربية والإنجليزية" %}{% endif %}</p>
+{% endblock %}
+
+{% block content %}
+<form method="post" style="max-width: 1000px;">
+    {% csrf_token %}
+
+    <!-- Section 1: Basic Information -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">folder</span>
+            <span>{% trans "معلومات القسم الأساسية (عربي وإنجليزي)" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.name_ar.id_for_label }}">{{ form.name_ar.label }}</label>
+                {{ form.name_ar }}
+                {% if form.name_ar.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.name_ar.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.name_en.id_for_label }}">{{ form.name_en.label }}</label>
+                {{ form.name_en }}
+                {% if form.name_en.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.name_en.errors }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.slug.id_for_label }}">{{ form.slug.label }}</label>
+                {{ form.slug }}
+                <small style="color: var(--text-secondary);">{% trans "اتركه فارغاً ليتم توليده تلقائياً من الاسم" %}</small>
+                {% if form.slug.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.slug.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.parent.id_for_label }}">{{ form.parent.label }}</label>
+                {{ form.parent }}
+                {% if form.parent.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.parent.errors }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Layout & Aesthetics -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">palette</span>
+            <span>{% trans "إعدادات المظهر والترتيب" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.icon.id_for_label }}">{{ form.icon.label }}</label>
+                {{ form.icon }}
+                <small style="color: var(--text-secondary);">{% trans "اسم الأيقونة من Material Symbols مثل (folder, article, book)" %}</small>
+                {% if form.icon.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.icon.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.color.id_for_label }}">{{ form.color.label }}</label>
+                {{ form.color }}
+                <small style="color: var(--text-secondary);">{% trans "رمز اللون بالصيغة الست عشرية (مثال: #3b82f6)" %}</small>
+                {% if form.color.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.color.errors }}</span>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.order.id_for_label }}">{{ form.order.label }}</label>
+                {{ form.order }}
+                {% if form.order.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.order.errors }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="background-color: var(--bg-primary); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border-color); display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+            {{ form.is_active }}
+            <label for="{{ form.is_active.id_for_label }}" style="font-weight: 600; cursor: pointer;">{{ form.is_active.label }}</label>
+        </div>
+    </div>
+
+    <!-- Section 3: SEO Settings -->
+    <div class="form-card">
+        <h3 class="form-section-title">
+            <span class="icon">travel_explore</span>
+            <span>{% trans "إعدادات محركات البحث (SEO)" %}</span>
+        </h3>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_title_ar.id_for_label }}">{{ form.meta_title_ar.label }}</label>
+                {{ form.meta_title_ar }}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_title_en.id_for_label }}">{{ form.meta_title_en.label }}</label>
+                {{ form.meta_title_en }}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_description_ar.id_for_label }}">{{ form.meta_description_ar.label }}</label>
+                {{ form.meta_description_ar }}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_description_en.id_for_label }}">{{ form.meta_description_en.label }}</label>
+                {{ form.meta_description_en }}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_keywords_ar.id_for_label }}">{{ form.meta_keywords_ar.label }}</label>
+                {{ form.meta_keywords_ar }}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="{{ form.meta_keywords_en.id_for_label }}">{{ form.meta_keywords_en.label }}</label>
+                {{ form.meta_keywords_en }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display: flex; gap: 1rem; margin-bottom: 4rem;">
+        <button type="submit" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">
+            <span class="icon">save</span>
+            <span>{% trans "حفظ القسم" %}</span>
+        </button>
+        <a href="{% url 'dashboard:categories' %}" class="btn btn-secondary" style="padding: 0.8rem 2rem; font-size: 1rem;">
+            {% trans "إلغاء" %}
+        </a>
+    </div>
+</form>
+{% endblock %}

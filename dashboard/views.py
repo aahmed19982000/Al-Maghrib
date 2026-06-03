@@ -14,8 +14,8 @@ from guardian.shortcuts import assign_perm
 from news.models import Article, Category, Comment
 from accounts.models import AuthorProfile
 from .models import ActivityLog, ArticleRevision
-from .forms import ArticleForm
-from .forms_author import AuthorProfileForm
+from .forms import ArticleForm, CategoryForm
+from .forms_author import AuthorProfileForm, AuthorCreateForm
 
 class DashboardAccessRequiredMixin(UserPassesTestMixin):
     def test_func(self):
@@ -500,3 +500,88 @@ class CommentActionView(LoginRequiredMixin, DashboardAccessRequiredMixin, View):
         
         next_url = request.POST.get('next') or reverse('dashboard:home')
         return HttpResponseRedirect(next_url)
+
+
+# Views for managing Categories and Authors (staff and admin only)
+class StaffAdminRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_authenticated and (self.request.user.is_superuser or self.request.user.is_staff)
+
+class CategoryCreateView(LoginRequiredMixin, StaffAdminRequiredMixin, CreateView):
+    model = Category
+    form_class = CategoryForm
+    template_name = 'dashboard/category_form.html'
+    success_url = reverse_lazy('dashboard:categories')
+
+    def form_valid(self, form):
+        # Generate slug if empty
+        if not form.instance.slug:
+            name = form.cleaned_data.get('name_en') or form.cleaned_data.get('name_ar') or "category"
+            form.instance.slug = slugify(name, allow_unicode=True)
+            
+        # Check slug uniqueness
+        slug = form.instance.slug
+        base_slug = slug
+        counter = 1
+        while Category.objects.filter(slug=slug).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        form.instance.slug = slug
+        
+        response = super().form_valid(form)
+        
+        ActivityLog.objects.create(
+            user=self.request.user,
+            action_type="إنشاء قسم",
+            description=f"تم إنشاء القسم الجديد: {self.object.name}"
+        )
+        messages.success(self.request, "تم إنشاء القسم بنجاح.")
+        return response
+
+class CategoryUpdateView(LoginRequiredMixin, StaffAdminRequiredMixin, UpdateView):
+    model = Category
+    form_class = CategoryForm
+    template_name = 'dashboard/category_form.html'
+    success_url = reverse_lazy('dashboard:categories')
+
+    def form_valid(self, form):
+        # Generate slug if empty
+        if not form.instance.slug:
+            name = form.cleaned_data.get('name_en') or form.cleaned_data.get('name_ar') or "category"
+            form.instance.slug = slugify(name, allow_unicode=True)
+            
+        # Check slug uniqueness
+        slug = form.instance.slug
+        base_slug = slug
+        counter = 1
+        while Category.objects.filter(slug=slug).exclude(pk=self.object.pk).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        form.instance.slug = slug
+        
+        response = super().form_valid(form)
+        
+        ActivityLog.objects.create(
+            user=self.request.user,
+            action_type="تعديل قسم",
+            description=f"تم تعديل القسم: {self.object.name}"
+        )
+        messages.success(self.request, "تم تحديث القسم بنجاح.")
+        return response
+
+class AuthorCreateView(LoginRequiredMixin, StaffAdminRequiredMixin, CreateView):
+    model = AuthorProfile
+    form_class = AuthorCreateForm
+    template_name = 'dashboard/author_create.html'
+    success_url = reverse_lazy('dashboard:authors_list')
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        ActivityLog.objects.create(
+            user=self.request.user,
+            action_type="إنشاء كاتب",
+            description=f"تم تسجيل كاتب جديد: {self.object} (@{self.object.user.username})"
+        )
+        messages.success(self.request, "تم إنشاء حساب الكاتب وتحديد صلاحياته بنجاح.")
+        return response
+

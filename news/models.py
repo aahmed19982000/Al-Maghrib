@@ -98,9 +98,39 @@ class Article(models.Model):
 
     def save(self, *args, **kwargs):
         # Automatic Pillow Image Compression and WebP Conversion
-        from core.utils import optimize_image_field
+        from core.utils import optimize_image_field, translate_text, is_html_empty
+
         optimize_image_field(self, 'cover_image', max_size=(1200, 1200), quality=85)
+
+        # ── Auto-translate Arabic fields → English when English fields are empty ──
+        # Only runs when the update_fields kwarg does NOT exclude these fields
+        # (i.e., not triggered by a simple soft-delete update_fields=['deleted_at'])
+        update_fields = kwargs.get('update_fields')
+        skip_translation = update_fields is not None and 'title_en' not in update_fields
+
+        if not skip_translation:
+            # Title
+            if self.title_ar and not (self.title_en or '').strip():
+                self.title_en = translate_text(self.title_ar)
+
+            # Excerpt
+            if self.excerpt_ar and not (self.excerpt_en or '').strip():
+                self.excerpt_en = translate_text(self.excerpt_ar)
+
+            # Body (HTML-aware: check for truly empty CKEditor output)
+            if self.body_ar and is_html_empty(self.body_en):
+                self.body_en = translate_text(self.body_ar)
+
+            # SEO meta title
+            if self.meta_title_ar and not (self.meta_title_en or '').strip():
+                self.meta_title_en = translate_text(self.meta_title_ar)
+
+            # SEO meta description
+            if self.meta_desc_ar and not (self.meta_desc_en or '').strip():
+                self.meta_desc_en = translate_text(self.meta_desc_ar)
+
         super().save(*args, **kwargs)
+
 
     def delete(self, *args, **kwargs):
         self.deleted_at = timezone.now()

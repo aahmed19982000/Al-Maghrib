@@ -7,9 +7,12 @@ from .views import (
     ArticlePreviewView, 
     ArticleBulkActionView,
     CategoryTreeView, 
+    CategoryCreateView,
+    CategoryUpdateView,
     AuthorStatsView,
     AuthorManagementListView,
     AuthorManagementDetailView,
+    AuthorCreateView,
     CommentActionView
 )
 
@@ -23,6 +26,8 @@ urlpatterns = [
     path('articles/<int:pk>/preview/', ArticlePreviewView.as_view(), name='article_preview'),
     path('articles/bulk-action/', ArticleBulkActionView.as_view(), name='article_bulk_action'),
     path('categories/', CategoryTreeView.as_view(), name='categories'),
+    path('categories/create/', CategoryCreateView.as_view(), name='category_create'),
+    path('categories/<int:pk>/edit/', CategoryUpdateView.as_view(), name='category_edit'),
     path('stats/', AuthorStatsView.as_view(), name='stats'),
     
     # Comments moderation
@@ -30,5 +35,6 @@ urlpatterns = [
     
     # Author Management (Staff/Admin)
     path('authors/', AuthorManagementListView.as_view(), name='authors_list'),
+    path('authors/create/', AuthorCreateView.as_view(), name='author_create'),
     path('authors/<int:pk>/', AuthorManagementDetailView.as_view(), name='author_detail_mgmt'),
 ]
