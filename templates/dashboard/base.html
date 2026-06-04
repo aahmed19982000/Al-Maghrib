@@ -140,6 +140,18 @@
                 </li>
                 {% if request.user.is_staff or request.user.is_superuser %}
                 <li>
+                    <a href="{% url 'dashboard:homepage_settings' %}" class="sidebar-link {% if request.resolver_match.url_name == 'homepage_settings' %}active{% endif %}">
+                        <span class="icon">settings</span>
+                        <span>{% trans "إعدادات الرئيسية" %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'dashboard:site_settings' %}" class="sidebar-link {% if request.resolver_match.url_name == 'site_settings' %}active{% endif %}">
+                        <span class="icon">public</span>
+                        <span>{% trans "إعدادات الموقع العامة" %}</span>
+                    </a>
+                </li>
+                <li>
                     <a href="{% url 'dashboard:authors_list' %}" class="sidebar-link {% if 'authors_list' in request.resolver_match.url_name or 'author_detail_mgmt' in request.resolver_match.url_name %}active{% endif %}">
                         <span class="icon">group</span>
                         <span>{% trans "إدارة الكتاب" %}</span>

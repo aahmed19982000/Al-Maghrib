@@ -213,6 +213,38 @@
                     </div>
                 {% endif %}
             {% endfor %}
+
+            <!-- Expertise Formset -->
+            <div style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <h4 style="font-size: 1rem; color: var(--text-primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span class="icon">stars</span>
+                    {% trans "مجالات التغطية والخبرة (المعروضة للجمهور)" %}
+                </h4>
+                {{ expertise_formset.management_form }}
+                {% for form in expertise_formset %}
+                    <div style="background-color: var(--bg-primary); padding: 1rem; border-radius: 0.5rem; border: 1px solid var(--border-color); margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                        {{ form.id }}
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.8rem;">{% trans "العنوان" %}</label>
+                            {{ form.title }}
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.8rem;">{% trans "الوصف" %}</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.8rem;">{% trans "الأيقونة" %} (<a href="https://fonts.google.com/icons" target="_blank" style="color: var(--accent-color);">Material Symbols</a>)</label>
+                            {{ form.icon }}
+                        </div>
+                        {% if form.instance.pk %}
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                                {{ form.DELETE }}
+                                <label for="{{ form.DELETE.id_for_label }}" style="font-size: 0.8rem; color: var(--accent-danger);">{% trans "حذف هذا المجال" %}</label>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
             
             <button type="submit" class="btn btn-primary" style="padding: 0.75rem; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
                 <span class="icon">save</span>

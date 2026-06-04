@@ -52,336 +52,310 @@
     </script>
 {% endblock %}
 
-{% block breadcrumbs %}
-    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
-{% endblock %}
-
 {% block content %}
-<!-- Sticky Reading Progress Bar -->
+<!-- Sticky Reading Progress -->
 <div class="fixed top-0 left-0 w-full z-[100]">
-    <div class="reading-progress-bar" id="progress"></div>
+<div class="reading-progress-bar" id="progress"></div>
 </div>
 
-<article class="py-12 bg-surface">
-    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop">
-        
-        <!-- Header Info -->
-        <div class="max-w-3xl mx-auto mb-10 text-center">
-            <a href="{{ article.category.get_absolute_url }}" class="bg-secondary-container text-on-secondary-container px-4 py-1.5 text-xs font-bold uppercase rounded-full inline-block mb-4 hover:opacity-90">
-                {{ article.category.name }}
-            </a>
-            
-            <h1 class="text-headline-lg md:text-[40px] font-bold text-primary mb-6 leading-tight">
-                {{ article.title }}
-            </h1>
-            
-            <!-- Metadata & Author details -->
-            <div class="flex flex-wrap items-center justify-center gap-6 text-sm text-on-surface-variant font-medium">
-                <a href="{{ article.author.author_profile.get_absolute_url }}" class="flex items-center gap-2 group hover:text-secondary">
-                    <div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs shrink-0 group-hover:border-secondary border transition-all">
-                        {{ article.author.username|slice:":2"|upper }}
-                    </div>
-                    <span>{{ article.author.author_profile.display_name|default:article.author.username }}</span>
-                </a>
-                <span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
-                <span>{{ article.published_at|date:"Y-m-d H:i" }}</span>
-                <span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
-                <div class="flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[18px]">schedule</span>
-                    <span>{{ article.read_time }} {% trans "دقائق قراءة" %}</span>
+<main class="w-full pt-12">
+<article class="max-w-[1280px] mx-auto">
+<!-- Article Header -->
+<header class="px-margin-mobile md:px-margin-desktop mb-12 text-center">
+<div class="flex justify-center mb-6">
+<a href="{{ article.category.get_absolute_url }}" class="bg-secondary text-on-secondary px-4 py-1 text-label-sm font-label-sm rounded-full hover:opacity-90 transition-opacity">{{ article.category.name }}</a>
+</div>
+<h1 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary max-w-[900px] mx-auto leading-tight mb-8">
+    {{ article.title }}
+</h1>
+<div class="flex flex-col md:flex-row items-center justify-center gap-6 py-8 border-y border-outline-variant">
+<div class="flex items-center gap-3">
+    {% if article.author.author_profile.avatar %}
+        {% thumbnail article.author.author_profile.avatar "150x150" crop="center" as im %}
+            <img alt="{{ article.author.author_profile.display_name|default:article.author.username }}" class="w-12 h-12 rounded-full object-cover grayscale" src="{{ im.url }}"/>
+        {% empty %}
+            <img alt="{{ article.author.author_profile.display_name|default:article.author.username }}" class="w-12 h-12 rounded-full object-cover grayscale" src="https://ui-avatars.com/api/?name={{ article.author.username }}&background=146c3c&color=fff"/>
+        {% endthumbnail %}
+    {% else %}
+        <img alt="{{ article.author.author_profile.display_name|default:article.author.username }}" class="w-12 h-12 rounded-full object-cover grayscale" src="https://ui-avatars.com/api/?name={{ article.author.username }}&background=146c3c&color=fff"/>
+    {% endif %}
+<div class="text-right">
+{% if article.author.author_profile %}
+<a href="{{ article.author.author_profile.get_absolute_url }}" class="font-bold text-primary text-body-md hover:text-secondary transition-colors">{{ article.author.author_profile.display_name|default:article.author.username }}</a>
+<p class="text-on-surface-variant text-label-sm">{{ article.author.author_profile.get_role_display|default:'كاتب' }}</p>
+{% else %}
+<span class="font-bold text-primary text-body-md">{{ article.author.username }}</span>
+<p class="text-on-surface-variant text-label-sm">كاتب</p>
+{% endif %}
+</div>
+</div>
+<div class="hidden md:block w-px h-10 bg-outline-variant"></div>
+<div class="flex items-center gap-6 text-on-surface-variant text-label-sm">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+<span>{{ article.published_at|date:"j F Y" }}</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span>{{ article.read_time }} {% trans "دقائق قراءة" %}</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Hero Image -->
+<div class="w-full px-margin-mobile md:px-margin-desktop mb-12">
+<div class="relative aspect-video md:aspect-[21/9] overflow-hidden rounded-xl bg-surface-variant border border-outline-variant">
+    {% if article.cover_image %}
+        {% thumbnail article.cover_image "1200x675" crop="center" as im %}
+            <img alt="{{ article.title }}" class="w-full h-full object-cover" src="{{ im.url }}"/>
+        {% empty %}
+            <div class="w-full h-full bg-surface-variant"></div>
+        {% endthumbnail %}
+    {% else %}
+        <div class="w-full h-full bg-surface-variant"></div>
+    {% endif %}
+</div>
+</div>
+
+<!-- Article Body -->
+<div class="flex flex-col md:flex-row gap-gutter px-margin-mobile md:px-margin-desktop">
+<!-- Social Sidebar -->
+<aside class="hidden md:flex flex-col gap-4 sticky top-32 h-fit">
+    <button onclick="copyToClipboard()" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary hover:text-white transition-all duration-300 text-primary" title="{% trans 'مشاركة' %}">
+    <span class="material-symbols-outlined">share</span>
+    </button>
+    <form method="post" action="{% url 'news:bookmark_article' article.slug %}" class="w-12 h-12 text-center">
+        {% csrf_token %}
+        <button type="submit" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 {% if user_has_bookmarked %}bg-secondary text-white border-secondary{% else %}hover:bg-secondary hover:text-white text-primary{% endif %}" title="{% trans 'حفظ' %}">
+            <span class="material-symbols-outlined" {% if user_has_bookmarked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>bookmark</span>
+        </button>
+    </form>
+    <form method="post" action="{% url 'news:like_article' article.slug %}" class="w-12 h-12 text-center">
+        {% csrf_token %}
+        <button type="submit" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 {% if user_has_liked %}bg-error text-white border-error{% else %}hover:bg-error hover:text-white text-primary{% endif %}" title="{% trans 'إعجاب' %}">
+            <span class="material-symbols-outlined" {% if user_has_liked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>favorite</span>
+        </button>
+    </form>
+    <div class="text-center mt-2 text-xs font-bold text-on-surface-variant flex flex-col gap-1">
+        <span>{{ likes_count }} <span class="material-symbols-outlined text-[10px]">favorite</span></span>
+    </div>
+</aside>
+<!-- Content Column -->
+<div class="flex-1 max-w-[720px] mx-auto w-full overflow-hidden">
+    {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+                <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-error-container text-on-error-container{% else %}bg-secondary-container text-on-secondary-container{% endif %}">
+                    {{ message }}
                 </div>
-                <span class="w-1.5 h-1.5 rounded-full bg-outline-variant"></span>
-                <div class="flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[18px]">visibility</span>
-                    <span>{{ article.views_count }}</span>
-                </div>
-            </div>
+            {% endfor %}
         </div>
+    {% endif %}
 
-        <!-- Cover Image -->
-        <div class="max-w-5xl mx-auto mb-12 rounded-xl overflow-hidden border border-outline-variant aspect-video relative bg-surface-container-high">
-            {% if article.cover_image %}
-                {% thumbnail article.cover_image "1200x675" crop="center" as im %}
-                    <img src="{{ im.url }}" alt="{{ article.title }}" class="w-full h-full object-cover" loading="lazy">
-                {% empty %}
-                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1200" alt="Default Cover" class="w-full h-full object-cover" loading="lazy">
-                {% endthumbnail %}
-            {% else %}
-                <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1200" alt="Default Cover" class="w-full h-full object-cover" loading="lazy">
-            {% endif %}
-        </div>
+<div class="prose prose-lg text-on-surface font-body-lg leading-relaxed max-w-none">
+    {{ article.body|safe }}
+</div>
 
-        <!-- Layout: Article Body & Sharing -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter max-w-5xl mx-auto">
-            
-            <!-- Left Side / Toolbar for Desktop (1 Col) -->
-            <div class="lg:col-span-1 hidden lg:flex flex-col gap-6 items-center sticky top-28 h-fit">
-                <span class="text-[10px] font-bold text-outline uppercase tracking-wider">{% trans "تفاعل" %}</span>
-                
-                <!-- Like form -->
-                <form method="post" action="{% url 'news:like_article' article.slug %}" class="w-full text-center">
-                    {% csrf_token %}
-                    <button type="submit" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 mx-auto {% if user_has_liked %}bg-error text-white border-error{% else %}hover:bg-error hover:text-white text-primary{% endif %}" title="{% trans "إعجاب" %}">
-                        <span class="material-symbols-outlined" {% if user_has_liked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>favorite</span>
-                    </button>
-                    <span class="text-xs text-on-surface-variant font-bold mt-1 block">{{ likes_count }}</span>
-                </form>
+<!-- Tags -->
+{% if article.tags.all %}
+<div class="flex flex-wrap gap-2 mt-12 pt-8 border-t border-outline-variant">
+    {% for tag in article.tags.all %}
+    <span class="px-4 py-1 bg-surface-container text-on-surface-variant text-label-sm rounded-full">#{{ tag.name }}</span>
+    {% endfor %}
+</div>
+{% endif %}
 
-                <!-- Bookmark form -->
-                <form method="post" action="{% url 'news:bookmark_article' article.slug %}" class="w-full text-center">
-                    {% csrf_token %}
-                    <button type="submit" class="w-12 h-12 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 mx-auto {% if user_has_bookmarked %}bg-secondary text-white border-secondary{% else %}hover:bg-secondary hover:text-white text-primary{% endif %}" title="{% trans "حفظ" %}">
-                        <span class="material-symbols-outlined" {% if user_has_bookmarked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>bookmark</span>
-                    </button>
-                    <span class="text-xs text-on-surface-variant font-bold mt-1 block">{{ bookmarks_count }}</span>
-                </form>
+<!-- Mobile Share & Like Bar (Hidden on desktop) -->
+<div class="flex md:hidden items-center justify-between gap-4 mt-8 py-4 border-t border-b border-outline-variant">
+    <div class="flex items-center gap-4">
+        <form method="post" action="{% url 'news:like_article' article.slug %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 {% if user_has_liked %}bg-error text-white border-error{% else %}hover:bg-error hover:text-white text-primary{% endif %}">
+                <span class="material-symbols-outlined" {% if user_has_liked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>favorite</span>
+            </button>
+        </form>
+        <span class="font-bold text-sm text-on-surface-variant">{{ likes_count }}</span>
+        <form method="post" action="{% url 'news:bookmark_article' article.slug %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 {% if user_has_bookmarked %}bg-secondary text-white border-secondary{% else %}hover:bg-secondary hover:text-white text-primary{% endif %}">
+                <span class="material-symbols-outlined" {% if user_has_bookmarked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>bookmark</span>
+            </button>
+        </form>
+    </div>
+    <button onclick="copyToClipboard()" class="w-10 h-10 rounded-full border border-outline-variant flex items-center justify-center hover:bg-primary hover:text-white transition-all duration-300 text-primary">
+        <span class="material-symbols-outlined">share</span>
+    </button>
+</div>
 
-                <div class="h-px w-6 bg-outline-variant my-2"></div>
-
-                <span class="text-[10px] font-bold text-outline uppercase tracking-wider">{% trans "مشاركة" %}</span>
-                
-                <button onclick="copyToClipboard()" class="w-10 h-10 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors" title="{% trans "نسخ الرابط" %}">
-                    <span class="material-symbols-outlined text-[20px]">link</span>
+<!-- Comments Section integration -->
+{% if article.allow_comments %}
+<section class="mt-12 pt-8 border-t border-outline-variant">
+    <h3 class="font-headline-md text-headline-md text-primary mb-8">
+        {% trans "التعليقات" %} ({{ comments.count }})
+    </h3>
+    
+    <!-- New Comment form -->
+    <div class="bg-surface-container-low border border-outline-variant p-6 rounded-lg mb-8">
+        <h4 class="font-bold text-primary mb-4 text-sm">{% trans "أضف تعليقاً" %}</h4>
+        {% if request.user.is_authenticated %}
+            <form method="post" action="{% url 'news:submit_comment' article.slug %}" class="space-y-4">
+                {% csrf_token %}
+                <textarea name="body" rows="3" placeholder="{% trans 'اكتب تعليقك هنا...' %}" class="w-full bg-surface border border-outline-variant px-4 py-3 text-sm outline-none focus:border-secondary focus:ring-1 focus:ring-secondary text-primary rounded-lg" required></textarea>
+                <button type="submit" class="bg-primary text-on-primary px-6 py-2.5 font-bold text-sm hover:opacity-90 rounded-lg transition-all">
+                    {% trans "إرسال التعليق" %}
                 </button>
-                <a href="https://twitter.com/intent/tweet?url={{ request.build_absolute_uri }}&text={{ article.title }}" target="_blank" class="w-10 h-10 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors" title="Twitter">
-                    <span>𝕏</span>
-                </a>
-                <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}" target="_blank" class="w-10 h-10 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors" title="Facebook">
-                    <span>fb</span>
+            </form>
+        {% else %}
+            <div class="text-center py-6">
+                <p class="text-on-surface-variant text-sm mb-4">{% trans "يرجى تسجيل الدخول لتتمكن من التعليق على المقال." %}</p>
+                <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="bg-primary text-on-primary px-6 py-2.5 text-sm font-bold hover:opacity-90 inline-block rounded-lg transition-opacity">
+                    {% trans "تسجيل الدخول" %}
                 </a>
             </div>
+        {% endif %}
+    </div>
 
-            <!-- Body text (8 Cols) -->
-            <div class="lg:col-span-8 space-y-8">
-                {% if messages %}
-                    <div class="mb-6">
-                        {% for message in messages %}
-                            <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-error-container text-on-error-container{% else %}bg-secondary-container text-on-secondary-container{% endif %}">
-                                {{ message }}
-                            </div>
-                        {% endfor %}
+    <!-- Comments List -->
+    <div class="space-y-6">
+        {% for comment in comments %}
+            <div class="bg-surface-container-lowest border border-outline-variant p-6 rounded-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container font-bold flex items-center justify-center text-sm">
+                            {{ comment.user.username|slice:":2"|upper }}
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold text-primary">{{ comment.user.username }}</p>
+                            <p class="text-[11px] text-on-surface-variant mt-0.5">{{ comment.created_at|date:"Y-m-d H:i" }}</p>
+                        </div>
                     </div>
-                {% endif %}
-
-                <!-- Content -->
-                <div class="prose max-w-none text-primary leading-relaxed text-body-md font-body-md" style="font-size: 18px;">
-                    {{ article.body|safe }}
+                    <button onclick="toggleReplyForm({{ comment.id }})" class="text-xs text-secondary font-bold hover:underline flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[16px]">reply</span>
+                        {% trans "رد" %}
+                    </button>
                 </div>
+                <p class="text-on-surface text-sm whitespace-pre-wrap leading-relaxed">
+                    {{ comment.body }}
+                </p>
 
-                <!-- Tags / Keywords -->
-                {% if article.tags.all %}
-                    <div class="flex flex-wrap gap-2 pt-6 border-t border-outline-variant">
-                        <span class="text-xs font-bold text-primary flex items-center">{% trans "الوسوم" %}:</span>
-                        {% for tag in article.tags.all %}
-                            <span class="bg-surface-container-high border border-outline px-3 py-1 text-xs font-medium rounded-lg">
-                                #{{ tag.name }}
-                            </span>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-
-                <!-- Mobile Share Bar -->
-                <div class="flex lg:hidden items-center justify-between gap-4 py-4 border-t border-b border-outline-variant">
-                    <div class="flex items-center gap-4">
-                        <!-- Mobile Like -->
-                        <form method="post" action="{% url 'news:like_article' article.slug %}" class="inline">
-                            {% csrf_token %}
-                            <button type="submit" class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 {% if user_has_liked %}bg-error text-white border-error{% else %}hover:bg-error hover:text-white text-primary{% endif %}" title="{% trans "إعجاب" %}">
-                                <span class="material-symbols-outlined text-[16px]" {% if user_has_liked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>favorite</span>
-                            </button>
-                        </form>
-                        <span class="text-xs font-bold text-primary">{{ likes_count }}</span>
-
-                        <!-- Mobile Bookmark -->
-                        <form method="post" action="{% url 'news:bookmark_article' article.slug %}" class="inline">
-                            {% csrf_token %}
-                            <button type="submit" class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center transition-all duration-300 {% if user_has_bookmarked %}bg-secondary text-white border-secondary{% else %}hover:bg-secondary hover:text-white text-primary{% endif %}" title="{% trans "حفظ" %}">
-                                <span class="material-symbols-outlined text-[16px]" {% if user_has_bookmarked %}style="font-variation-settings: 'FILL' 1;"{% endif %}>bookmark</span>
-                            </button>
-                        </form>
-                        <span class="text-xs font-bold text-primary">{{ bookmarks_count }}</span>
-                    </div>
-
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-primary">{% trans "مشاركة" %}:</span>
-                        <button onclick="copyToClipboard()" class="w-8 h-8 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors" title="{% trans "نسخ الرابط" %}">
-                            <span class="material-symbols-outlined text-[16px]">link</span>
-                        </button>
-                        <a href="https://twitter.com/intent/tweet?url={{ request.build_absolute_uri }}&text={{ article.title }}" target="_blank" class="w-8 h-8 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors">𝕏</a>
-                        <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}" target="_blank" class="w-8 h-8 border border-outline-variant rounded-full hover:bg-surface-container-low text-primary flex items-center justify-center transition-colors">fb</a>
-                    </div>
-                </div>
-
-                <!-- Comments Thread Section -->
-                {% if article.allow_comments %}
-                <section class="pt-12 border-t border-outline-variant space-y-8">
-                    <h3 class="font-headline-md text-headline-md text-primary">
-                        {% trans "التعليقات" %} ({{ comments.count }})
-                    </h3>
-
-                    <!-- Comments List -->
-                    <div class="space-y-6">
-                        {% for comment in comments %}
-                            <div class="bg-surface-container-low border border-outline-variant p-6 rounded-lg">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container font-bold flex items-center justify-center text-xs">
-                                            {{ comment.user.username|slice:":2"|upper }}
+                <!-- Replies -->
+                {% if comment.replies.all %}
+                    <div class="mt-6 border-r-2 border-outline-variant pr-6 space-y-4">
+                        {% for reply in comment.replies.all %}
+                            {% if reply.is_approved %}
+                                <div class="bg-surface-container-low p-4 rounded-lg">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container font-bold flex items-center justify-center text-xs">
+                                            {{ reply.user.username|slice:":2"|upper }}
                                         </div>
                                         <div>
-                                            <p class="text-sm font-bold text-primary">{{ comment.user.username }}</p>
-                                            <p class="text-[10px] text-on-surface-variant">{{ comment.created_at|date:"Y-m-d H:i" }}</p>
+                                            <p class="text-xs font-bold text-primary">{{ reply.user.username }}</p>
+                                            <p class="text-[10px] text-on-surface-variant">{{ reply.created_at|date:"Y-m-d H:i" }}</p>
                                         </div>
                                     </div>
-                                    <button onclick="toggleReplyForm({{ comment.id }})" class="text-xs text-secondary font-bold hover:underline flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-[14px]">reply</span>
-                                        {% trans "رد" %}
-                                    </button>
+                                    <p class="text-on-surface-variant text-sm whitespace-pre-wrap">
+                                        {{ reply.body }}
+                                    </p>
                                 </div>
-                                <p class="text-on-surface-variant text-sm whitespace-pre-wrap leading-relaxed">
-                                    {{ comment.body }}
-                                </p>
-
-                                <!-- Nesting replies -->
-                                {% if comment.replies.all %}
-                                    <div class="mt-6 border-s-2 border-outline-variant ps-6 space-y-6">
-                                        {% for reply in comment.replies.all %}
-                                            {% if reply.is_approved %}
-                                                <div class="bg-surface-container p-4 rounded-lg">
-                                                    <div class="flex items-center gap-2 mb-2">
-                                                        <div class="w-6 h-6 rounded-full bg-primary-container text-on-primary-container font-bold flex items-center justify-center text-[10px]">
-                                                            {{ reply.user.username|slice:":2"|upper }}
-                                                        </div>
-                                                        <div>
-                                                            <p class="text-xs font-bold text-primary">{{ reply.user.username }}</p>
-                                                            <p class="text-[9px] text-on-surface-variant">{{ reply.created_at|date:"Y-m-d H:i" }}</p>
-                                                        </div>
-                                                    </div>
-                                                    <p class="text-on-surface-variant text-xs whitespace-pre-wrap">
-                                                        {{ reply.body }}
-                                                    </p>
-                                                </div>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-
-                                <!-- Hidden Reply Form -->
-                                <div id="reply-form-{{ comment.id }}" class="hidden mt-6 pt-4 border-t border-outline-variant">
-                                    <form method="post" action="{% url 'news:submit_comment' article.slug %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
-                                        <textarea name="body" rows="3" placeholder="{% trans "اكتب ردك هنا..." %}" class="w-full bg-surface border border-outline px-4 py-2 text-xs outline-none focus:border-secondary text-primary mb-3" required></textarea>
-                                        <div class="flex justify-end gap-2">
-                                            <button type="button" onclick="toggleReplyForm({{ comment.id }})" class="bg-surface-container border border-outline px-3 py-1.5 text-xs hover:bg-surface-container-high font-bold transition-all">
-                                                {% trans "إلغاء" %}
-                                            </button>
-                                            <button type="submit" class="bg-primary text-on-primary px-4 py-1.5 text-xs hover:opacity-90 font-bold transition-all">
-                                                {% trans "إرسال الرد" %}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-
-                            </div>
-                        {% empty %}
-                            <p class="text-on-surface-variant text-sm py-4 text-center">{% trans "كن أول من يعلق على هذا المقال." %}</p>
+                            {% endif %}
                         {% endfor %}
                     </div>
-
-                    <!-- New Comment Submission -->
-                    <div class="bg-surface-container-low border border-outline-variant p-6 rounded-lg mt-8">
-                        <h4 class="font-bold text-primary mb-4 text-sm">{% trans "أضف تعليقاً" %}</h4>
-                        {% if request.user.is_authenticated %}
-                            <form method="post" action="{% url 'news:submit_comment' article.slug %}" class="space-y-4">
-                                {% csrf_token %}
-                                <textarea name="body" rows="4" placeholder="{% trans "اكتب تعليقك هنا..." %}" class="w-full bg-surface border border-outline px-4 py-3 text-sm outline-none focus:border-secondary text-primary" required></textarea>
-                                <button type="submit" class="bg-primary text-on-primary px-6 py-2.5 font-bold text-sm hover:opacity-90 transition-all">
-                                    {% trans "إرسال التعليق" %}
-                                </button>
-                            </form>
-                        {% else %}
-                            <div class="text-center py-6">
-                                <p class="text-on-surface-variant text-sm mb-4">{% trans "يرجى تسجيل الدخول لتتمكن من التعليق على المقال." %}</p>
-                                <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="bg-primary text-on-primary px-6 py-2.5 text-sm font-bold hover:opacity-90 inline-block transition-opacity">
-                                    {% trans "تسجيل الدخول" %}
-                                </a>
-                            </div>
-                        {% endif %}
-                    </div>
-                </section>
                 {% endif %}
 
-            </div>
-
-            <!-- Right Sidebar / Author Bio & Related Articles (3 Cols) -->
-            <aside class="lg:col-span-3 space-y-8">
-                <!-- Author Widget -->
-                <div class="bg-surface-container-low border border-outline-variant p-6 rounded-lg text-center">
-                    <h4 class="text-[10px] font-bold text-outline uppercase tracking-wider mb-4">{% trans "الكاتب" %}</h4>
-                    <a href="{{ article.author.author_profile.get_absolute_url }}" class="group">
-                        <div class="w-20 h-20 rounded-full overflow-hidden border-2 border-outline-variant group-hover:border-secondary mx-auto mb-4 transition-colors">
-                            {% if article.author.author_profile.avatar %}
-                                {% thumbnail article.author.author_profile.avatar "150x150" crop="center" as im %}
-                                    <img src="{{ im.url }}" alt="{{ article.author }}" class="w-full h-full object-cover" loading="lazy">
-                                {% empty %}
-                                    <img src="https://ui-avatars.com/api/?name={{ article.author }}&background=146c3c&color=fff" alt="{{ article.author }}" class="w-full h-full object-cover" loading="lazy">
-                                {% endthumbnail %}
-                            {% else %}
-                                <img src="https://ui-avatars.com/api/?name={{ article.author }}&background=146c3c&color=fff" alt="{{ article.author }}" class="w-full h-full object-cover" loading="lazy">
-                            {% endif %}
+                <!-- Hidden Reply Form -->
+                <div id="reply-form-{{ comment.id }}" class="hidden mt-6 pt-4 border-t border-outline-variant">
+                    <form method="post" action="{% url 'news:submit_comment' article.slug %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                        <textarea name="body" rows="3" placeholder="{% trans 'اكتب ردك هنا...' %}" class="w-full bg-surface border border-outline-variant px-4 py-2 text-sm outline-none focus:border-secondary rounded-lg text-primary mb-3" required></textarea>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" onclick="toggleReplyForm({{ comment.id }})" class="bg-surface-container border border-outline-variant px-4 py-2 text-xs hover:bg-surface-container-high rounded-lg font-bold transition-all">
+                                {% trans "إلغاء" %}
+                            </button>
+                            <button type="submit" class="bg-primary text-on-primary px-4 py-2 text-xs hover:opacity-90 rounded-lg font-bold transition-all">
+                                {% trans "إرسال الرد" %}
+                            </button>
                         </div>
-                        <h5 class="font-bold text-primary group-hover:text-secondary transition-colors text-sm">
-                            {{ article.author.author_profile.display_name|default:article.author.username }}
-                        </h5>
-                    </a>
-                    <span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 text-[10px] font-bold rounded mt-2 inline-block">
-                        {{ article.author.author_profile.get_role_display }}
-                    </span>
-                    <p class="text-on-surface-variant text-xs mt-4 line-clamp-3 leading-relaxed">
-                        {{ article.author.author_profile.bio|default:"" }}
-                    </p>
+                    </form>
                 </div>
-
-                <!-- Related Articles -->
-                <div class="bg-surface border border-outline-variant p-6 rounded-lg">
-                    <h4 class="font-bold text-primary mb-6 text-label-sm tracking-widest uppercase border-b-2 border-secondary pb-2">
-                        {% trans "مقالات ذات صلة" %}
-                    </h4>
-                    <div class="space-y-6">
-                        {% for r_art in related_articles %}
-                            <div class="group flex flex-col gap-2">
-                                {% if r_art.cover_image %}
-                                    <a href="{{ r_art.get_absolute_url }}" class="aspect-video rounded overflow-hidden border border-outline-variant block">
-                                        {% thumbnail r_art.cover_image "400x225" crop="center" as im %}
-                                            <img src="{{ im.url }}" alt="{{ r_art.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
-                                        {% empty %}
-                                            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
-                                        {% endthumbnail %}
-                                    </a>
-                                {% endif %}
-                                <h5 class="font-bold text-primary text-xs leading-snug group-hover:text-secondary transition-colors">
-                                    <a href="{{ r_art.get_absolute_url }}">{{ r_art.title }}</a>
-                                </h5>
-                                <span class="text-[10px] text-on-surface-variant block">
-                                    {{ r_art.published_at|date:"Y-m-d" }}
-                                </span>
-                            </div>
-                        {% empty %}
-                            <p class="text-on-surface-variant text-xs">{% trans "لا يوجد مقالات ذات صلة حالياً" %}</p>
-                        {% endfor %}
-                    </div>
-                </div>
-            </aside>
-
-        </div>
+            </div>
+        {% empty %}
+            <p class="text-on-surface-variant text-sm py-4 text-center">{% trans "كن أول من يعلق على هذا المقال." %}</p>
+        {% endfor %}
     </div>
+</section>
+{% endif %}
+
+</div>
+
+<!-- Right Sidebar: Related Content -->
+<aside class="w-full lg:w-80 flex flex-col gap-8 shrink-0 mt-12 lg:mt-0">
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant">
+<h3 class="text-headline-md font-headline-md text-primary mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">trending_up</span>
+                            {% trans "مقالات ذات صلة" %}
+                        </h3>
+<div class="flex flex-col gap-6">
+    {% for r_art in related_articles|slice:":3" %}
+    <div class="group cursor-pointer">
+    <span class="text-secondary font-bold text-label-sm">0{{ forloop.counter }}</span>
+    <h4 class="font-bold text-body-md group-hover:text-secondary transition-colors"><a href="{{ r_art.get_absolute_url }}">{{ r_art.title }}</a></h4>
+    <p class="text-on-surface-variant text-label-sm mt-2">{{ r_art.excerpt|default:r_art.body|truncatewords:10 }}</p>
+    </div>
+    {% empty %}
+    <p class="text-on-surface-variant text-sm">{% trans "لا يوجد مقالات ذات صلة" %}</p>
+    {% endfor %}
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden bg-primary text-on-primary p-6 h-64 flex flex-col justify-end group">
+<div class="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-secondary via-transparent to-transparent"></div>
+<h3 class="relative z-10 text-headline-md font-bold mb-2">{% trans "النشرة البريدية" %}</h3>
+<p class="relative z-10 text-label-sm mb-4">{% trans "احصل على أهم الأخبار مباشرة في بريدك." %}</p>
+<form method="post" action="{% url 'core:newsletter_subscribe' %}" class="relative z-10 w-full flex flex-col gap-2">
+    {% csrf_token %}
+    <input type="email" name="email" placeholder="{% trans 'البريد الإلكتروني' %}" class="w-full bg-surface text-primary py-2 px-3 rounded-lg text-sm outline-none focus:ring-2 focus:ring-secondary" required>
+    <button type="submit" class="w-full bg-secondary text-white py-2 rounded-lg font-bold hover:scale-[1.02] transition-transform">{% trans "اشترك الآن" %}</button>
+</form>
+</div>
+</aside>
+</div>
 </article>
+
+<!-- Read More Section -->
+{% if related_articles.count > 0 %}
+<section class="w-full bg-surface-container-lowest mt-24 py-16 border-t border-outline-variant">
+<div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop">
+<h2 class="text-headline-md font-headline-md text-primary mb-10 flex items-center justify-between">
+<span>{% trans "اقرأ أيضاً" %}</span>
+<a class="text-secondary text-label-sm flex items-center gap-1 hover:underline" href="{{ article.category.get_absolute_url }}">{% trans "عرض الكل" %} <span class="material-symbols-outlined text-[14px]">arrow_back</span></a>
+</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+    {% for r_art in related_articles|slice:":3" %}
+    <a href="{{ r_art.get_absolute_url }}" class="bg-surface border border-outline-variant rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 group block flex-col h-full">
+    <div class="h-48 overflow-hidden bg-surface-variant shrink-0">
+        {% if r_art.cover_image %}
+            {% thumbnail r_art.cover_image "600x337" crop="center" as im %}
+                <img alt="{{ r_art.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="{{ im.url }}"/>
+            {% endthumbnail %}
+        {% endif %}
+    </div>
+    <div class="p-6 flex flex-col flex-1">
+    <span class="text-secondary text-label-sm font-bold">{{ r_art.category.name }}</span>
+    <h3 class="font-bold text-body-lg mt-2 group-hover:text-primary transition-colors line-clamp-2">{{ r_art.title }}</h3>
+    <p class="text-on-surface-variant text-label-sm mt-3 line-clamp-2">{{ r_art.excerpt|default:r_art.body|truncatewords:15 }}</p>
+    </div>
+    </a>
+    {% endfor %}
+</div>
+</div>
+</section>
+{% endif %}
+</main>
 
 <script>
     function copyToClipboard() {
         navigator.clipboard.writeText(window.location.href);
-        alert("{% trans "تم نسخ الرابط بنجاح!" %}");
+        alert("{% trans 'تم نسخ الرابط بنجاح!' %}");
     }
 
     function toggleReplyForm(commentId) {

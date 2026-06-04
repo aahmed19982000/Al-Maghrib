@@ -1,0 +1,201 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "إعدادات الموقع العامة" %}{% endblock %}
+
+{% block page_title %}{% trans "إعدادات الموقع العامة (الهيدر والفوتر)" %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card custom-settings-wrapper">
+    <form method="post" id="site-settings-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- Section 1: Basic Info -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">settings</span>
+                {% trans "المعلومات الأساسية" %}
+            </h2>
+            <div class="custom-grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">{{ form.site_name.label }}</label>
+                    {{ form.site_name }}
+                    {% if form.site_name.errors %}<div class="text-danger">{{ form.site_name.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.logo.label }}</label>
+                    {{ form.logo }}
+                    {% if form.logo.errors %}<div class="text-danger">{{ form.logo.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.contact_email.label }}</label>
+                    {{ form.contact_email }}
+                    {% if form.contact_email.errors %}<div class="text-danger">{{ form.contact_email.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.contact_phone.label }}</label>
+                    {{ form.contact_phone }}
+                    {% if form.contact_phone.errors %}<div class="text-danger">{{ form.contact_phone.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Header Categories -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">web</span>
+                {% trans "إعدادات القائمة العلوية (Navbar)" %}
+            </h2>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">{{ form.navbar_categories.label }}</label>
+                <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 0.75rem;">اختر الأقسام التي تود أن تظهر في قائمة التصفح العلوية في جميع صفحات الموقع (يمكنك اختيار أكثر من قسم بالضغط على Ctrl أو Cmd).</p>
+                {{ form.navbar_categories }}
+                {% if form.navbar_categories.errors %}<div class="text-danger">{{ form.navbar_categories.errors }}</div>{% endif %}
+            </div>
+        </div>
+
+        <!-- Section 3: Footer Settings -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">vertical_align_bottom</span>
+                {% trans "إعدادات الفوتر (Footer)" %}
+            </h2>
+            <div class="custom-grid grid-2">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">{{ form.footer_description.label }}</label>
+                    <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 0.75rem;">نبذة عن المؤسسة أو الموقع تظهر في العمود الأول من الفوتر.</p>
+                    {{ form.footer_description }}
+                    {% if form.footer_description.errors %}<div class="text-danger">{{ form.footer_description.errors }}</div>{% endif %}
+                </div>
+                
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">{{ form.footer_categories.label }}</label>
+                    <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 0.75rem;">اختر الأقسام التي تود عرضها في عمود "الأقسام" في الفوتر.</p>
+                    {{ form.footer_categories }}
+                    {% if form.footer_categories.errors %}<div class="text-danger">{{ form.footer_categories.errors }}</div>{% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">{{ form.facebook_url.label }}</label>
+                    {{ form.facebook_url }}
+                    {% if form.facebook_url.errors %}<div class="text-danger">{{ form.facebook_url.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.twitter_url.label }}</label>
+                    {{ form.twitter_url }}
+                    {% if form.twitter_url.errors %}<div class="text-danger">{{ form.twitter_url.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.instagram_url.label }}</label>
+                    {{ form.instagram_url }}
+                    {% if form.instagram_url.errors %}<div class="text-danger">{{ form.instagram_url.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.youtube_url.label }}</label>
+                    {{ form.youtube_url }}
+                    {% if form.youtube_url.errors %}<div class="text-danger">{{ form.youtube_url.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="sticky-footer">
+            <button type="submit" class="btn btn-primary save-btn">
+                <span class="icon">save</span>
+                {% trans "حفظ التغييرات" %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .custom-settings-wrapper {
+        padding: 2rem;
+        background-color: var(--bg-secondary);
+        border-radius: 10px;
+        color: var(--text-primary);
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .settings-section {
+        margin-bottom: 3rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--accent-color);
+    }
+
+    .custom-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .custom-grid.grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.6rem 0.8rem;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .form-control:focus {
+        border-color: var(--accent-color);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .sticky-footer {
+        position: sticky;
+        bottom: 0;
+        padding: 1.5rem;
+        background-color: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        margin: 2rem -2rem -2rem -2rem;
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+        box-shadow: 0 -4px 6px rgba(0,0,0,0.1);
+        z-index: 100;
+    }
+
+    .save-btn {
+        padding: 0.8rem 2.5rem;
+        font-size: 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .text-danger {
+        color: var(--accent-danger, #ef4444);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+
+    @media (max-width: 768px) {
+        .custom-grid.grid-2 {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-group[style*="grid-column: span 2"] {
+            grid-column: span 1 !important;
+        }
+    }
+</style>
+{% endblock %}

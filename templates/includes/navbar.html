@@ -1,60 +1,184 @@
 {% load i18n %}
 {% get_current_language as LANGUAGE_CODE %}
 
-<header class="docked full-width top-0 sticky z-50 border-b border-outline-variant bg-surface">
-    <div class="flex flex-col w-full max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-4">
-        <div class="flex justify-between items-center w-full">
-            <!-- Site Logo / Name -->
-            <a href="{% url 'news:article_list' %}" class="text-headline-md font-headline-md font-bold tracking-tighter text-primary uppercase">
-                {{ site_settings.site_name|default:"Al-Maghrib Al-Arabi" }}
-            </a>
+<header class="docked full-width top-0 sticky z-50 bg-surface border-b border-outline-variant shadow-sm">
+    <div class="flex flex-col w-full max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop">
+        <div class="flex items-center justify-between py-4">
             
-            <!-- Dynamic Navigation Menus -->
-            {% load cache %}
-            {% cache 600 global_navbar_cats LANGUAGE_CODE %}
-            <nav class="hidden md:flex gap-8 items-center">
-                {% for cat in global_categories %}
-                    <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary transition-colors duration-200" href="{% url 'news:category_list' cat.slug %}">
-                        {{ cat.name }}
-                    </a>
-                {% empty %}
-                    <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">{% trans "السياسة" %}</a>
-                    <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">{% trans "الاقتصاد" %}</a>
-                    <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">{% trans "الثقافة" %}</a>
-                    <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary transition-colors duration-200" href="#">{% trans "الرياضة" %}</a>
-                {% endfor %}
-            </nav>
-            {% endcache %}
-            
-            <!-- Utility Buttons & Actions -->
             <div class="flex items-center gap-4">
-                <!-- Language Switcher -->
-                {% if LANGUAGE_CODE == 'ar' %}
-                    <a href="/en{{ request.path|slice:'3:' }}" class="material-symbols-outlined text-primary cursor-pointer hover:bg-surface-container-low p-2 rounded-full transition-colors" title="Switch to English">
-                        language
-                    </a>
+                {% if site_settings.logo %}
+                    <img alt="{{ site_settings.site_name }}" class="h-12 w-12 object-contain" src="{{ site_settings.logo.url }}"/>
                 {% else %}
-                    <a href="/ar{{ request.path|slice:'3:' }}" class="material-symbols-outlined text-primary cursor-pointer hover:bg-surface-container-low p-2 rounded-full transition-colors" title="تغيير إلى العربية">
-                        language
-                    </a>
+                    <img alt="{{ site_settings.site_name }}" class="h-12 w-12 object-contain" src="https://ui-avatars.com/api/?name={{ site_settings.site_name }}&background=0a1d37&color=fff"/>
                 {% endif %}
+                <a href="{% url 'news:article_list' %}">
+                    <h1 class="text-headline-md font-bold tracking-tighter text-primary uppercase">{{ site_settings.site_name|default:"Al-Maghrib Al-Arabi" }}</h1>
+                </a>
+            </div>
 
-                <!-- Notifications placeholder or search -->
-                <span class="material-symbols-outlined text-primary cursor-pointer hover:bg-surface-container-low p-2 rounded-full transition-colors" title="Notifications">
-                    notifications
-                </span>
+            {% load cache %}
+            <nav class="hidden md:flex items-center gap-8">
+                {% if site_settings.navbar_categories.exists %}
+                    {% for cat in site_settings.navbar_categories.all %}
+                        <a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm py-1" href="{% url 'news:category_list' cat.slug %}">
+                            {{ cat.name }}
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <!-- Fallback to global_categories if none selected -->
+                    {% for cat in global_categories %}
+                        <a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm py-1" href="{% url 'news:category_list' cat.slug %}">
+                            {{ cat.name }}
+                        </a>
+                    {% empty %}
+                        <a class="text-secondary font-bold border-b-2 border-secondary text-label-sm py-1" href="#">{% trans "السياسة" %}</a>
+                        <a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm py-1" href="#">{% trans "الاقتصاد" %}</a>
+                        <a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm py-1" href="#">{% trans "الثقافة" %}</a>
+                        <a class="text-on-surface-variant hover:text-primary transition-colors text-label-sm py-1" href="#">{% trans "الرياضة" %}</a>
+                    {% endfor %}
+                {% endif %}
+            </nav>
 
-                <!-- Conditional Dashboard/Login Buttons -->
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2">
+                    <!-- Language Switcher -->
+                    {% if LANGUAGE_CODE == 'ar' %}
+                        <a href="/en{{ request.path }}" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" title="Switch to English">
+                            language
+                        </a>
+                    {% else %}
+                        <a href="{{ request.path|slice:'3:'|default:'/' }}" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" title="تغيير إلى العربية">
+                            language
+                        </a>
+                    {% endif %}
+                    
+                    <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">search</span>
+                    <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">notifications</span>
+                </div>
+                
                 {% if request.user.is_authenticated %}
-                    <a href="{% url 'dashboard:home' %}" class="bg-primary text-on-primary px-6 py-2 text-label-sm font-bold hover:opacity-90 transition-opacity">
+                    <a href="{% url 'dashboard:home' %}" class="bg-primary text-on-primary px-6 py-2 text-label-sm font-bold rounded hover:opacity-90 transition-opacity">
                         {% trans "لوحة التحكم" %}
                     </a>
                 {% else %}
-                    <a href="{% url 'accounts:login' %}" class="bg-primary text-on-primary px-6 py-2 text-label-sm font-bold hover:opacity-90 transition-opacity">
+                    <a href="{% url 'accounts:login' %}" class="bg-primary text-on-primary px-6 py-2 text-label-sm font-bold rounded hover:opacity-90 transition-opacity">
                         {% trans "دخول" %}
                     </a>
                 {% endif %}
+
+                <button id="mobile-menu-btn" class="md:hidden p-2 text-on-surface">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
             </div>
         </div>
     </div>
+    
+    {% if home_settings and home_settings.show_breaking_news and breaking_articles %}
+    <div class="breaking-news-gradient text-on-primary py-2 overflow-hidden whitespace-nowrap border-t border-white/10">
+        <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop flex items-center gap-6">
+            <span class="flex items-center gap-2 text-label-sm font-bold bg-error px-2 py-0.5 rounded animate-pulse">{% trans "عاجل" %}</span>
+            <div class="flex gap-12 text-label-sm overflow-hidden" style="animation: scroll 30s linear infinite;">
+                {% for art in breaking_articles %}
+                    <a href="{{ art.get_absolute_url }}" class="hover:underline cursor-pointer">{{ art.title }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </header>
+
+<!-- Mobile Drawer -->
+<div id="mobile-menu" class="fixed inset-0 z-[100] hidden">
+    <!-- Backdrop -->
+    <div id="mobile-menu-backdrop" class="fixed inset-0 bg-black/50 opacity-0 transition-opacity duration-300"></div>
+    
+    <!-- Drawer -->
+    <!-- For RTL, we slide from the right side, so translate-x-full means off-screen to the right -->
+    <div id="mobile-menu-drawer" class="fixed inset-y-0 right-0 w-64 bg-surface shadow-lg transform translate-x-full transition-transform duration-300 flex flex-col z-[101]">
+        <!-- Close button -->
+        <div class="flex justify-between items-center p-4 border-b border-outline-variant">
+            <span class="font-bold text-primary">{{ site_settings.site_name }}</span>
+            <button id="mobile-menu-close" class="p-2 text-on-surface hover:text-error transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <!-- Navigation Links -->
+        <nav class="flex flex-col p-4 gap-4 overflow-y-auto">
+            {% if site_settings.navbar_categories.exists %}
+                {% for cat in site_settings.navbar_categories.all %}
+                    <a class="text-on-surface hover:text-primary transition-colors font-bold py-2 border-b border-outline-variant/50" href="{% url 'news:category_list' cat.slug %}">
+                        {{ cat.name }}
+                    </a>
+                {% endfor %}
+            {% else %}
+                {% for cat in global_categories %}
+                    <a class="text-on-surface hover:text-primary transition-colors font-bold py-2 border-b border-outline-variant/50" href="{% url 'news:category_list' cat.slug %}">
+                        {{ cat.name }}
+                    </a>
+                {% endfor %}
+            {% endif %}
+        </nav>
+        
+        <!-- Auth / Extra Links -->
+        <div class="p-4 border-t border-outline-variant mt-auto space-y-4">
+            <div class="flex items-center justify-center gap-4 border-b border-outline-variant/50 pb-4">
+                {% if LANGUAGE_CODE == 'ar' %}
+                    <a href="/en{{ request.path }}" class="flex items-center gap-2 text-on-surface-variant cursor-pointer hover:text-primary transition-colors" title="Switch to English">
+                        <span class="material-symbols-outlined">language</span> English
+                    </a>
+                {% else %}
+                    <a href="{{ request.path|slice:'3:'|default:'/' }}" class="flex items-center gap-2 text-on-surface-variant cursor-pointer hover:text-primary transition-colors" title="تغيير إلى العربية">
+                        <span class="material-symbols-outlined">language</span> العربية
+                    </a>
+                {% endif %}
+            </div>
+
+            {% if request.user.is_authenticated %}
+                <a href="{% url 'dashboard:home' %}" class="block text-center w-full bg-primary text-on-primary px-4 py-3 rounded font-bold hover:opacity-90 transition-opacity">
+                    {% trans "لوحة التحكم" %}
+                </a>
+            {% else %}
+                <a href="{% url 'accounts:login' %}" class="block text-center w-full bg-primary text-on-primary px-4 py-3 rounded font-bold hover:opacity-90 transition-opacity">
+                    {% trans "دخول" %}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const closeBtn = document.getElementById('mobile-menu-close');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const backdrop = document.getElementById('mobile-menu-backdrop');
+        const drawer = document.getElementById('mobile-menu-drawer');
+
+        function openMenu() {
+            mobileMenu.classList.remove('hidden');
+            // Small delay to allow display:block to apply before animating
+            setTimeout(() => {
+                backdrop.classList.remove('opacity-0');
+                backdrop.classList.add('opacity-100');
+                drawer.classList.remove('translate-x-full');
+                drawer.classList.add('translate-x-0');
+            }, 10);
+        }
+
+        function closeMenu() {
+            backdrop.classList.remove('opacity-100');
+            backdrop.classList.add('opacity-0');
+            drawer.classList.remove('translate-x-0');
+            drawer.classList.add('translate-x-full');
+            // Wait for transition
+            setTimeout(() => {
+                mobileMenu.classList.add('hidden');
+            }, 300);
+        }
+
+        if(menuBtn) menuBtn.addEventListener('click', openMenu);
+        if(closeBtn) closeBtn.addEventListener('click', closeMenu);
+        if(backdrop) backdrop.addEventListener('click', closeMenu);
+    });
+</script>

@@ -99,8 +99,8 @@
     <div style="display:flex; align-items:flex-start; gap:0.75rem; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:0.75rem; padding:1rem 1.25rem; margin-bottom:1.75rem;">
         <span class="icon" style="color:var(--accent-color); font-size:22px; flex-shrink:0; margin-top:2px;">translate</span>
         <div>
-            <strong style="color:var(--accent-color);">{% trans "الترجمة التلقائية مُفعّلة" %}</strong>
-            <p style="margin:0.25rem 0 0; font-size:0.875rem; color:var(--text-secondary);">{% trans "عند حفظ المقال، ستُترجَم الحقول الإنجليزية الفارغة تلقائياً من العربية. إذا أدخلت نصاً إنجليزياً يدوياً في أي حقل، فلن يتم استبداله." %}</p>
+            <strong style="color:var(--accent-color);">{% trans "الترجمة التلقائية للإنجليزية" %}</strong>
+            <p style="margin:0.25rem 0 0; font-size:0.875rem; color:var(--text-secondary);">{% trans "عند تفعيل خيار الترجمة التلقائية (في الأسفل)، سيتم ترجمة المحتوى العربي إلى الإنجليزي تلقائياً وسيتم الكتابة فوق أي محتوى إنجليزي موجود. إذا كنت ترغب بكتابة النسخة الإنجليزية يدوياً، قم بإلغاء تفعيل هذا الخيار." %}</p>
         </div>
     </div>
 
@@ -122,7 +122,6 @@
             <div class="form-group">
                 <label class="form-label" for="{{ form.title_en.id_for_label }}">
                     {{ form.title_en.label }}
-                    <span style="font-size:0.75rem; font-weight:400; color:var(--accent-color); margin-inline-start:0.4rem;">({% trans "سيتم الترجمة تلقائياً إذا تُرك فارغاً" %})</span>
                 </label>
                 {{ form.title_en }}
                 {% if form.title_en.errors %}
@@ -144,12 +143,25 @@
             </div>
             <div class="form-group">
                 <label class="form-label" for="{{ form.category.id_for_label }}">
-                    {% trans "القسم" %}
+                    {% trans "القسم الأساسي" %}
                 </label>
                 {{ form.category }}
                 {% if form.category.errors %}
                     <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.category.errors }}</span>
                 {% endif %}
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label" for="{{ form.additional_categories.id_for_label }}">
+                    {{ form.additional_categories.label }}
+                </label>
+                {{ form.additional_categories }}
+                {% if form.additional_categories.errors %}
+                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.additional_categories.errors }}</span>
+                {% endif %}
+                <small style="color: var(--text-secondary);">{% trans "يمكنك اختيار أقسام إضافية لظهور الخبر فيها عبر الضغط المستمر على زر (Ctrl أو Cmd)" %}</small>
             </div>
         </div>
     </div>
@@ -241,7 +253,6 @@
             <div class="form-group">
                 <label class="form-label" for="{{ form.excerpt_en.id_for_label }}">
                     {{ form.excerpt_en.label }}
-                    <span style="font-size:0.75rem; font-weight:400; color:var(--accent-color); margin-inline-start:0.4rem;">({% trans "سيتم الترجمة تلقائياً إذا تُرك فارغاً" %})</span>
                 </label>
                 {{ form.excerpt_en }}
                 {% if form.excerpt_en.errors %}
@@ -263,7 +274,6 @@
         <div class="form-group" style="margin-top: 2.5rem;">
             <label class="form-label" for="{{ form.body_en.id_for_label }}">
                 {{ form.body_en.label }}
-                <span style="font-size:0.75rem; font-weight:400; color:var(--accent-color); margin-inline-start:0.4rem;">({% trans "سيتم الترجمة تلقائياً إذا تُرك فارغاً" %})</span>
             </label>
             <div style="margin-top: 0.5rem;">
                 {{ form.body_en }}
@@ -304,6 +314,14 @@
         </div>
     </div>
 
+    <!-- Translation Option -->
+    <div style="margin-bottom: 2rem; padding: 1.5rem; background-color: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.3); border-radius: 0.75rem;">
+        <label class="checkbox-label" style="font-size: 1.1rem; color: var(--accent-color);">
+            {{ form.auto_translate }}
+            <span style="font-weight: bold;">{% trans "تفعيل الترجمة التلقائية للإنجليزية (سيتم الكتابة فوق أي محتوى إنجليزي أدخلته)" %}</span>
+        </label>
+    </div>
+
     <!-- Actions Panel -->
     <div style="display: flex; gap: 1rem; margin-bottom: 4rem;">
         <button type="submit" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">
@@ -315,4 +333,42 @@
         </a>
     </div>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const titleInput = document.getElementById('{{ form.title_ar.id_for_label }}');
+        const titleEnInput = document.getElementById('{{ form.title_en.id_for_label }}');
+        const slugInput = document.getElementById('{{ form.slug.id_for_label }}');
+        
+        // Only auto-fill if we are creating a new article (slug is empty on load)
+        // or if the user explicitly clears the slug field
+        let autoFill = !slugInput.value;
+        
+        slugInput.addEventListener('input', function() {
+            // If user types manually, stop auto-filling
+            autoFill = !slugInput.value;
+        });
+        
+        function updateSlug() {
+            if (!autoFill) return;
+            
+            let text = titleInput.value;
+            if (!text && titleEnInput) {
+                text = titleEnInput.value;
+            }
+            
+            let slug = text.trim()
+                .replace(/[\s_]+/g, '-') 
+                .replace(/[^\w\u0621-\u064A\u0660-\u0669\-]+/g, '') // Keep Arabic and English chars
+                .replace(/\-\-+/g, '-') 
+                .replace(/^-+/, '') 
+                .replace(/-+$/, '');
+                
+            slugInput.value = slug;
+        }
+
+        if (titleInput) titleInput.addEventListener('input', updateSlug);
+        if (titleEnInput) titleEnInput.addEventListener('input', updateSlug);
+    });
+</script>
 {% endblock %}

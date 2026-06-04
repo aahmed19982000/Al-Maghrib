@@ -1,0 +1,475 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "إعدادات الصفحة الرئيسية" %}{% endblock %}
+
+{% block page_title %}{% trans "إعدادات الصفحة الرئيسية" %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card custom-settings-wrapper">
+    <form method="post" id="homepage-settings-form">
+        {% csrf_token %}
+        
+        <!-- Section 1: Global SEO Settings -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">search</span>
+                {% trans "إعدادات محركات البحث (SEO)" %}
+            </h2>
+            <div class="custom-grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">{{ settings_form.seo_title_ar.label }}</label>
+                    {{ settings_form.seo_title_ar }}
+                    {% if settings_form.seo_title_ar.errors %}<div class="text-danger">{{ settings_form.seo_title_ar.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ settings_form.seo_title_en.label }}</label>
+                    {{ settings_form.seo_title_en }}
+                    {% if settings_form.seo_title_en.errors %}<div class="text-danger">{{ settings_form.seo_title_en.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ settings_form.seo_description_ar.label }}</label>
+                    {{ settings_form.seo_description_ar }}
+                    {% if settings_form.seo_description_ar.errors %}<div class="text-danger">{{ settings_form.seo_description_ar.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ settings_form.seo_description_en.label }}</label>
+                    {{ settings_form.seo_description_en }}
+                    {% if settings_form.seo_description_en.errors %}<div class="text-danger">{{ settings_form.seo_description_en.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ settings_form.seo_keywords_ar.label }}</label>
+                    {{ settings_form.seo_keywords_ar }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ settings_form.seo_keywords_en.label }}</label>
+                    {{ settings_form.seo_keywords_en }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Visibility & Components -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">visibility</span>
+                {% trans "الأقسام الرئيسية (العلوية والجانبية)" %}
+            </h2>
+            <div class="custom-grid grid-2 bg-panel">
+                <div class="panel-box">
+                    <h3 class="panel-title">{% trans "إظهار/إخفاء" %}</h3>
+                    <div class="checkbox-group">
+                        <label class="custom-checkbox">
+                            {{ settings_form.show_breaking_news }}
+                            <span>{{ settings_form.show_breaking_news.label }}</span>
+                        </label>
+                        <label class="custom-checkbox">
+                            {{ settings_form.show_slider }}
+                            <span>{{ settings_form.show_slider.label }}</span>
+                        </label>
+                        <label class="custom-checkbox">
+                            {{ settings_form.show_featured }}
+                            <span>{{ settings_form.show_featured.label }}</span>
+                        </label>
+                        <label class="custom-checkbox">
+                            {{ settings_form.show_popular }}
+                            <span>{{ settings_form.show_popular.label }}</span>
+                        </label>
+                        <label class="custom-checkbox">
+                            {{ settings_form.show_authors_section }}
+                            <span>{{ settings_form.show_authors_section.label }}</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="panel-box">
+                    <h3 class="panel-title">{% trans "الإعدادات الرقمية" %}</h3>
+                    <div class="number-group">
+                        <div class="input-inline">
+                            <label class="form-label">{{ settings_form.slider_count.label }}</label>
+                            {{ settings_form.slider_count }}
+                        </div>
+                        <div class="input-inline">
+                            <label class="form-label">{{ settings_form.featured_count.label }}</label>
+                            {{ settings_form.featured_count }}
+                        </div>
+                        <div class="input-inline">
+                            <label class="form-label">{{ settings_form.popular_count.label }}</label>
+                            {{ settings_form.popular_count }}
+                        </div>
+                        <div class="input-inline" style="flex-direction: column; align-items: stretch; margin-bottom: 10px;">
+                            <label class="form-label">{{ settings_form.authors_section_title.label }}</label>
+                            {{ settings_form.authors_section_title }}
+                        </div>
+                        <div class="input-inline" style="flex-direction: column; align-items: stretch; margin-bottom: 10px;">
+                            <label class="form-label">{{ settings_form.featured_authors.label }}</label>
+                            {{ settings_form.featured_authors }}
+                        </div>
+                        <div class="input-inline">
+                            <label class="form-label">{{ settings_form.authors_section_order.label }}</label>
+                            {{ settings_form.authors_section_order }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Categories Sections -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">dashboard_customize</span>
+                {% trans "الأقسام الإخبارية (في وسط الصفحة)" %}
+            </h2>
+            <p class="section-subtitle">
+                {% trans "أضف الأقسام التي تريد ظهورها ورتبها من الأعلى للأسفل. يمكنك اختيار تصميم العرض لكل قسم." %}
+            </p>
+
+            {{ category_formset.management_form }}
+            
+            <div id="formset-container" class="formset-container">
+                <!-- Desktop Header -->
+                <div class="formset-header">
+                    <div class="col-3">القسم</div>
+                    <div class="col-3">شكل التصميم</div>
+                    <div class="col-2">الترتيب</div>
+                    <div class="col-2">عدد المقالات</div>
+                    <div class="col-1 center">نشط</div>
+                    <div class="col-1 right">حذف</div>
+                </div>
+
+                {% for form in category_formset %}
+                <div class="formset-row">
+                    {{ form.id }}
+                    <div class="col-3 mobile-box">
+                        <label class="mobile-label">{{ form.category.label }}</label>
+                        {{ form.category }}
+                    </div>
+                    <div class="col-3 mobile-box">
+                        <label class="mobile-label">{{ form.design_style.label }}</label>
+                        {{ form.design_style }}
+                    </div>
+                    <div class="col-2 mobile-box">
+                        <label class="mobile-label">{{ form.order.label }}</label>
+                        {{ form.order }}
+                    </div>
+                    <div class="col-2 mobile-box">
+                        <label class="mobile-label">{{ form.article_count.label }}</label>
+                        {{ form.article_count }}
+                    </div>
+                    <div class="col-1 center mobile-box inline-flex">
+                        <label class="mobile-label" style="margin-bottom:0; margin-inline-end:10px;">{{ form.is_active.label }}</label>
+                        {{ form.is_active }}
+                    </div>
+                    <div class="col-1 right mobile-box inline-flex">
+                        {% if category_formset.can_delete %}
+                            <label class="mobile-label text-danger" style="margin-bottom:0; margin-inline-end:10px;">{{ form.DELETE.label|default:"حذف" }}</label>
+                            {{ form.DELETE }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="button" id="add-form" class="btn btn-secondary action-btn">
+                <span class="icon">add</span>
+                {% trans "إضافة قسم جديد" %}
+            </button>
+        </div>
+
+        <div class="sticky-footer">
+            <button type="submit" class="btn btn-primary save-btn">
+                <span class="icon">save</span>
+                {% trans "حفظ التغييرات" %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Template for new forms -->
+<div id="empty-form-template" style="display:none;">
+    <div class="formset-row">
+        {{ category_formset.empty_form.id }}
+        <div class="col-3 mobile-box">
+            <label class="mobile-label">{{ category_formset.empty_form.category.label }}</label>
+            {{ category_formset.empty_form.category }}
+        </div>
+        <div class="col-3 mobile-box">
+            <label class="mobile-label">{{ category_formset.empty_form.design_style.label }}</label>
+            {{ category_formset.empty_form.design_style }}
+        </div>
+        <div class="col-2 mobile-box">
+            <label class="mobile-label">{{ category_formset.empty_form.order.label }}</label>
+            {{ category_formset.empty_form.order }}
+        </div>
+        <div class="col-2 mobile-box">
+            <label class="mobile-label">{{ category_formset.empty_form.article_count.label }}</label>
+            {{ category_formset.empty_form.article_count }}
+        </div>
+        <div class="col-1 center mobile-box inline-flex">
+            <label class="mobile-label" style="margin-bottom:0; margin-inline-end:10px;">{{ category_formset.empty_form.is_active.label }}</label>
+            {{ category_formset.empty_form.is_active }}
+        </div>
+        <div class="col-1 right mobile-box inline-flex">
+            {% if category_formset.can_delete %}
+                <label class="mobile-label text-danger" style="margin-bottom:0; margin-inline-end:10px;">{{ category_formset.empty_form.DELETE.label|default:"حذف" }}</label>
+                {{ category_formset.empty_form.DELETE }}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('add-form').addEventListener('click', function() {
+    var form_idx = document.getElementById('id_form-TOTAL_FORMS').value;
+    var template = document.getElementById('empty-form-template').innerHTML;
+    var container = document.getElementById('formset-container');
+    
+    // Replace __prefix__ with current form index
+    var newFormHtml = template.replace(/__prefix__/g, form_idx);
+    
+    // Append the new form
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = newFormHtml;
+    container.appendChild(wrapper.firstElementChild);
+    
+    // Update total forms count
+    document.getElementById('id_form-TOTAL_FORMS').value = parseInt(form_idx) + 1;
+});
+</script>
+
+<style>
+    .custom-settings-wrapper {
+        padding: 2rem;
+        background-color: var(--bg-secondary);
+        border-radius: 10px;
+        color: var(--text-primary);
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .settings-section {
+        margin-bottom: 3rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--accent-color);
+    }
+
+    .section-subtitle {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+    }
+
+    .custom-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .custom-grid.grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .bg-panel {
+        background-color: var(--bg-tertiary);
+        padding: 1.5rem;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+    }
+
+    .panel-box {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .panel-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 1rem;
+    }
+
+    .checkbox-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .custom-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .number-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .input-inline {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .input-inline .form-label {
+        width: 200px;
+        margin-bottom: 0;
+        font-size: 0.9rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.6rem 0.8rem;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .form-control:focus {
+        border-color: var(--accent-color);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Formset styling */
+    .formset-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .formset-header {
+        display: flex;
+        padding: 0 1rem;
+        font-size: 0.8rem;
+        font-weight: bold;
+        color: var(--text-secondary);
+        margin-bottom: -0.5rem;
+    }
+
+    .formset-row {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background-color: var(--bg-tertiary);
+        gap: 1rem;
+        transition: border-color 0.2s;
+    }
+    .formset-row:hover {
+        border-color: var(--accent-color);
+    }
+
+    .col-3 { flex: 3; }
+    .col-2 { flex: 2; }
+    .col-1 { flex: 1; }
+
+    .center { text-align: center; justify-content: center; }
+    .right { text-align: end; justify-content: flex-end; }
+
+    .mobile-label {
+        display: none;
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: var(--accent-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .sticky-footer {
+        position: sticky;
+        bottom: 0;
+        padding: 1.5rem;
+        background-color: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        margin: 2rem -2rem -2rem -2rem;
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+        box-shadow: 0 -4px 6px rgba(0,0,0,0.1);
+        z-index: 100;
+    }
+
+    .save-btn {
+        padding: 0.8rem 2.5rem;
+        font-size: 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .text-danger {
+        color: var(--accent-danger, #ef4444);
+    }
+
+    /* Responsive styling */
+    @media (max-width: 768px) {
+        .custom-grid.grid-2 {
+            grid-template-columns: 1fr;
+        }
+
+        .input-inline {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.5rem;
+        }
+
+        .input-inline .form-label {
+            width: 100%;
+        }
+
+        .formset-header {
+            display: none;
+        }
+
+        .formset-row {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1rem;
+            padding: 1.5rem;
+        }
+
+        .col-3, .col-2, .col-1 {
+            flex: 1;
+            width: 100%;
+        }
+
+        .mobile-label {
+            display: block;
+        }
+
+        .inline-flex {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .center, .right {
+            text-align: start;
+        }
+    }
+</style>
+{% endblock %}

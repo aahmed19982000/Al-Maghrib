@@ -71,3 +71,12 @@ class EditorLog(models.Model):
 
     def __str__(self):
         return f"{self.editor.username if self.editor else 'System'} - {self.action} on {self.object_name} at {self.timestamp}"
+
+class AuthorExpertise(models.Model):
+    author = models.ForeignKey(AuthorProfile, on_delete=models.CASCADE, related_name='expertises')
+    title = models.CharField(max_length=100, verbose_name="العنوان (مثال: التحليل الإقليمي)")
+    description = models.CharField(max_length=200, verbose_name="الوصف (مثال: السياسات والشؤون المغاربية)")
+    icon = models.CharField(max_length=50, default='star', help_text="أيقونة من Material Symbols", verbose_name="الأيقونة")
+
+    def __str__(self):
+        return self.title

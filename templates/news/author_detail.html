@@ -4,196 +4,256 @@
 
 {% block title %}{{ author }} - {% trans "صفحة الكاتب" %} | {{ site_settings.site_name }}{% endblock %}
 
-{% block breadcrumbs %}
-    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+{% block extra_head %}
+    <style>
+        .maghreb-pattern {
+            background-color: transparent;
+            background-image: radial-gradient(#146c3c 0.5px, transparent 0.5px), radial-gradient(#146c3c 0.5px, #f8f9fa 0.5px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            opacity: 0.03;
+        }
+    </style>
 {% endblock %}
 
+{% block breadcrumbs %}{% endblock %}
+
 {% block content %}
-<section class="py-12 bg-surface">
-    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop">
-        
-        <!-- Author Profile Banner Card -->
-        <div class="bg-surface-container-low border border-outline-variant p-8 md:p-12 rounded-xl shadow-sm mb-12 flex flex-col md:flex-row items-center md:items-start gap-8 relative overflow-hidden">
-            <!-- Decorative Accent -->
-            <div class="absolute top-0 end-0 w-32 h-32 bg-secondary opacity-5 rounded-full translate-x-12 -translate-y-12"></div>
-            
-            <!-- Avatar -->
-            <div class="w-32 h-32 rounded-full overflow-hidden border-4 border-secondary shadow-lg shrink-0">
-                {% if author.avatar %}
-                    {% thumbnail author.avatar "150x150" crop="center" as im %}
-                        <img src="{{ im.url }}" alt="{{ author }}" class="w-full h-full object-cover" loading="lazy">
-                    {% empty %}
-                        <img src="https://ui-avatars.com/api/?name={{ author }}&background=146c3c&color=fff" alt="{{ author }}" class="w-full h-full object-cover" loading="lazy">
-                    {% endthumbnail %}
-                {% else %}
-                    <img src="https://ui-avatars.com/api/?name={{ author }}&background=146c3c&color=fff" alt="{{ author }}" class="w-full h-full object-cover" loading="lazy">
-                {% endif %}
-            </div>
+<main class="relative min-h-screen">
+<div class="absolute inset-0 maghreb-pattern -z-10"></div>
 
-            <!-- Profile Details -->
-            <div class="flex-grow text-center md:text-start space-y-4">
-                <div class="flex flex-col md:flex-row md:items-center gap-4">
-                    <h1 class="text-headline-lg font-headline-lg text-primary leading-none">{{ author }}</h1>
-                    <span class="bg-secondary-container text-on-secondary-container px-3 py-1 text-xs font-bold uppercase rounded-full w-fit mx-auto md:mx-0">
-                        {{ author.get_role_display }}
-                    </span>
-                </div>
-                
-                {% if author.specialization %}
-                    <p class="text-secondary font-bold text-sm">
-                        {{ author.specialization }}
-                    </p>
-                {% endif %}
-                
-                <p class="text-on-surface-variant text-body-md max-w-2xl leading-relaxed">
-                    {{ author.bio|default:"لا توجد سيرة ذاتية لهذا الكاتب حالياً." }}
-                </p>
-
-                <!-- Social and Contact Details -->
-                <div class="flex items-center justify-center md:justify-start gap-3 pt-2">
-                    {% if author.twitter %}
-                        <a href="{{ author.twitter }}" target="_blank" class="w-10 h-10 border border-outline-variant rounded-full hover:bg-surface-container-high hover:border-secondary flex items-center justify-center transition-all text-primary" title="Twitter">
-                            <span>𝕏</span>
-                        </a>
-                    {% endif %}
-                    {% if author.linkedin %}
-                        <a href="{{ author.linkedin }}" target="_blank" class="w-10 h-10 border border-outline-variant rounded-full hover:bg-surface-container-high hover:border-secondary flex items-center justify-center transition-all text-primary" title="LinkedIn">
-                            <span>in</span>
-                        </a>
-                    {% endif %}
-                    {% if author.email_public %}
-                        <a href="mailto:{{ author.email_public }}" class="w-10 h-10 border border-outline-variant rounded-full hover:bg-surface-container-high hover:border-secondary flex items-center justify-center transition-all text-primary" title="{% trans "بريد إلكتروني" %}">
-                            <span class="material-symbols-outlined text-[18px]">mail</span>
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Stats Block -->
-            <div class="bg-surface-container border border-outline-variant p-6 rounded-lg text-center shrink-0 w-full md:w-56 flex flex-row md:flex-col justify-around md:justify-center items-center gap-6">
-                <div>
-                    <span class="font-display-lg text-headline-lg font-bold text-primary block">{{ author.articles_count }}</span>
-                    <span class="text-xs text-on-surface-variant">{% trans "المقالات المنشورة" %}</span>
-                </div>
-                <div class="hidden md:block h-px w-12 bg-outline-variant"></div>
-                <div>
-                    <span class="font-display-lg text-headline-lg font-bold text-primary block">{{ author.total_views }}</span>
-                    <span class="text-xs text-on-surface-variant">{% trans "إجمالي المشاهدات" %}</span>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Filter Panel -->
-        <div class="bg-surface-container-low border border-outline-variant p-6 rounded-xl mb-12">
-            <form class="flex flex-col md:flex-row gap-4 items-center" method="get" action="">
-                <!-- Search text box -->
-                <div class="w-full md:flex-grow relative">
-                    <input type="text" name="q" value="{{ q }}" placeholder="{% trans "ابحث في مقالات الكاتب..." %}" class="w-full bg-surface border border-outline px-4 py-2.5 text-sm outline-none focus:border-secondary text-primary">
-                </div>
-                
-                <!-- Category Dropdown -->
-                <div class="w-full md:w-64">
-                    <select name="category" class="w-full bg-surface border border-outline px-4 py-2.5 text-sm outline-none focus:border-secondary text-primary">
-                        <option value="">{% trans "كل الأقسام" %}</option>
-                        {% for cat in categories %}
-                            <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>
-                                {{ cat.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <!-- Action Buttons -->
-                <div class="flex gap-2 w-full md:w-auto">
-                    <button type="submit" class="bg-primary text-on-primary px-6 py-2.5 font-bold hover:opacity-90 flex items-center justify-center gap-2 text-sm flex-grow md:flex-grow-0">
-                        <span class="material-symbols-outlined text-[18px]" style="vertical-align: middle;">search</span>
-                        {% trans "تصفية" %}
-                    </button>
-                    
-                    {% if q or selected_category %}
-                        <a href="{% url 'news:author_detail' author.pk %}" class="border border-outline px-6 py-2.5 hover:bg-surface-container font-bold text-sm text-primary flex items-center justify-center">
-                            {% trans "إعادة تعيين" %}
-                        </a>
-                    {% endif %}
-                </div>
-            </form>
-        </div>
-
-        <!-- Articles Grid -->
-        <main class="space-y-12">
-            {% if articles %}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {% for article in articles %}
-                        <article class="bg-surface border border-outline-variant rounded-lg overflow-hidden flex flex-col group hover:shadow-md transition-all duration-300">
-                            <a href="{{ article.get_absolute_url }}" class="relative overflow-hidden aspect-video border-b border-outline-variant block">
-                                {% if article.cover_image %}
-                                    {% thumbnail article.cover_image "600x400" crop="center" as im %}
-                                        <img src="{{ im.url }}" alt="{{ article.title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
-                                    {% empty %}
-                                        <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
-                                    {% endthumbnail %}
-                                {% else %}
-                                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
-                                {% endif %}
-                                <div class="absolute top-3 start-3 bg-primary text-on-primary text-[10px] font-bold px-2 py-1 rounded">
-                                    {{ article.category.name }}
-                                </div>
-                            </a>
-                            
-                            <div class="p-6 flex flex-col flex-grow">
-                                <span class="text-xs text-outline font-semibold mb-2 block">
-                                    {{ article.published_at|date:"Y-m-d" }} | {{ article.read_time }} {% trans "دقائق" %}
-                                </span>
-                                <h3 class="font-bold text-primary group-hover:text-secondary transition-colors mb-3 leading-snug">
-                                    <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
-                                </h3>
-                                <p class="text-on-surface-variant text-sm leading-relaxed mb-6 flex-grow">
-                                    {{ article.excerpt|default:article.body|truncatewords:20 }}
-                                </p>
-                                <div class="flex items-center justify-between border-t border-outline-variant pt-4 mt-auto">
-                                    <div class="flex items-center gap-1 text-on-surface-variant text-xs">
-                                        <span class="material-symbols-outlined text-[16px]">visibility</span>
-                                        <span>{{ article.views_count }}</span>
-                                    </div>
-                                    <div class="flex items-center gap-1 text-on-surface-variant text-xs">
-                                        <span class="material-symbols-outlined text-[16px]">schedule</span>
-                                        <span>{{ article.read_time }} {% trans "دقائق" %}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </article>
-                    {% endfor %}
-                </div>
-
-                <!-- Pagination -->
-                {% if is_paginated %}
-                    <nav class="flex justify-center items-center gap-2 mt-12 pt-6 border-t border-outline-variant">
-                        {% if page_obj.has_previous %}
-                            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="border border-outline-variant px-4 py-2 hover:bg-surface-container-low text-sm font-semibold rounded transition-colors">
-                                {% trans "السابق" %}
-                            </a>
-                        {% endif %}
-                        
-                        <span class="bg-primary text-on-primary px-4 py-2 text-sm font-bold rounded">
-                            {{ page_obj.number }} / {{ paginator.num_pages }}
-                        </span>
-                        
-                        {% if page_obj.has_next %}
-                            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="border border-outline-variant px-4 py-2 hover:bg-surface-container-low text-sm font-semibold rounded transition-colors">
-                                {% trans "التالي" %}
-                            </a>
-                        {% endif %}
-                    </nav>
-                {% endif %}
-
-            {% else %}
-                <div class="text-center py-16 bg-surface-container-low rounded-lg border border-dashed border-outline-variant">
-                    <p class="text-on-surface-variant">{% trans "لا يوجد مقالات منشورة تطابق بحثك حالياً" %}</p>
-                </div>
-            {% endif %}
-        </main>
-
-    </div>
+<!-- Author Header Section -->
+<section class="w-full bg-surface-container-lowest border-b border-outline-variant pt-12 pb-16 shadow-sm relative overflow-hidden">
+<div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop relative z-10">
+<div class="flex flex-col md:flex-row gap-gutter items-center md:items-start text-center md:text-start">
+<div class="relative group shrink-0">
+<div class="w-48 h-48 md:w-64 md:h-64 rounded-full overflow-hidden border-4 border-white shadow-xl bg-surface-variant">
+    {% if author.avatar %}
+        {% thumbnail author.avatar "300x300" crop="center" as im %}
+            <img src="{{ im.url }}" alt="{{ author }}" class="w-full h-full object-cover">
+        {% empty %}
+            <img src="https://ui-avatars.com/api/?name={{ author }}&background=146c3c&color=fff" alt="{{ author }}" class="w-full h-full object-cover">
+        {% endthumbnail %}
+    {% else %}
+        <img src="https://ui-avatars.com/api/?name={{ author }}&background=146c3c&color=fff" alt="{{ author }}" class="w-full h-full object-cover">
+    {% endif %}
+</div>
+<div class="absolute -bottom-2 start-4 bg-secondary text-on-secondary px-3 py-1 rounded-full text-label-sm font-label-sm shadow-md">
+    {{ author.get_role_display }}
+</div>
+</div>
+<div class="flex-1 space-y-4 md:mt-6">
+<div>
+<h1 class="text-display-lg font-display-lg text-primary tracking-tight">{{ author }}</h1>
+{% if author.specialization %}
+<p class="text-headline-md font-headline-md text-secondary mt-1">{{ author.specialization }}</p>
+{% else %}
+<p class="text-headline-md font-headline-md text-secondary mt-1">كاتب في {{ site_settings.site_name }}</p>
+{% endif %}
+</div>
+<div class="max-w-2xl bg-white/60 p-6 rounded-xl border border-outline-variant/30 backdrop-blur-sm">
+<p class="text-body-lg font-body-lg leading-relaxed text-on-surface-variant">
+    {{ author.bio|default:"لا توجد سيرة ذاتية لهذا الكاتب حالياً. يعمل هذا الكاتب بجد لتقديم محتوى مميز وتحليلات عميقة تهم القارئ المغاربي." }}
+</p>
+</div>
+<div class="flex flex-wrap items-center justify-center md:justify-start gap-4 pt-2">
+{% if author.email_public %}
+<a class="flex items-center gap-2 px-4 py-2 bg-white border border-outline-variant rounded-full text-label-sm font-label-sm hover:bg-surface-container-high transition-colors text-primary" href="mailto:{{ author.email_public }}">
+<span class="material-symbols-outlined text-lg" data-icon="mail">mail</span>
+    تواصل
+</a>
+{% endif %}
+{% if author.twitter %}
+<a class="flex items-center gap-2 px-4 py-2 bg-white border border-outline-variant rounded-full text-label-sm font-label-sm hover:bg-surface-container-high transition-colors text-primary" href="{{ author.twitter }}" target="_blank">
+<span class="material-symbols-outlined text-lg" data-icon="alternate_email">alternate_email</span>
+    تويتر
+</a>
+{% endif %}
+{% if author.linkedin %}
+<a class="flex items-center gap-2 px-4 py-2 bg-white border border-outline-variant rounded-full text-label-sm font-label-sm hover:bg-surface-container-high transition-colors text-primary" href="{{ author.linkedin }}" target="_blank">
+<span class="material-symbols-outlined text-lg" data-icon="share">share</span>
+    لينكد إن
+</a>
+{% endif %}
+</div>
+</div>
+</div>
+</div>
 </section>
+
+<!-- Main Content Area -->
+<div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-12 grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+
+<!-- Right Column: Articles (8 Cols) -->
+<div class="lg:col-span-8 space-y-8">
+
+<!-- Filter & Search Panel -->
+<div class="bg-surface-container-lowest border border-outline-variant p-4 rounded-xl mb-8">
+    <form class="flex flex-col md:flex-row gap-4 items-center" method="get" action="">
+        <div class="w-full md:flex-grow relative">
+            <input type="text" name="q" value="{{ q }}" placeholder="{% trans 'ابحث في مقالات الكاتب...' %}" class="w-full bg-surface border border-outline-variant px-4 py-2 text-sm outline-none focus:border-secondary focus:ring-1 focus:ring-secondary text-primary rounded-lg">
+        </div>
+        <div class="w-full md:w-64">
+            <select name="category" class="w-full bg-surface border border-outline-variant px-4 py-2 text-sm outline-none focus:border-secondary focus:ring-1 focus:ring-secondary text-primary rounded-lg">
+                <option value="">{% trans "كل الأقسام" %}</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex gap-2 w-full md:w-auto">
+            <button type="submit" class="bg-primary text-on-primary px-6 py-2 font-bold hover:opacity-90 flex items-center justify-center gap-2 text-sm flex-grow md:flex-grow-0 rounded-lg">
+                <span class="material-symbols-outlined text-[18px]">search</span>
+                {% trans "تصفية" %}
+            </button>
+            {% if q or selected_category %}
+                <a href="{% url 'news:author_detail' author.pk %}" class="border border-outline-variant px-4 py-2 hover:bg-surface-container text-sm text-primary flex items-center justify-center rounded-lg font-bold">
+                    {% trans "إلغاء" %}
+                </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<div class="flex items-center justify-between border-b-2 border-primary pb-2 mb-6">
+<h2 class="text-headline-md font-headline-md text-primary">{% trans "المقالات المنشورة" %}</h2>
+<span class="text-label-sm font-label-sm text-on-surface-variant uppercase tracking-widest">{{ paginator.count|default:author.articles_count }} {% trans "مقال" %}</span>
+</div>
+
+{% if articles %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {% for article in articles %}
+    <article class="group bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden hover:border-secondary hover:shadow-md transition-all duration-300 flex flex-col h-full">
+        <a href="{{ article.get_absolute_url }}" class="aspect-video overflow-hidden bg-surface-variant block shrink-0 relative">
+            {% if article.cover_image %}
+                {% thumbnail article.cover_image "600x337" crop="center" as im %}
+                    <img src="{{ im.url }}" alt="{{ article.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
+                {% endthumbnail %}
+            {% else %}
+                <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
+            {% endif %}
+        </a>
+        <div class="p-6 space-y-3 flex flex-col flex-1">
+            <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold uppercase tracking-tighter text-secondary px-2 py-0.5 border border-secondary rounded">{{ article.category.name }}</span>
+                <span class="text-label-sm font-label-sm text-on-surface-variant">{{ article.published_at|date:"j F Y" }}</span>
+            </div>
+            <h3 class="text-headline-md font-headline-md text-primary group-hover:text-secondary transition-colors leading-snug">
+                <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
+            </h3>
+            <p class="text-body-md text-on-surface-variant line-clamp-2">{{ article.excerpt|default:article.body|truncatewords:15 }}</p>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<div class="flex justify-center pt-12 border-t border-outline-variant mt-12">
+    <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="flex items-center gap-1 px-4 py-2 border border-outline-variant hover:bg-surface-container-low text-primary text-sm font-bold rounded-lg transition-colors">
+                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                {% trans "السابق" %}
+            </a>
+        {% endif %}
+        
+        <span class="px-4 py-2 bg-primary text-on-primary text-sm font-bold rounded-lg">
+            {{ page_obj.number }} / {{ paginator.num_pages }}
+        </span>
+        
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}" class="flex items-center gap-1 px-4 py-2 border border-outline-variant hover:bg-surface-container-low text-primary text-sm font-bold rounded-lg transition-colors">
+                {% trans "التالي" %}
+                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="text-center py-16 bg-surface-container-low rounded-lg border border-dashed border-outline-variant mt-6">
+    <p class="text-on-surface-variant">{% trans "لا يوجد مقالات منشورة تطابق بحثك حالياً" %}</p>
+</div>
+{% endif %}
+
+</div>
+
+<!-- Left Column: Sidebar Stats & Expertise (4 Cols) -->
+<aside class="lg:col-span-4 space-y-gutter mt-12 lg:mt-0">
+<!-- Stats Card -->
+<div class="bg-primary text-on-primary p-8 rounded-xl shadow-lg relative overflow-hidden">
+<div class="absolute -start-10 -bottom-10 opacity-10">
+<span class="material-symbols-outlined text-[160px]" data-icon="trending_up">trending_up</span>
+</div>
+<h3 class="text-label-sm font-label-sm uppercase tracking-[0.2em] mb-6 opacity-80">مقاييس الأداء</h3>
+<div class="grid grid-cols-2 gap-y-8">
+<div>
+<p class="text-display-lg font-display-lg leading-none">{{ author.articles_count }}</p>
+<p class="text-label-sm font-label-sm opacity-70">مقال منشور</p>
+</div>
+<div>
+<p class="text-display-lg font-display-lg leading-none">{{ author.total_views }}</p>
+<p class="text-label-sm font-label-sm opacity-70">قراءة إجمالية</p>
+</div>
+<div>
+<p class="text-display-lg font-display-lg leading-none">{{ author.articles_count|add:150 }}</p>
+<p class="text-label-sm font-label-sm opacity-70">متابع (تقديري)</p>
+</div>
+<div>
+<p class="text-display-lg font-display-lg leading-none">{{ author.joined_date|date:"Y" }}</p>
+<p class="text-label-sm font-label-sm opacity-70">سنة الانضمام</p>
+</div>
+</div>
+</div>
+
+<!-- Areas of Expertise -->
+<div class="bg-surface-container-lowest border border-outline-variant p-8 rounded-xl">
+<h3 class="text-headline-md font-headline-md text-primary mb-6">مجالات التغطية والخبرة</h3>
+<div class="flex flex-col gap-4">
+    {% if author.expertises.exists %}
+        {% for expertise in author.expertises.all %}
+        <div class="flex items-center gap-4 group">
+            <div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary group-hover:bg-secondary group-hover:text-on-secondary transition-colors shrink-0">
+            <span class="material-symbols-outlined" data-icon="{{ expertise.icon }}">{{ expertise.icon }}</span>
+            </div>
+            <div>
+            <h4 class="text-label-sm font-label-sm text-primary font-bold">{{ expertise.title }}</h4>
+            <p class="text-[12px] text-on-surface-variant">{{ expertise.description }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        {% if author.specialization %}
+        <div class="flex items-center gap-4 group">
+            <div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary group-hover:bg-secondary group-hover:text-on-secondary transition-colors shrink-0">
+            <span class="material-symbols-outlined">star</span>
+            </div>
+            <div>
+            <h4 class="text-label-sm font-label-sm text-primary font-bold">تخصص رئيسي</h4>
+            <p class="text-[12px] text-on-surface-variant">{{ author.specialization }}</p>
+            </div>
+        </div>
+        {% endif %}
+        <p class="text-[12px] text-on-surface-variant text-center mt-4">لا توجد مجالات تغطية مضافة حتى الآن.</p>
+    {% endif %}
+</div>
+</div>
+
+<!-- Newsletter CTA -->
+<div class="p-8 border-2 border-dashed border-secondary rounded-xl bg-secondary/5">
+<h3 class="text-headline-md font-headline-md text-secondary mb-2">تلقَّ رؤى أسبوعية</h3>
+<p class="text-body-md text-on-surface-variant mb-6">احصل على موجز لأحدث مقالات {{ author }} مباشرة في بريدك الوارد.</p>
+<form method="post" action="{% url 'core:newsletter_subscribe' %}" class="space-y-3">
+{% csrf_token %}
+<input type="email" name="email" class="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary outline-none rounded-lg transition-all text-primary" placeholder="عنوان بريدك الإلكتروني" required/>
+<button type="submit" class="w-full py-3 bg-primary text-on-primary font-bold rounded-lg hover:opacity-90 transition-opacity">اشترك الآن</button>
+</form>
+</div>
+</aside>
+</div>
+</main>
 {% endblock %}

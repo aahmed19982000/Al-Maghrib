@@ -1,5 +1,5 @@
 from modeltranslation.translator import register, TranslationOptions
-from .models import SiteSettings, Advertisement
+from .models import SiteSettings, Advertisement, HomePageSettings
 
 @register(SiteSettings)
 class SiteSettingsTranslationOptions(TranslationOptions):
@@ -8,3 +8,7 @@ class SiteSettingsTranslationOptions(TranslationOptions):
 @register(Advertisement)
 class AdvertisementTranslationOptions(TranslationOptions):
     fields = ('title',)
+
+@register(HomePageSettings)
+class HomePageSettingsTranslationOptions(TranslationOptions):
+    fields = ('seo_title', 'seo_description', 'seo_keywords')

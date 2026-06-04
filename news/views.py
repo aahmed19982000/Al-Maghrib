@@ -72,7 +72,10 @@ class CategoryListView(ListView):
         self.category = get_object_or_404(Category, slug=self.kwargs['slug'])
         # Get category and all its subcategories
         categories = self.category.get_descendants(include_self=True)
-        queryset = Article.objects.filter(category__in=categories, status='published')
+        queryset = Article.objects.filter(
+            Q(category__in=categories) | Q(additional_categories__in=categories),
+            status='published'
+        ).distinct()
         
         # Sort selection
         self.sort_by = self.request.GET.get('sort', 'latest')
@@ -146,7 +149,9 @@ class AuthorDetailView(ListView):
         if category_slug:
             category = get_object_or_404(Category, slug=category_slug)
             categories = category.get_descendants(include_self=True)
-            queryset = queryset.filter(category__in=categories)
+            queryset = queryset.filter(
+                Q(category__in=categories) | Q(additional_categories__in=categories)
+            ).distinct()
             
         return queryset
 

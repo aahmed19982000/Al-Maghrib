@@ -13,7 +13,9 @@ from .views import (
     AuthorManagementListView,
     AuthorManagementDetailView,
     AuthorCreateView,
-    CommentActionView
+    CommentActionView,
+    HomePageSettingsView,
+    SiteSettingsView
 )
 
 app_name = 'dashboard'
@@ -29,6 +31,8 @@ urlpatterns = [
     path('categories/create/', CategoryCreateView.as_view(), name='category_create'),
     path('categories/<int:pk>/edit/', CategoryUpdateView.as_view(), name='category_edit'),
     path('stats/', AuthorStatsView.as_view(), name='stats'),
+    path('settings/home/', HomePageSettingsView.as_view(), name='homepage_settings'),
+    path('settings/site/', SiteSettingsView.as_view(), name='site_settings'),
     
     # Comments moderation
     path('comments/<int:pk>/action/', CommentActionView.as_view(), name='comment_action'),

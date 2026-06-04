@@ -15,7 +15,7 @@ from news.models import Article, Category, Comment
 from accounts.models import AuthorProfile
 from .models import ActivityLog, ArticleRevision
 from .forms import ArticleForm, CategoryForm
-from .forms_author import AuthorProfileForm, AuthorCreateForm
+from dashboard.forms_author import AuthorProfileForm, AuthorCreateForm, AuthorExpertiseFormSet
 
 class DashboardAccessRequiredMixin(UserPassesTestMixin):
     def test_func(self):
@@ -327,6 +327,12 @@ class ArticleBulkActionView(LoginRequiredMixin, DashboardAccessRequiredMixin, Vi
         else:
             messages.error(request, "إجراء غير صالح.")
             
+        from django.core.cache import cache
+        try:
+            cache.clear()
+        except Exception:
+            pass
+            
         ActivityLog.objects.create(
             user=request.user,
             action_type="إجراء جماعي",
@@ -373,7 +379,7 @@ class AuthorManagementListView(LoginRequiredMixin, DashboardAccessRequiredMixin,
         # Annotate total articles and total views, filtering out deleted articles
         return AuthorProfile.objects.annotate(
             total_articles=Count('user__articles', filter=Q(user__articles__deleted_at__isnull=True)),
-            total_views=Coalesce(Sum('user__articles__views_count', filter=Q(user__articles__deleted_at__isnull=True)), Value(0))
+            calc_total_views=Coalesce(Sum('user__articles__views_count', filter=Q(user__articles__deleted_at__isnull=True)), Value(0))
         ).order_by('-joined_date')
 
 class AuthorManagementDetailView(LoginRequiredMixin, DashboardAccessRequiredMixin, View):
@@ -390,6 +396,7 @@ class AuthorManagementDetailView(LoginRequiredMixin, DashboardAccessRequiredMixi
     def get(self, request, pk, *args, **kwargs):
         author = self.get_author(pk)
         form = AuthorProfileForm(instance=author)
+        expertise_formset = AuthorExpertiseFormSet(instance=author)
         
         # Articles of this author with search/filtering
         articles = Article.objects.filter(author=author.user)
@@ -427,6 +434,7 @@ class AuthorManagementDetailView(LoginRequiredMixin, DashboardAccessRequiredMixi
         context = {
             'author': author,
             'form': form,
+            'expertise_formset': expertise_formset,
             'page_obj': page_obj,
             'total_articles': total_articles,
             'total_views': total_views,
@@ -441,9 +449,12 @@ class AuthorManagementDetailView(LoginRequiredMixin, DashboardAccessRequiredMixi
     def post(self, request, pk, *args, **kwargs):
         author = self.get_author(pk)
         form = AuthorProfileForm(request.POST, request.FILES, instance=author)
-        if form.is_valid():
+        expertise_formset = AuthorExpertiseFormSet(request.POST, instance=author)
+        
+        if form.is_valid() and expertise_formset.is_valid():
             form.save()
-            messages.success(request, "تم تحديث بيانات الكاتب وصلاحياته بنجاح.")
+            expertise_formset.save()
+            messages.success(request, "تم تحديث بيانات الكاتب ومجالات الخبرة بنجاح.")
             return HttpResponseRedirect(reverse('dashboard:author_detail_mgmt', kwargs={'pk': pk}))
         else:
             messages.error(request, "حدث خطأ في تحديث البيانات. يرجى مراجعة الحقول.")
@@ -460,6 +471,7 @@ class AuthorManagementDetailView(LoginRequiredMixin, DashboardAccessRequiredMixi
             context = {
                 'author': author,
                 'form': form,
+                'expertise_formset': expertise_formset,
                 'page_obj': page_obj,
                 'total_articles': total_articles,
                 'total_views': total_views,
@@ -584,4 +596,75 @@ class AuthorCreateView(LoginRequiredMixin, StaffAdminRequiredMixin, CreateView):
         )
         messages.success(self.request, "تم إنشاء حساب الكاتب وتحديد صلاحياته بنجاح.")
         return response
+
+from .forms import HomePageSettingsForm, HomePageCategoryFormSet
+from core.models import HomePageSettings, HomePageCategory
+
+class HomePageSettingsView(LoginRequiredMixin, StaffAdminRequiredMixin, TemplateView):
+    template_name = 'dashboard/homepage_settings.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        settings_obj = HomePageSettings.load()
+        if 'settings_form' not in context:
+            context['settings_form'] = HomePageSettingsForm(instance=settings_obj)
+        if 'category_formset' not in context:
+            context['category_formset'] = HomePageCategoryFormSet(queryset=HomePageCategory.objects.all())
+        return context
+
+    def post(self, request, *args, **kwargs):
+        settings_obj = HomePageSettings.load()
+        settings_form = HomePageSettingsForm(request.POST, instance=settings_obj)
+        category_formset = HomePageCategoryFormSet(request.POST, queryset=HomePageCategory.objects.all())
+
+        if settings_form.is_valid() and category_formset.is_valid():
+            settings_form.save()
+            category_formset.save()
+            messages.success(request, "تم حفظ إعدادات الصفحة الرئيسية بنجاح.")
+            
+            ActivityLog.objects.create(
+                user=request.user,
+                action_type="تحديث الإعدادات",
+                description="تحديث إعدادات الصفحة الرئيسية"
+            )
+            return HttpResponseRedirect(reverse('dashboard:homepage_settings'))
+            
+        messages.error(request, "يرجى مراجعة الأخطاء أدناه.")
+        context = self.get_context_data(
+            settings_form=settings_form,
+            category_formset=category_formset
+        )
+        return self.render_to_response(context)
+
+from dashboard.forms import SiteSettingsForm
+from core.models import SiteSettings
+
+class SiteSettingsView(LoginRequiredMixin, StaffAdminRequiredMixin, TemplateView):
+    template_name = 'dashboard/site_settings.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        settings_obj = SiteSettings.load()
+        if 'form' not in context:
+            context['form'] = SiteSettingsForm(instance=settings_obj)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        settings_obj = SiteSettings.load()
+        form = SiteSettingsForm(request.POST, request.FILES, instance=settings_obj)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "تم حفظ الإعدادات العامة للموقع بنجاح.")
+            
+            ActivityLog.objects.create(
+                user=request.user,
+                action_type="تحديث الإعدادات",
+                description="تحديث إعدادات الموقع العامة (الهيدر والفوتر)"
+            )
+            return HttpResponseRedirect(reverse('dashboard:site_settings'))
+            
+        messages.error(request, "يرجى مراجعة الأخطاء في النموذج أدناه.")
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
 

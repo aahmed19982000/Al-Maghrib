@@ -4,6 +4,7 @@ from django import forms
 from django.urls import reverse_lazy
 from django.http import HttpResponse
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Q
 from news.models import Article, Category
 from accounts.models import AuthorProfile
 
@@ -19,29 +20,65 @@ class HomepageView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Fetch breaking, featured, popular, and latest published articles
-        context['latest_articles'] = Article.objects.filter(status='published').order_by('-published_at')[:10]
-        context['featured_articles'] = Article.objects.filter(status='published', is_featured=True).order_by('-published_at')[:4]
-        context['breaking_articles'] = Article.objects.filter(status='published', is_breaking=True).order_by('-published_at')[:5]
-        context['popular_articles'] = Article.objects.filter(status='published').order_by('-views_count')[:5]
-        context['slider_articles'] = Article.objects.filter(status='published', cover_image__gt='').order_by('-published_at')[:5]
+        from core.models import HomePageSettings, HomePageCategory
+        settings = HomePageSettings.load()
+        context['home_settings'] = settings
         
-        # Categorized news columns
+        if settings.show_breaking_news:
+            context['breaking_articles'] = Article.objects.filter(status='published', is_breaking=True).order_by('-published_at')[:5]
+        
+        if settings.show_slider:
+            context['slider_articles'] = Article.objects.filter(status='published', cover_image__gt='').order_by('-published_at')[:settings.slider_count]
+            
+        if settings.show_featured:
+            context['featured_articles'] = Article.objects.filter(status='published', is_featured=True).order_by('-published_at')[:settings.featured_count]
+            
+        if settings.show_popular:
+            context['popular_articles'] = Article.objects.filter(status='published').order_by('-views_count')[:settings.popular_count]
+            
+        # Dynamic Categorized news columns
         categories_data = []
-        for cat in Category.objects.filter(is_active=True, parent=None)[:5]:
-            articles = Article.objects.filter(category__in=cat.get_descendants(include_self=True), status='published').order_by('-published_at')[:4]
+        for home_cat in HomePageCategory.objects.filter(is_active=True).order_by('order'):
+            cats = home_cat.category.get_descendants(include_self=True)
+            articles = Article.objects.filter(
+                Q(category__in=cats) | Q(additional_categories__in=cats),
+                status='published'
+            ).distinct().order_by('-published_at')[:home_cat.article_count]
             if articles.exists():
                 categories_data.append({
-                    'category': cat,
+                    'category': home_cat.category,
+                    'design_style': home_cat.design_style,
                     'articles': articles
                 })
+        
+        # Fallback if no categories configured
+        if not categories_data:
+            for cat in Category.objects.filter(is_active=True, parent=None)[:5]:
+                cats = cat.get_descendants(include_self=True)
+                articles = Article.objects.filter(
+                    Q(category__in=cats) | Q(additional_categories__in=cats),
+                    status='published'
+                ).distinct().order_by('-published_at')[:4]
+                if articles.exists():
+                    categories_data.append({
+                        'category': cat,
+                        'design_style': 'grid',
+                        'articles': articles
+                    })
+                    
         context['categories_data'] = categories_data
         
         # Sidebar Ad
         from core.models import Advertisement
         context['sidebar_ad'] = Advertisement.objects.filter(slot='sidebar', is_active=True).first()
         
-        context['authors'] = AuthorProfile.objects.filter(is_active=True)[:6]
+        # Authors Section
+        featured = settings.featured_authors.filter(is_active=True)
+        if featured.exists():
+            context['authors'] = featured[:6]
+        else:
+            context['authors'] = AuthorProfile.objects.filter(is_active=True)[:6]
+            
         return context
 
 class SearchView(ListView):

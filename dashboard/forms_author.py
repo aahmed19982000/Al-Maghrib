@@ -1,5 +1,6 @@
 from django import forms
-from accounts.models import AuthorProfile
+from accounts.models import AuthorProfile, AuthorExpertise
+from django.forms import inlineformset_factory
 
 class AuthorProfileForm(forms.ModelForm):
     class Meta:
@@ -37,6 +38,24 @@ class AuthorProfileForm(forms.ModelForm):
         
         for field_name in ['is_active', 'can_publish_directly', 'can_edit_others', 'can_delete_articles']:
             self.fields[field_name].required = False
+
+class AuthorExpertiseForm(forms.ModelForm):
+    class Meta:
+        model = AuthorExpertise
+        fields = ['title', 'description', 'icon']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: التحليل الإقليمي'}),
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'مثال: السياسات والشؤون المغاربية'}),
+            'icon': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'account_balance'}),
+        }
+
+AuthorExpertiseFormSet = inlineformset_factory(
+    AuthorProfile,
+    AuthorExpertise,
+    form=AuthorExpertiseForm,
+    extra=1,
+    can_delete=True
+)
 
 from django.contrib.auth.models import User
 

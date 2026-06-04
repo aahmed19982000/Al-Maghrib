@@ -40,4 +40,12 @@ urlpatterns += i18n_patterns(
     path('notifications/', include('notifications.urls')),
     path('news/', include('news.urls')),
     path('', include('core.urls')),
+    prefix_default_language=False
 )
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

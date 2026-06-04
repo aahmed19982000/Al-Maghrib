@@ -12,8 +12,8 @@ class ArticleForm(forms.ModelForm):
             'author',
             'body_ar', 'body_en',
             'excerpt_ar', 'excerpt_en',
-            'category', 'tags',
-            'status', 'is_featured', 'is_breaking',
+            'category', 'additional_categories', 'tags',
+            'status', 'is_featured', 'is_breaking', 'auto_translate',
             'cover_image', 'allow_comments',
             'meta_title_ar', 'meta_title_en',
             'meta_desc_ar', 'meta_desc_en'
@@ -23,11 +23,12 @@ class ArticleForm(forms.ModelForm):
             'title_en': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Title in English'}),
             'slug': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'slug-url'}),
             'author': forms.Select(attrs={'class': 'form-control'}),
-            'body_ar': CKEditor5Widget(config_name='default', attrs={'class': 'django_ckeditor_5'}),
-            'body_en': CKEditor5Widget(config_name='default', attrs={'class': 'django_ckeditor_5'}),
+            'body_ar': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
+            'body_en': CKEditor5Widget(config_name='extends_en', attrs={'class': 'django_ckeditor_5'}),
             'excerpt_ar': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'المقتطف بالعربية'}),
             'excerpt_en': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Excerpt in English'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
+            'additional_categories': forms.SelectMultiple(attrs={'class': 'form-control', 'style': 'height: 100px;'}),
             'tags': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'tag1, tag2, ...'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'meta_title_ar': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'عنوان سيو بالعربية'}),
@@ -41,6 +42,8 @@ class ArticleForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Ensure category queryset is loaded and has a hierarchy
         self.fields['category'].queryset = Category.objects.filter(is_active=True)
+        self.fields['additional_categories'].queryset = Category.objects.filter(is_active=True)
+        self.fields['additional_categories'].label = "الأقسام الإضافية (اختياري)"
         
         # Check permissions for Author assignment
         can_assign_author = False
@@ -85,6 +88,7 @@ class ArticleForm(forms.ModelForm):
         self.fields['meta_title_en'].label = "SEO Title (English)"
         self.fields['meta_desc_ar'].label = "وصف SEO (عربي)"
         self.fields['meta_desc_en'].label = "SEO Description (English)"
+        self.fields['auto_translate'].label = "الترجمة التلقائية للإنجليزية (Auto-translate)"
         self.fields['cover_image'].widget.attrs.update({'class': 'form-control'})
         self.fields['tags'].required = False
 
@@ -145,4 +149,120 @@ class CategoryForm(forms.ModelForm):
         # Prevent circular parent relationships
         if self.instance and self.instance.pk:
             self.fields['parent'].queryset = Category.objects.exclude(pk=self.instance.pk)
+
+from django.forms.models import modelformset_factory
+from core.models import HomePageSettings, HomePageCategory
+
+class HomePageSettingsForm(forms.ModelForm):
+    class Meta:
+        model = HomePageSettings
+        fields = [
+            'seo_title_ar', 'seo_title_en',
+            'seo_description_ar', 'seo_description_en',
+            'seo_keywords_ar', 'seo_keywords_en',
+            'show_breaking_news', 'show_slider', 'show_featured', 'show_popular',
+            'show_authors_section', 'authors_section_title', 'featured_authors', 'authors_section_order',
+            'slider_count', 'featured_count', 'popular_count'
+        ]
+        widgets = {
+            'seo_title_ar': forms.TextInput(attrs={'class': 'form-control'}),
+            'seo_title_en': forms.TextInput(attrs={'class': 'form-control'}),
+            'seo_description_ar': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'seo_description_en': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'seo_keywords_ar': forms.TextInput(attrs={'class': 'form-control'}),
+            'seo_keywords_en': forms.TextInput(attrs={'class': 'form-control'}),
+            'authors_section_order': forms.NumberInput(attrs={'class': 'form-control'}),
+            'slider_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'featured_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'popular_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'authors_section_title': forms.TextInput(attrs={'class': 'form-control'}),
+            'featured_authors': forms.SelectMultiple(attrs={'class': 'form-control', 'style': 'height: 150px;'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['seo_title_ar'].label = "عنوان SEO للصفحة الرئيسية (عربي)"
+        self.fields['seo_title_en'].label = "SEO Title (English)"
+        self.fields['seo_description_ar'].label = "وصف SEO (عربي)"
+        self.fields['seo_description_en'].label = "SEO Description (English)"
+        self.fields['seo_keywords_ar'].label = "الكلمات المفتاحية (عربي)"
+        self.fields['seo_keywords_en'].label = "SEO Keywords (English)"
+        self.fields['show_breaking_news'].label = "عرض شريط الأخبار العاجلة"
+        self.fields['show_slider'].label = "عرض المعرض (Slider)"
+        self.fields['show_featured'].label = "عرض التحليلات المميزة"
+        self.fields['show_popular'].label = "عرض الأخبار الأكثر تداولاً"
+        self.fields['show_authors_section'].label = "عرض قسم الكتاب"
+        self.fields['authors_section_title'].label = "عنوان قسم الكتاب"
+        self.fields['featured_authors'].label = "اختر الكتاب لعرضهم (اتركه فارغاً لعرض أحدث الكتاب)"
+        self.fields['authors_section_order'].label = "ترتيب قسم الكتاب"
+        self.fields['slider_count'].label = "عدد الأخبار في المعرض"
+        self.fields['featured_count'].label = "عدد التحليلات المميزة"
+        self.fields['popular_count'].label = "عدد الأخبار الأكثر تداولاً"
+
+class HomePageCategoryForm(forms.ModelForm):
+    class Meta:
+        model = HomePageCategory
+        fields = ['category', 'order', 'design_style', 'article_count', 'is_active']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'order': forms.NumberInput(attrs={'class': 'form-control'}),
+            'design_style': forms.Select(attrs={'class': 'form-control'}),
+            'article_count': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['category'].label = "القسم"
+        self.fields['order'].label = "الترتيب"
+        self.fields['design_style'].label = "التصميم"
+        self.fields['article_count'].label = "عدد المقالات"
+        self.fields['is_active'].label = "نشط"
+        self.fields['category'].queryset = Category.objects.filter(is_active=True, parent__isnull=True)
+
+HomePageCategoryFormSet = modelformset_factory(
+    HomePageCategory,
+    form=HomePageCategoryForm,
+    extra=1,
+    can_delete=True
+)
+
+from core.models import SiteSettings
+
+class SiteSettingsForm(forms.ModelForm):
+    class Meta:
+        model = SiteSettings
+        fields = [
+            'site_name', 'logo',
+            'navbar_categories', 'footer_categories',
+            'footer_description',
+            'facebook_url', 'twitter_url', 'instagram_url', 'youtube_url',
+            'contact_email', 'contact_phone'
+        ]
+        widgets = {
+            'site_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'footer_description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'facebook_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://facebook.com/...'}),
+            'twitter_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://twitter.com/...'}),
+            'instagram_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://instagram.com/...'}),
+            'youtube_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://youtube.com/...'}),
+            'contact_email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'navbar_categories': forms.SelectMultiple(attrs={'class': 'form-control', 'style': 'height: 150px;'}),
+            'footer_categories': forms.SelectMultiple(attrs={'class': 'form-control', 'style': 'height: 150px;'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['site_name'].label = "اسم الموقع"
+        self.fields['logo'].label = "شعار الموقع (Logo)"
+        self.fields['navbar_categories'].label = "أقسام القائمة العلوية (Navbar)"
+        self.fields['footer_categories'].label = "أقسام الفوتر (Footer)"
+        self.fields['footer_description'].label = "نص نبذة الفوتر"
+        self.fields['facebook_url'].label = "رابط فيسبوك"
+        self.fields['twitter_url'].label = "رابط تويتر/X"
+        self.fields['instagram_url'].label = "رابط إنستجرام"
+        self.fields['youtube_url'].label = "رابط يوتيوب"
+        self.fields['contact_email'].label = "البريد الإلكتروني للتواصل"
+        self.fields['contact_phone'].label = "رقم هاتف التواصل"
+
 

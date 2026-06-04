@@ -6,7 +6,7 @@ from .views import HomepageView, SearchView, ContactView, AboutView, NewsletterS
 app_name = 'core'
 
 urlpatterns = [
-    path('', cache_page(60 * 15)(HomepageView.as_view()), name='home'),
+    path('', HomepageView.as_view(), name='home'),
     path('search/', SearchView.as_view(), name='search'),
     path('contact/', ContactView.as_view(), name='contact'),
     path('contact/success/', lambda r: HttpResponse("Success"), name='contact_success'), # Quick dummy success URL
