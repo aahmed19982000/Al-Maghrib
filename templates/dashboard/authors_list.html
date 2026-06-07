@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="table-container">
-    <div class="table-header-row" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="table-header-row responsive-flex-row" style="display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: 1rem;">
             <span style="font-weight: 700; font-size: 1.1rem;">{% trans "قائمة الكتّاب المسجلين" %}</span>
             {% if request.user.is_staff or request.user.is_superuser %}

@@ -8,60 +8,165 @@
 {% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="relative bg-primary text-on-primary py-24 overflow-hidden">
-    <div class="absolute inset-0 opacity-10 pointer-events-none">
-        <img alt="" class="w-full h-full object-cover" src="https://images.unsplash.com/photo-1495020689067-958852a6565d?q=80&w=1200" loading="lazy"/>
-    </div>
-    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop relative z-10 text-center">
-        <h1 class="font-display-lg text-display-lg mb-6">{% trans "من نحن | صوت المغرب العربي" %}</h1>
-        <p class="font-body-lg text-body-lg max-w-3xl mx-auto opacity-80 leading-relaxed">
-            {% trans "نحن مؤسسة صحفية إلكترونية مستقلة، تسعى لتقديم تغطية إخبارية شاملة وتحليلات عميقة حول التطورات السياسية والاقتصادية والاجتماعية والثقافية في منطقة المغرب العربي الكبير." %}
+<!-- Premium Hero Section -->
+<section class="relative bg-gradient-to-br from-[#0a1d37] via-[#0e274b] to-[#146c3c] text-white py-28 overflow-hidden">
+    <!-- Decorative Floating Gradients -->
+    <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/40 rounded-full blur-[100px] pointer-events-none"></div>
+    
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop relative z-10 text-center animate-fade-in">
+        <!-- Badge -->
+        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/10 text-secondary-fixed text-label-sm font-bold backdrop-blur-md border border-white/10 mb-6">
+            <span class="w-2 h-2 rounded-full bg-secondary"></span>
+            {% trans "صوت المغرب العربي والوطن العربي" %}
+        </span>
+        
+        <h1 class="font-display-lg text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight leading-tight">
+            {% trans "من نحن" %}
+        </h1>
+        <p class="font-body-lg text-lg md:text-xl max-w-3xl mx-auto text-white/80 leading-relaxed">
+            {% trans "منصة إعلامية إلكترونية عربية تسعى لبناء جسور التواصل وتقديم محتوى إخباري ومعرفي متميز وبأعلى درجات المصداقية." %}
         </p>
     </div>
 </section>
 
-<!-- Values & Mission -->
-<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-16 mb-24">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-center">
-        <!-- Text Columns -->
-        <div class="lg:col-span-7 space-y-6">
-            <h2 class="font-headline-md text-headline-md text-primary">{% trans "رؤيتنا ورسالتنا الصحفية" %}</h2>
-            <p class="text-on-surface-variant text-body-md leading-relaxed">
-                {% trans "نؤمن في جريدة المغرب العربي بأن القارئ يستحق صحافة متميزة تلتزم بأعلى معايير المهنية والموضوعية. فريقنا المتكامل من الصحفيين والمحللين يغطي الأحداث من قلب الميدان لنقل الحقيقة كاملة وبكل أبعادها الإقليمية والدولية." %}
-            </p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                <div class="border-s-4 border-secondary ps-4">
-                    <h4 class="font-bold text-primary mb-2">{% trans "الموضوعية والاستقلالية" %}</h4>
-                    <p class="text-sm text-on-surface-variant">{% trans "ننقل الخبر دون انحياز، مع تمكين جميع الأطراف من التعبير عن آرائهم وفق مبادئ التعددية." %}</p>
-                </div>
-                <div class="border-s-4 border-secondary ps-4">
-                    <h4 class="font-bold text-primary mb-2">{% trans "العمق الإقليمي" %}</h4>
-                    <p class="text-sm text-on-surface-variant">{% trans "نربط الأحداث المحلية ببعدها المغاربي، لنرسم صورة متكاملة تلبي تطلعات مواطني المنطقة." %}</p>
+<!-- About Section -->
+<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-20">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center mb-24">
+        <!-- Interactive Illustration / Badges on Left -->
+        <div class="lg:col-span-5 order-last lg:order-first">
+            <div class="relative p-8 rounded-2xl bg-white border border-outline-variant shadow-xl overflow-hidden group hover:shadow-2xl transition-all duration-300">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-secondary/10 rounded-full blur-xl"></div>
+                <h3 class="font-headline-md text-headline-md text-primary mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-secondary">map</span>
+                    {% trans "نطاق التغطية والجمهور" %}
+                </h3>
+                
+                <div class="space-y-4">
+                    <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-surface-container-low transition-colors duration-200">
+                        <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                            <span class="material-symbols-outlined">public</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-primary text-sm">{% trans "دول المغرب العربي" %}</h4>
+                            <p class="text-xs text-on-surface-variant mt-1">{% trans "تغطية ميدانية شاملة لشؤون تونس، الجزائر، المغرب، ليبيا، وموريتانيا." %}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-surface-container-low transition-colors duration-200">
+                        <div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
+                            <span class="material-symbols-outlined">explore</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-primary text-sm">{% trans "دول الخليج العربي ومصر" %}</h4>
+                            <p class="text-xs text-on-surface-variant mt-1">{% trans "ربط المشرق والمغرب العربي بجمهورية مصر العربية ومختلف دول الخليج العربي." %}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4 p-4 rounded-xl hover:bg-surface-container-low transition-colors duration-200">
+                        <div class="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-600 shrink-0">
+                            <span class="material-symbols-outlined">language</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-primary text-sm">{% trans "المتابعون حول العالم" %}</h4>
+                            <p class="text-xs text-on-surface-variant mt-1">{% trans "إيصال الصوت العربي والجسر المعرفي للجاليات والمتابعين في مختلف بلدان العالم." %}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Visual / Graphic Block -->
-        <div class="lg:col-span-5">
-            <div class="bg-surface-container-low border border-outline-variant p-8 rounded-lg shadow-sm">
-                <h3 class="font-headline-md text-headline-md text-primary mb-6">{% trans "حقائق وأرقام" %}</h3>
-                <div class="space-y-6">
-                    <div class="flex justify-between items-center border-b border-outline-variant pb-4">
-                        <span class="text-on-surface-variant text-sm">{% trans "المكاتب الإقليمية" %}</span>
-                        <span class="font-display-lg text-headline-lg font-bold text-secondary">5</span>
+        <!-- Text Info Column -->
+        <div class="lg:col-span-7 space-y-6">
+            <h2 class="font-headline-md text-3xl font-bold text-primary">
+                {% trans "بناء جسور التواصل المعرفي العربي" %}
+            </h2>
+            <div class="w-20 h-1 bg-secondary rounded-full"></div>
+            
+            <p class="text-on-surface-variant text-body-md leading-relaxed text-justify">
+                {% trans "موقع المغرب العربي هو منصة إعلامية إلكترونية عربية تهدف إلى تقديم محتوى إخباري ومعرفي وإعلامي متميز يخاطب جمهور دول المغرب العربي ودول الخليج العربي وجمهورية مصر العربية، إلى جانب المتابعين في مختلف أنحاء العالم." %}
+            </p>
+            
+            <p class="text-on-surface-variant text-body-md leading-relaxed text-justify">
+                {% trans "نسعى إلى بناء جسر للتواصل بين الشعوب العربية من خلال تقديم الأخبار والتحليلات والتقارير والمواد الإعلامية التي تواكب التطورات السياسية والاقتصادية والثقافية والاجتماعية، مع الالتزام بالمصداقية والمهنية والموضوعية." %}
+            </p>
+
+            <p class="text-on-surface-variant text-body-md leading-relaxed text-justify">
+                {% trans "ويعمل الموقع على إبراز القضايا والفرص المشتركة بين دول المنطقة، وتعزيز التبادل المعرفي والثقافي، ليكون نافذة عربية شاملة تجمع بين الخبر والرأي والمعلومة في مكان واحد." %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Vision & Mission Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-24">
+        <!-- Vision Card -->
+        <div class="group relative p-8 rounded-2xl bg-[#0a1d37] text-white border border-white/5 shadow-xl overflow-hidden hover:scale-[1.02] transition-all duration-300">
+            <div class="absolute -top-12 -left-12 w-36 h-36 bg-secondary/20 rounded-full blur-2xl group-hover:bg-secondary/35 transition-colors duration-300"></div>
+            <div class="relative z-10 flex flex-col h-full justify-between">
+                <div>
+                    <div class="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-6">
+                        <span class="material-symbols-outlined text-secondary text-2xl">trending_up</span>
                     </div>
-                    <div class="flex justify-between items-center border-b border-outline-variant pb-4">
-                        <span class="text-on-surface-variant text-sm">{% trans "محرر ومراسل في الميدان" %}</span>
-                        <span class="font-display-lg text-headline-lg font-bold text-secondary">50+</span>
-                    </div>
-                    <div class="flex justify-between items-center pb-2">
-                        <span class="text-on-surface-variant text-sm">{% trans "معدل القراءات الشهري" %}</span>
-                        <span class="font-display-lg text-headline-lg font-bold text-secondary">2M+</span>
-                    </div>
+                    <h3 class="text-2xl font-bold mb-4">{% trans "رؤيتنا" %}</h3>
+                    <p class="text-white/80 leading-relaxed text-sm">
+                        {% trans "أن نكون المنصة الإعلامية العربية الرائدة في تغطية شؤون المغرب العربي والخليج ومصر وربطها بالعالم." %}
+                    </p>
                 </div>
             </div>
+        </div>
+
+        <!-- Mission Card -->
+        <div class="group relative p-8 rounded-2xl bg-white text-primary border border-outline-variant shadow-xl overflow-hidden hover:scale-[1.02] transition-all duration-300">
+            <div class="absolute -top-12 -left-12 w-36 h-36 bg-secondary/10 rounded-full blur-2xl group-hover:bg-secondary/20 transition-colors duration-300"></div>
+            <div class="relative z-10 flex flex-col h-full justify-between">
+                <div>
+                    <div class="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center mb-6">
+                        <span class="material-symbols-outlined text-primary text-2xl">rocket_launch</span>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">{% trans "رسالتنا" %}</h3>
+                    <p class="text-on-surface-variant leading-relaxed text-sm">
+                        {% trans "تقديم محتوى إعلامي موثوق ومتوازن يسهم في نشر المعرفة وتعزيز التواصل والتقارب بين الشعوب العربية." %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Values Section -->
+    <div class="text-center mb-16">
+        <h2 class="font-headline-md text-3xl font-bold text-primary mb-4">{% trans "قيمنا ومبادئنا" %}</h2>
+        <div class="w-16 h-1 bg-secondary mx-auto rounded-full"></div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="p-6 bg-white border border-outline-variant rounded-2xl shadow-sm text-center hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined">verified_user</span>
+            </div>
+            <h4 class="font-bold text-primary text-lg mb-2">{% trans "المصداقية" %}</h4>
+            <p class="text-xs text-on-surface-variant leading-relaxed">
+                {% trans "نلتزم بنقل الحقائق الدقيقة والأخبار الموثوقة من مصادرها الرسمية والميدانية." %}
+            </p>
+        </div>
+
+        <div class="p-6 bg-white border border-outline-variant rounded-2xl shadow-sm text-center hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined">gavel</span>
+            </div>
+            <h4 class="font-bold text-primary text-lg mb-2">{% trans "المهنية" %}</h4>
+            <p class="text-xs text-on-surface-variant leading-relaxed">
+                {% trans "نتبع أعلى المعايير الصحفية العالمية في التحرير والتحليل وعرض المعلومات." %}
+            </p>
+        </div>
+
+        <div class="p-6 bg-white border border-outline-variant rounded-2xl shadow-sm text-center hover:shadow-md transition-shadow">
+            <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined">balance</span>
+            </div>
+            <h4 class="font-bold text-primary text-lg mb-2">{% trans "الموضوعية" %}</h4>
+            <p class="text-xs text-on-surface-variant leading-relaxed">
+                {% trans "نقف على مسافة واحدة من الجميع ونعرض مختلف وجهات النظر بتوازن وحيادية." %}
+            </p>
         </div>
     </div>
 </main>

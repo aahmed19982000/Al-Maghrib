@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "سياسة الخصوصية" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block breadcrumbs %}
+    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+{% endblock %}
+
+{% block content %}
+<!-- Premium Hero Section -->
+<section class="relative bg-gradient-to-br from-[#0a1d37] via-[#0e274b] to-[#146c3c] text-white py-24 overflow-hidden">
+    <!-- Decorative Floating Gradients -->
+    <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/40 rounded-full blur-[100px] pointer-events-none"></div>
+    
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop relative z-10 text-center animate-fade-in">
+        <h1 class="font-display-lg text-4xl md:text-5xl font-bold mb-4 tracking-tight leading-tight">
+            {% trans "سياسة الخصوصية" %}
+        </h1>
+        <p class="font-body-lg text-base md:text-lg max-w-2xl mx-auto text-white/80 leading-relaxed">
+            {% trans "خصوصيتك تهمنا. نوضح هنا كيفية جمعنا لبياناتك وحمايتها واستخدامها عند تصفح موقعنا." %}
+        </p>
+    </div>
+</section>
+
+<!-- Content Section -->
+<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-16">
+    <div class="max-w-3xl mx-auto bg-white border border-outline-variant rounded-2xl p-8 md:p-12 shadow-sm">
+        
+        <div class="prose prose-slate max-w-none text-on-surface-variant text-sm leading-relaxed space-y-8">
+            
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "مقدمة عامة" %}
+                </h2>
+                <p>
+                    {% trans "نحن نلتزم بحماية سرية وخصوصية بيانات المستخدمين والزوار على موقعنا. توضح هذه السياسة طبيعة المعلومات الشخصية التي نجمعها، وكيفية استخدامها وحمايتها، وحقوقك المتعلقة ببياناتك." %}
+                </p>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "البيانات التي نجمعها" %}
+                </h2>
+                <p>{% trans "قد نقوم بجمع الأنواع التالية من المعلومات عند استخدامك لموقعنا:" %}</p>
+                <ul class="list-disc list-inside space-y-2 ps-4">
+                    <li>{% trans "المعلومات الشخصية التي تقدمها طواعية عند الاشتراك في النشرة البريدية أو استخدام نموذج الاتصال (مثل الاسم والبريد الإلكتروني)." %}</li>
+                    <li>{% trans "بيانات التصفح والاستخدام، وتشمل عنوان البروتوكول (IP)، نوع المتصفح، الصفحات التي زرتها، ووقت الزيارة." %}</li>
+                    <li>{% trans "ملفات تعريف الارتباط (Cookies) لتحسين تجربة المستخدم وتحليل أداء الموقع وإظهار الإعلانات المناسبة." %}</li>
+                </ul>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "كيفية استخدام بياناتك" %}
+                </h2>
+                <p>{% trans "نستخدم البيانات التي نجمعها للأغراض التالية:" %}</p>
+                <ul class="list-disc list-inside space-y-2 ps-4">
+                    <li>{% trans "تقديم محتوى الموقع الإخباري والخدمات المتاحة وتخصيصها لتناسب اهتماماتك." %}</li>
+                    <li>{% trans "إرسال النشرات الإخبارية والمستجدات التي قمت بالاشتراك فيها." %}</li>
+                    <li>{% trans "الرد على استفساراتك ورسائلك التي ترسلها لنا عبر نموذج الاتصال." %}</li>
+                    <li>{% trans "تحليل حركة المرور وسلوك الزوار لتحسين وتطوير أداء الموقع وسرعته." %}</li>
+                </ul>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "حماية البيانات ومشاركتها" %}
+                </h2>
+                <p>
+                    {% trans "نحن نطبق إجراءات أمنية تقنية وإدارية صارمة لمنع الوصول غير المصرح به إلى بياناتك أو تعديلها أو كشفها. نؤكد أننا لا نقوم ببيع أو تأجير أو مشاركة معلوماتك الشخصية مع أطراف ثالثة لأغراض تجارية، باستثناء الحالات التي يتطلبها القانون أو لحماية حقوقنا القانونية." %}
+                </p>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "حقوق المستخدم" %}
+                </h2>
+                <p>
+                    {% trans "لك الحق في الوصول إلى بياناتك الشخصية التي نحتفظ بها، أو طلب تصحيحها أو تعديلها، كما يمكنك في أي وقت إلغاء الاشتراك من النشرة البريدية عبر رابط إلغاء الاشتراك المتوفر في نهاية كل رسالة بريدية نرسلها إليك." %}
+                </p>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "التعديلات على سياسة الخصوصية" %}
+                </h2>
+                <p>
+                    {% trans "نحتفظ بالحق في تعديل أو تحديث سياسة الخصوصية هذه في أي وقت. سيتم نشر أي تغييرات هنا مع تحديث تاريخ آخر تعديل في أسفل الصفحة. ننصح بمراجعة هذه الصفحة بشكل دوري للوقوف على أي مستجدات." %}
+                </p>
+            </section>
+
+            <div class="border-t border-outline-variant pt-6 flex items-center justify-between text-xs text-outline">
+                <span>{% trans "آخر تحديث:" %} {% now "d-m-Y" %}</span>
+                <span>{% trans "موقع المغرب العربي" %}</span>
+            </div>
+
+        </div>
+    </div>
+</main>
+{% endblock %}

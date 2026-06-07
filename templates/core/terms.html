@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "شروط الاستخدام" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block breadcrumbs %}
+    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+{% endblock %}
+
+{% block content %}
+<!-- Premium Hero Section -->
+<section class="relative bg-gradient-to-br from-[#0a1d37] via-[#0e274b] to-[#146c3c] text-white py-24 overflow-hidden">
+    <!-- Decorative Floating Gradients -->
+    <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/40 rounded-full blur-[100px] pointer-events-none"></div>
+    
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop relative z-10 text-center animate-fade-in">
+        <h1 class="font-display-lg text-4xl md:text-5xl font-bold mb-4 tracking-tight leading-tight">
+            {% trans "شروط الاستخدام" %}
+        </h1>
+        <p class="font-body-lg text-base md:text-lg max-w-2xl mx-auto text-white/80 leading-relaxed">
+            {% trans "يرجى قراءة شروط الاستخدام بعناية قبل تصفح الموقع أو استخدام أي من خدماته الإخبارية." %}
+        </p>
+    </div>
+</section>
+
+<!-- Content Section -->
+<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-16">
+    <div class="max-w-3xl mx-auto bg-white border border-outline-variant rounded-2xl p-8 md:p-12 shadow-sm">
+        
+        <div class="prose prose-slate max-w-none text-on-surface-variant text-sm leading-relaxed space-y-8">
+            
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "الموافقة على الشروط" %}
+                </h2>
+                <p>
+                    {% trans "دخولك وتصفحك لموقع المغرب العربي يعني موافقتك الكاملة واللامشروطة على الالتزام بجميع شروط الاستخدام المذكورة هنا، والامتثال لكافة القوانين واللوائح المعمول بها محلياً ودولياً. إذا كنت لا توافق على هذه الشروط، يرجى التوقف عن استخدام الموقع." %}
+                </p>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "حقوق الملكية الفكرية" %}
+                </h2>
+                <p>
+                    {% trans "جميع المحتويات المنشورة على الموقع، بما في ذلك الأخبار، المقالات، التحليلات، الصور، الفيديوهات، الشعارات، والتصميمات، هي ملكية فكرية حصرية لموقع المغرب العربي أو شركائه من وكالات الأنباء، وهي محمية بموجب قوانين الملكية الفكرية وحقوق النشر الدولية." %}
+                </p>
+                <p>
+                    {% trans "لا يُسمح بنسخ أو إعادة إنتاج أو نشر أو توزيع أي جزء من محتوى الموقع دون الحصول على إذن كتابي مسبق من إدارة الموقع، مع وجوب ذكر المصدر بوضوح ووضع رابط مباشر للمادة الأصلية عند الاقتباس المصرح به." %}
+                </p>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "الاستخدام المقبول" %}
+                </h2>
+                <p>{% trans "عند استخدامك للموقع، فإنك تلتزم بعدم:" %}</p>
+                <ul class="list-disc list-inside space-y-2 ps-4">
+                    <li>{% trans "استخدام الموقع بأي طريقة تؤدي إلى إلحاق الضرر به أو تعطيل خوادمه أو شبكاته المتصلة." %}</li>
+                    <li>{% trans "نشر أو إرسال أي محتوى يحتوي على برمجيات خبيثة أو فيروسات تهدف إلى إتلاف أو اختراق الموقع." %}</li>
+                    <li>{% trans "استخدام أدوات آلية أو برمجيات كشط البيانات (Scraping) لجمع محتويات الموقع دون إذن مسبق." %}</li>
+                    <li>{% trans "استخدام الموقع للترويج لإعلانات تجارية غير مصرح بها أو إرسال رسائل غير مرغوب فيها (Spam)." %}</li>
+                </ul>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "إخلاء المسؤولية" %}
+                </h2>
+                <p>
+                    {% trans "يتم تقديم المحتوى الإخباري والمعلوماتي على هذا الموقع كما هو، للتعريف العام والتثقيف. على الرغم من بذلنا كافة الجهود لضمان صحة ودقة المعلومات، فإن الموقع لا يضمن خلو المحتوى تماماً من الأخطاء المطبعية أو الفنية غير المقصودة، ولا يتحمل أي مسؤولية عن القرارات التي يتخذها المستخدم بناءً على هذا المحتوى." %}
+                </p>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "روابط الأطراف الثالثة" %}
+                </h2>
+                <p>
+                    {% trans "قد يحتوي موقعنا على روابط لمواقع إلكترونية خارجية تديرها أطراف أخرى. هذه الروابط متوفرة لسهولة وصولك فقط، ولا تعني مصادقتنا على محتوياتها أو تحملنا لأي مسؤولية عن ممارسات الخصوصية أو شروط الاستخدام الخاصة بتلك المواقع." %}
+                </p>
+            </section>
+
+            <section class="space-y-3">
+                <h2 class="text-xl font-bold text-primary flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-secondary rounded-full"></span>
+                    {% trans "القانون الواجب التطبيق" %}
+                </h2>
+                <p>
+                    {% trans "تخضع شروط الاستخدام هذه وتفسر وفقاً للقوانين المعمول بها. ويخضع أي نزاع قد ينشأ عن استخدام هذا الموقع للاختصاص الحصري للمحاكم المختصة." %}
+                </p>
+            </section>
+
+            <div class="border-t border-outline-variant pt-6 flex items-center justify-between text-xs text-outline">
+                <span>{% trans "آخر تحديث:" %} {% now "d-m-Y" %}</span>
+                <span>{% trans "موقع المغرب العربي" %}</span>
+            </div>
+
+        </div>
+    </div>
+</main>
+{% endblock %}

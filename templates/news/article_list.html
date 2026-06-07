@@ -49,7 +49,7 @@
                                         <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
                                     </h3>
                                     <p class="text-on-surface-variant text-sm leading-relaxed mb-6 flex-grow">
-                                        {{ article.excerpt|default:article.body|truncatewords:20 }}
+                                        {{ article.excerpt|default:article.body|striptags|truncatewords:20 }}
                                     </p>
                                     <div class="flex items-center justify-between border-t border-outline-variant pt-4 mt-auto">
                                         <span class="text-xs font-semibold text-primary">

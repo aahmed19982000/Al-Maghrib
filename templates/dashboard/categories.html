@@ -10,7 +10,7 @@
 
 {% block content %}
 <div class="table-container" style="padding: 2rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+    <div class="responsive-flex-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
         <div style="display: flex; align-items: center; gap: 1rem;">
             <h2>{% trans "شجرة الأقسام" %}</h2>
             {% if request.user.is_staff or request.user.is_superuser %}

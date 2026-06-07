@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
 from taggit.managers import TaggableManager
 
@@ -58,10 +59,10 @@ class Tag(models.Model):
 
 class Article(models.Model):
     STATUS_CHOICES = (
-        ('draft', 'Draft'),
-        ('review', 'Review'),
-        ('published', 'Published'),
-        ('archived', 'Archived'),
+        ('draft', _('مسودة')),
+        ('review', _('مراجعة')),
+        ('published', _('منشور')),
+        ('archived', _('مؤرشف')),
     )
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True)
@@ -71,14 +72,14 @@ class Article(models.Model):
     category = TreeForeignKey(Category, on_delete=models.PROTECT, related_name='articles')
     additional_categories = models.ManyToManyField(Category, related_name='additional_articles', blank=True, help_text="أقسام فرعية إضافية (اختياري)")
     tags = TaggableManager(blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     published_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(blank=True, null=True)
     
     is_featured = models.BooleanField(default=False)
-    is_breaking = models.BooleanField(default=False)
+    is_breaking = models.BooleanField(default=True)
     auto_translate = models.BooleanField(default=True, help_text="ترجمة تلقائية للإنجليزية (Auto-translate to English)")
     cover_image = models.ImageField(upload_to='articles/', blank=True, null=True)
     views_count = models.PositiveIntegerField(default=0)
@@ -106,6 +107,49 @@ class Article(models.Model):
         from core.utils import optimize_image_field, translate_text, is_html_empty
 
         optimize_image_field(self, 'cover_image', max_size=(1200, 1200), quality=85)
+
+        # ── Auto-populate SEO Metadata if empty ──
+        from django.utils.html import strip_tags
+
+        # Arabic SEO Fields Auto-population
+        if not getattr(self, 'meta_title_ar', None) or getattr(self, 'meta_title_ar', None).strip() == "":
+            title_ar_val = getattr(self, 'title_ar', None) or self.title
+            if title_ar_val:
+                self.meta_title_ar = title_ar_val
+                if not self.meta_title:
+                    self.meta_title = title_ar_val
+
+        if not getattr(self, 'meta_desc_ar', None) or getattr(self, 'meta_desc_ar', None).strip() == "":
+            excerpt_ar_val = getattr(self, 'excerpt_ar', None) or self.excerpt
+            body_ar_val = getattr(self, 'body_ar', None) or self.body
+            desc_val = ""
+            if excerpt_ar_val and excerpt_ar_val.strip() != "":
+                desc_val = strip_tags(excerpt_ar_val)
+            elif body_ar_val and body_ar_val.strip() != "":
+                desc_val = strip_tags(body_ar_val)
+            if desc_val:
+                desc_val = " ".join(desc_val.split())[:160]
+                self.meta_desc_ar = desc_val
+                if not self.meta_desc:
+                    self.meta_desc = desc_val
+
+        # English SEO Fields Auto-population (fallback/fallback when auto_translate is disabled)
+        if not getattr(self, 'meta_title_en', None) or getattr(self, 'meta_title_en', None).strip() == "":
+            title_en_val = getattr(self, 'title_en', None) or self.title
+            if title_en_val:
+                self.meta_title_en = title_en_val
+
+        if not getattr(self, 'meta_desc_en', None) or getattr(self, 'meta_desc_en', None).strip() == "":
+            excerpt_en_val = getattr(self, 'excerpt_en', None) or self.excerpt
+            body_en_val = getattr(self, 'body_en', None) or self.body
+            desc_val = ""
+            if excerpt_en_val and excerpt_en_val.strip() != "":
+                desc_val = strip_tags(excerpt_en_val)
+            elif body_en_val and body_en_val.strip() != "":
+                desc_val = strip_tags(body_en_val)
+            if desc_val:
+                desc_val = " ".join(desc_val.split())[:160]
+                self.meta_desc_en = desc_val
 
         # ── Auto-translate Arabic fields → English ──
         # Only runs when the update_fields kwarg does NOT exclude these fields
@@ -212,13 +256,27 @@ def clear_cache_on_change(sender, **kwargs):
         # Safeguard if cache connection fails in environment
         pass
 
+from django.db.models.signals import m2m_changed
+
 @receiver(post_save, sender=Article)
-def auto_add_to_latest_news(sender, instance, created, **kwargs):
-    if created:
+def auto_add_to_latest_news(sender, instance, **kwargs):
+    if instance.status == 'published':
         try:
-            # You can identify "آخر الأخبار" by its slug or name. Assuming slug is 'آخر-الأخبار'
             latest_category = Category.objects.filter(name_ar__icontains='آخر الأخبار').first()
             if latest_category and instance.category != latest_category:
-                instance.additional_categories.add(latest_category)
+                if not instance.additional_categories.filter(pk=latest_category.pk).exists():
+                    instance.additional_categories.add(latest_category)
         except Exception:
             pass
+
+@receiver(m2m_changed, sender=Article.additional_categories.through)
+def ensure_latest_news_category_on_m2m(sender, instance, action, **kwargs):
+    if action in ['post_add', 'post_remove', 'post_clear']:
+        if instance.status == 'published':
+            try:
+                latest_category = Category.objects.filter(name_ar__icontains='آخر الأخبار').first()
+                if latest_category and instance.category != latest_category:
+                    if not instance.additional_categories.filter(pk=latest_category.pk).exists():
+                        instance.additional_categories.add(latest_category)
+            except Exception:
+                pass

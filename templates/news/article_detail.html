@@ -2,26 +2,36 @@
 {% load i18n %}
 {% load thumbnail %}
 
-{% block title %}{{ article.title }} | {{ site_settings.site_name }}{% endblock %}
+{% block title %}{{ article.meta_title|default:article.title }} | {{ site_settings.site_name }}{% endblock %}
 
-{% block meta_description %}{{ article.meta_desc|default:article.excerpt|default:article.body|truncatewords:25 }}{% endblock %}
+{% block meta_description %}{{ article.meta_desc|default:article.excerpt|default:article.body|striptags|truncatewords:25 }}{% endblock %}
 
 {% block og_type %}article{% endblock %}
 {% block og_title %}{{ article.title }}{% endblock %}
-{% block og_description %}{{ article.meta_desc|default:article.excerpt|default:article.body|truncatewords:25 }}{% endblock %}
+{% block og_description %}{{ article.meta_desc|default:article.excerpt|default:article.body|striptags|truncatewords:25 }}{% endblock %}
 {% block og_image %}{% if article.cover_image %}{{ request.scheme }}://{{ request.get_host }}{{ article.cover_image.url }}{% endif %}{% endblock %}
 
 {% block twitter_title %}{{ article.title }}{% endblock %}
-{% block twitter_description %}{{ article.meta_desc|default:article.excerpt|default:article.body|truncatewords:25 }}{% endblock %}
+{% block twitter_description %}{{ article.meta_desc|default:article.excerpt|default:article.body|striptags|truncatewords:25 }}{% endblock %}
 {% block twitter_image %}{% if article.cover_image %}{{ request.scheme }}://{{ request.get_host }}{{ article.cover_image.url }}{% endif %}{% endblock %}
 
 {% block extra_head %}
-    {% if article.meta_title or article.meta_desc %}
-        <meta name="title" content="{{ article.meta_title|default:article.title }}">
-        <meta name="description" content="{{ article.meta_desc|default:article.excerpt }}">
-    {% endif %}
     <style>
         .reading-progress-bar { height: 4px; background: #146c3c; width: 0%; transition: width 0.1s ease-out; }
+        .prose p {
+            margin-top: 1.5rem !important;
+            margin-bottom: 1.5rem !important;
+            line-height: 1.9;
+        }
+        .prose img {
+            max-width: 80% !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            height: auto !important;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
     </style>
     <!-- Schema.org Article Structured Data -->
     <script type="application/ld+json">
@@ -47,7 +57,7 @@
           "url": "{{ request.scheme }}://{{ request.get_host }}{% if site_settings.logo %}{{ site_settings.logo.url }}{% else %}/static/images/logo.png{% endif %}"
         }
       },
-      "description": "{{ article.excerpt|default:article.body|truncatewords:30|escapejs }}"
+      "description": "{{ article.excerpt|default:article.body|striptags|truncatewords:30|escapejs }}"
     }
     </script>
 {% endblock %}
@@ -103,8 +113,8 @@
 </div>
 </header>
 <!-- Hero Image -->
-<div class="w-full px-margin-mobile md:px-margin-desktop mb-12">
-<div class="relative aspect-video md:aspect-[21/9] overflow-hidden rounded-xl bg-surface-variant border border-outline-variant">
+<div class="max-w-[800px] mx-auto px-4 mb-12">
+<div class="relative aspect-video overflow-hidden rounded-xl bg-surface-variant border border-outline-variant">
     {% if article.cover_image %}
         {% thumbnail article.cover_image "1200x675" crop="center" as im %}
             <img alt="{{ article.title }}" class="w-full h-full object-cover" src="{{ im.url }}"/>
@@ -300,7 +310,7 @@
     <div class="group cursor-pointer">
     <span class="text-secondary font-bold text-label-sm">0{{ forloop.counter }}</span>
     <h4 class="font-bold text-body-md group-hover:text-secondary transition-colors"><a href="{{ r_art.get_absolute_url }}">{{ r_art.title }}</a></h4>
-    <p class="text-on-surface-variant text-label-sm mt-2">{{ r_art.excerpt|default:r_art.body|truncatewords:10 }}</p>
+    <p class="text-on-surface-variant text-label-sm mt-2">{{ r_art.excerpt|default:r_art.body|striptags|truncatewords:10 }}</p>
     </div>
     {% empty %}
     <p class="text-on-surface-variant text-sm">{% trans "لا يوجد مقالات ذات صلة" %}</p>
@@ -342,7 +352,7 @@
     <div class="p-6 flex flex-col flex-1">
     <span class="text-secondary text-label-sm font-bold">{{ r_art.category.name }}</span>
     <h3 class="font-bold text-body-lg mt-2 group-hover:text-primary transition-colors line-clamp-2">{{ r_art.title }}</h3>
-    <p class="text-on-surface-variant text-label-sm mt-3 line-clamp-2">{{ r_art.excerpt|default:r_art.body|truncatewords:15 }}</p>
+    <p class="text-on-surface-variant text-label-sm mt-3 line-clamp-2">{{ r_art.excerpt|default:r_art.body|striptags|truncatewords:15 }}</p>
     </div>
     </a>
     {% endfor %}

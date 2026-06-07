@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load thumbnail %}
+
+{% block title %}{% trans "الأرشيف" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block breadcrumbs %}
+    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+{% endblock %}
+
+{% block content %}
+<!-- Premium Hero Section -->
+<section class="relative bg-gradient-to-br from-[#0a1d37] via-[#0e274b] to-[#146c3c] text-white py-24 overflow-hidden">
+    <!-- Decorative Floating Gradients -->
+    <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/40 rounded-full blur-[100px] pointer-events-none"></div>
+    
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop relative z-10 text-center animate-fade-in">
+        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/10 text-secondary-fixed text-label-sm font-bold backdrop-blur-md border border-white/10 mb-6">
+            <span class="w-2 h-2 rounded-full bg-secondary"></span>
+            {% trans "الأرشيف الصحفي" %}
+        </span>
+        <h1 class="font-display-lg text-4xl md:text-5xl font-bold mb-4 tracking-tight leading-tight">
+            {% trans "الأرشيف الإخباري" %}
+        </h1>
+        <p class="font-body-lg text-base md:text-lg max-w-2xl mx-auto text-white/80 leading-relaxed">
+            {% trans "تصفح كافة المقالات والتقارير والتحليلات التي تم نشرها في الموقع مرتبة ومصنفة بحسب تاريخ النشر." %}
+        </p>
+    </div>
+</section>
+
+<!-- Content Section -->
+<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-16">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+        
+        <!-- Left Column: Articles Grid (8 cols) -->
+        <div class="lg:col-span-8 space-y-12">
+            
+            <!-- Filter Status Indicator -->
+            {% if selected_year or selected_month %}
+                <div class="bg-surface-container-low border border-outline-variant p-4 rounded-xl flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-sm text-primary font-semibold">
+                        <span class="material-symbols-outlined text-secondary">filter_alt</span>
+                        <span>{% trans "تصفية الأرشيف لـ:" %}</span>
+                        <span class="bg-secondary/15 text-secondary px-3 py-1 rounded-full text-xs font-bold">
+                            {% if selected_month %}
+                                {{ selected_month }}/{{ selected_year }}
+                            {% else %}
+                                {{ selected_year }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    <a href="{% url 'core:archive' %}" class="text-xs text-red-600 hover:text-red-700 flex items-center gap-1 font-bold">
+                        <span class="material-symbols-outlined text-[16px]">close</span>
+                        <span>{% trans "إلغاء التصفية" %}</span>
+                    </a>
+                </div>
+            {% endif %}
+
+            {% if articles %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {% for article in articles %}
+                        <article class="bg-white border border-outline-variant rounded-xl overflow-hidden flex flex-col group hover:shadow-md transition-all duration-300">
+                            <!-- Image Cover -->
+                            <a href="{{ article.get_absolute_url }}" class="relative overflow-hidden aspect-video border-b border-outline-variant block">
+                                {% if article.cover_image %}
+                                    {% thumbnail article.cover_image "600x400" crop="center" as im %}
+                                        <img src="{{ im.url }}" alt="{{ article.title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                    {% empty %}
+                                        <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                    {% endthumbnail %}
+                                {% else %}
+                                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                {% endif %}
+                                <div class="absolute top-3 start-3 bg-[#0a1d37] text-white text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/10">
+                                    {{ article.category.name }}
+                                </div>
+                            </a>
+                            
+                            <!-- Article Metadata & Title -->
+                            <div class="p-6 flex flex-col flex-grow">
+                                <div class="flex items-center gap-2 text-xs text-outline font-semibold mb-3">
+                                    <span class="material-symbols-outlined text-[14px]">calendar_month</span>
+                                    <span>{{ article.published_at|date:"Y-m-d" }}</span>
+                                    <span>•</span>
+                                    <span class="material-symbols-outlined text-[14px]">schedule</span>
+                                    <span>{{ article.read_time }} {% trans "دقائق" %}</span>
+                                </div>
+                                <h3 class="font-bold text-primary group-hover:text-secondary transition-colors mb-3 leading-snug text-base md:text-lg">
+                                    <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
+                                </h3>
+                                <p class="text-on-surface-variant text-sm leading-relaxed mb-6 flex-grow">
+                                    {{ article.excerpt|default:article.body|striptags|truncatewords:18 }}
+                                </p>
+                                
+                                <!-- Author & Views -->
+                                <div class="flex items-center justify-between border-t border-outline-variant pt-4 mt-auto">
+                                    <span class="text-xs font-bold text-primary flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-secondary text-[16px]">person</span>
+                                        {{ article.author.author_profile.display_name|default:article.author.username }}
+                                    </span>
+                                    <div class="flex items-center gap-1 text-on-surface-variant text-xs font-medium">
+                                        <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                        <span>{{ article.views_count }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                    <nav class="flex justify-center items-center gap-2 mt-12 pt-6 border-t border-outline-variant">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_month %}&month={{ selected_month }}{% endif %}" class="border border-outline-variant px-4 py-2 hover:bg-surface-container-low text-sm font-semibold rounded-lg transition-colors">
+                                {% trans "السابق" %}
+                            </a>
+                        {% endif %}
+                        
+                        <span class="bg-primary text-on-primary px-4 py-2 text-sm font-bold rounded-lg shadow-sm">
+                            {{ page_obj.number }} / {{ paginator.num_pages }}
+                        </span>
+                        
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_month %}&month={{ selected_month }}{% endif %}" class="border border-outline-variant px-4 py-2 hover:bg-surface-container-low text-sm font-semibold rounded-lg transition-colors">
+                                {% trans "التالي" %}
+                            </a>
+                        {% endif %}
+                    </nav>
+                {% endif %}
+
+            {% else %}
+                <div class="text-center py-20 bg-surface-container-low rounded-2xl border border-dashed border-outline-variant">
+                    <span class="material-symbols-outlined text-4xl text-outline mb-4">folder_open</span>
+                    <p class="text-on-surface-variant text-base">{% trans "لا يوجد مقالات في هذا الأرشيف للفترة المحددة." %}</p>
+                </div>
+            {% endif %}
+
+        </div>
+
+        <!-- Right Column: Sidebar Filter (4 cols) -->
+        <aside class="lg:col-span-4 space-y-8">
+            
+            <!-- Archive Months Widget -->
+            <div class="bg-white border border-outline-variant rounded-2xl p-6 shadow-sm">
+                <h3 class="font-bold text-primary text-lg mb-6 pb-4 border-b border-outline-variant flex items-center gap-2">
+                    <span class="material-symbols-outlined text-secondary">date_range</span>
+                    {% trans "تصفح حسب الشهر" %}
+                </h3>
+                
+                {% if archive_months %}
+                    <ul class="space-y-2 max-h-[480px] overflow-y-auto custom-scrollbar">
+                        {% for item in archive_months %}
+                            <li>
+                                <a href="?year={{ item.month_date|date:'Y' }}&month={{ item.month_date|date:'n' }}" 
+                                   class="flex items-center justify-between p-3 rounded-xl transition-all text-sm font-medium
+                                          {% if selected_year == item.month_date|date:'Y' and selected_month == item.month_date|date:'n' %}
+                                              bg-primary text-on-primary font-bold shadow-sm
+                                          {% else %}
+                                              hover:bg-surface-container-low text-on-surface-variant hover:text-primary
+                                          {% endif %}">
+                                    <span class="flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                                        <span>{{ item.month_date|date:"F Y" }}</span>
+                                    </span>
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold
+                                                 {% if selected_year == item.month_date|date:'Y' and selected_month == item.month_date|date:'n' %}
+                                                     bg-white/25 text-white
+                                                 {% else %}
+                                                     bg-surface-container-high text-primary
+                                                 {% endif %}">
+                                        {{ item.count }}
+                                    </span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-xs text-on-surface-variant">{% trans "لا يوجد تاريخ أرشفة متاح حالياً." %}</p>
+                {% endif %}
+            </div>
+
+        </aside>
+
+    </div>
+</main>
+{% endblock %}

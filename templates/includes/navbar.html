@@ -6,13 +6,12 @@
         <div class="flex items-center justify-between py-4">
             
             <div class="flex items-center gap-4">
-                {% if site_settings.logo %}
-                    <img alt="{{ site_settings.site_name }}" class="h-12 w-12 object-contain" src="{{ site_settings.logo.url }}"/>
-                {% else %}
-                    <img alt="{{ site_settings.site_name }}" class="h-12 w-12 object-contain" src="https://ui-avatars.com/api/?name={{ site_settings.site_name }}&background=0a1d37&color=fff"/>
-                {% endif %}
-                <a href="{% url 'news:article_list' %}">
-                    <h1 class="text-headline-md font-bold tracking-tighter text-primary uppercase">{{ site_settings.site_name|default:"Al-Maghrib Al-Arabi" }}</h1>
+                <a href="{% url 'core:home' %}">
+                    {% if site_settings.logo %}
+                        <img alt="{{ site_settings.site_name }}" class="h-16 w-16 object-contain" src="{{ site_settings.logo.url }}"/>
+                    {% else %}
+                        <img alt="{{ site_settings.site_name }}" class="h-16 w-16 object-contain" src="https://ui-avatars.com/api/?name={{ site_settings.site_name }}&background=0a1d37&color=fff"/>
+                    {% endif %}
                 </a>
             </div>
 
@@ -52,15 +51,22 @@
                         </a>
                     {% endif %}
                     
-                    <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">search</span>
+                    <!-- Search Bar Toggle -->
+                    <div class="relative flex items-center" id="search-container">
+                        <form action="{% url 'core:search' %}" method="get" class="flex items-center">
+                            <input type="text" name="q" placeholder="{% trans 'ابحث عن...' %}" 
+                                   class="w-0 opacity-0 transition-all duration-300 bg-surface-container-low border border-transparent py-1.5 text-xs rounded-full outline-none focus:ring-1 focus:ring-secondary text-primary" 
+                                   id="search-input">
+                            <button type="button" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary flex items-center justify-center" id="search-toggle-btn">
+                                search
+                            </button>
+                        </form>
+                    </div>
+                    
                     <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">notifications</span>
                 </div>
                 
-                {% if request.user.is_authenticated %}
-                    <a href="{% url 'dashboard:home' %}" class="bg-primary text-on-primary px-6 py-2 text-label-sm font-bold rounded hover:opacity-90 transition-opacity">
-                        {% trans "لوحة التحكم" %}
-                    </a>
-                {% else %}
+                {% if not request.user.is_authenticated %}
                     <a href="{% url 'accounts:login' %}" class="bg-primary text-on-primary px-6 py-2 text-label-sm font-bold rounded hover:opacity-90 transition-opacity">
                         {% trans "دخول" %}
                     </a>
@@ -103,6 +109,16 @@
             </button>
         </div>
         
+        <!-- Mobile Search Form -->
+        <form action="{% url 'core:search' %}" method="get" class="p-4 border-b border-outline-variant/50">
+            <div class="relative flex items-center bg-surface-container-low border border-outline-variant rounded-full px-3 py-1.5">
+                <input type="text" name="q" placeholder="{% trans 'ابحث عن أخبار...' %}" class="w-full bg-transparent text-xs outline-none text-primary placeholder:text-outline" required>
+                <button type="submit" class="material-symbols-outlined text-on-surface-variant text-[18px] hover:text-primary flex items-center justify-center">
+                    search
+                </button>
+            </div>
+        </form>
+        
         <!-- Navigation Links -->
         <nav class="flex flex-col p-4 gap-4 overflow-y-auto">
             {% if site_settings.navbar_categories.exists %}
@@ -134,11 +150,7 @@
                 {% endif %}
             </div>
 
-            {% if request.user.is_authenticated %}
-                <a href="{% url 'dashboard:home' %}" class="block text-center w-full bg-primary text-on-primary px-4 py-3 rounded font-bold hover:opacity-90 transition-opacity">
-                    {% trans "لوحة التحكم" %}
-                </a>
-            {% else %}
+            {% if not request.user.is_authenticated %}
                 <a href="{% url 'accounts:login' %}" class="block text-center w-full bg-primary text-on-primary px-4 py-3 rounded font-bold hover:opacity-90 transition-opacity">
                     {% trans "دخول" %}
                 </a>
@@ -180,5 +192,38 @@
         if(menuBtn) menuBtn.addEventListener('click', openMenu);
         if(closeBtn) closeBtn.addEventListener('click', closeMenu);
         if(backdrop) backdrop.addEventListener('click', closeMenu);
+
+        // Search Toggle logic
+        const searchToggleBtn = document.getElementById('search-toggle-btn');
+        const searchInput = document.getElementById('search-input');
+        const searchForm = searchToggleBtn ? searchToggleBtn.form : null;
+
+        if (searchToggleBtn && searchInput) {
+            searchToggleBtn.addEventListener('click', function(e) {
+                if (searchInput.classList.contains('w-0')) {
+                    e.preventDefault();
+                    searchInput.classList.remove('w-0', 'opacity-0', 'border-transparent');
+                    searchInput.classList.add('w-40', 'md:w-48', 'opacity-100', 'border-outline-variant', 'px-3', 'mx-2');
+                    searchInput.focus();
+                } else {
+                    if (searchInput.value.trim() !== '') {
+                        searchForm.submit();
+                    } else {
+                        searchInput.classList.add('w-0', 'opacity-0', 'border-transparent');
+                        searchInput.classList.remove('w-40', 'md:w-48', 'opacity-100', 'border-outline-variant', 'px-3', 'mx-2');
+                    }
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                const container = document.getElementById('search-container');
+                if (container && !container.contains(e.target) && !searchInput.classList.contains('w-0')) {
+                    if (searchInput.value.trim() === '') {
+                        searchInput.classList.add('w-0', 'opacity-0', 'border-transparent');
+                        searchInput.classList.remove('w-40', 'md:w-48', 'opacity-100', 'border-outline-variant', 'px-3', 'mx-2');
+                    }
+                }
+            });
+        }
     });
 </script>

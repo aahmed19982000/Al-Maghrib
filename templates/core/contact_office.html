@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "اتصل بالمكتب" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block breadcrumbs %}
+    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+{% endblock %}
+
+{% block content %}
+<!-- Premium Hero Section -->
+<section class="relative bg-gradient-to-br from-[#0a1d37] via-[#0e274b] to-[#146c3c] text-white py-28 overflow-hidden">
+    <!-- Decorative Floating Gradients -->
+    <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/40 rounded-full blur-[100px] pointer-events-none"></div>
+    
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop relative z-10 text-center animate-fade-in">
+        <!-- Badge -->
+        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/10 text-secondary-fixed text-label-sm font-bold backdrop-blur-md border border-white/10 mb-6">
+            <span class="w-2 h-2 rounded-full bg-secondary"></span>
+            {% trans "فروعنا ومكاتبنا الإقليمية" %}
+        </span>
+        
+        <h1 class="font-display-lg text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight leading-tight">
+            {% trans "اتصل بالمكتب" %}
+        </h1>
+        <p class="font-body-lg text-lg md:text-xl max-w-3xl mx-auto text-white/80 leading-relaxed">
+            {% trans "شبكة مكاتبنا وصحفيينا تغطي مختلف دول المغرب العربي والشرق الأوسط لتزويدكم بالخبر فور حدوثه." %}
+        </p>
+    </div>
+</section>
+
+<!-- Content Section -->
+<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-20">
+    <div class="space-y-16">
+        
+        <!-- Offices Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- Tunisia Office -->
+            <div class="p-8 bg-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-2 h-full bg-secondary"></div>
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="material-symbols-outlined text-secondary text-3xl">location_on</span>
+                    <h3 class="font-bold text-primary text-xl">{% trans "تونس" %}</h3>
+                </div>
+                <div class="space-y-4 text-sm text-on-surface-variant">
+                    <p class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">map</span>
+                        <span>{% trans "شارع الحبيب بورقيبة، عمارة المغرب العربي، تونس العاصمة" %}</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">call</span>
+                        <span dir="ltr">+216 71 123 456</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">mail</span>
+                        <a href="mailto:tunis@almaghrib.com" class="hover:text-secondary hover:underline">tunis@almaghrib.com</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Morocco Office -->
+            <div class="p-8 bg-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-2 h-full bg-primary"></div>
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="material-symbols-outlined text-primary text-3xl">location_on</span>
+                    <h3 class="font-bold text-primary text-xl">{% trans "المغرب" %}</h3>
+                </div>
+                <div class="space-y-4 text-sm text-on-surface-variant">
+                    <p class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">map</span>
+                        <span>{% trans "شارع محمد الخامس، برج الأعمال، الرباط" %}</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">call</span>
+                        <span dir="ltr">+212 537 777 888</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">mail</span>
+                        <a href="mailto:rabat@almaghrib.com" class="hover:text-primary hover:underline">rabat@almaghrib.com</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Algeria Office -->
+            <div class="p-8 bg-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-2 h-full bg-secondary"></div>
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="material-symbols-outlined text-secondary text-3xl">location_on</span>
+                    <h3 class="font-bold text-primary text-xl">{% trans "الجزائر" %}</h3>
+                </div>
+                <div class="space-y-4 text-sm text-on-surface-variant">
+                    <p class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">map</span>
+                        <span>{% trans "حي حيدرة، عمارة الصنوبر، الجزائر العاصمة" %}</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">call</span>
+                        <span dir="ltr">+213 21 555 444</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">mail</span>
+                        <a href="mailto:algiers@almaghrib.com" class="hover:text-secondary hover:underline">algiers@almaghrib.com</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Egypt Office -->
+            <div class="p-8 bg-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-2 h-full bg-primary"></div>
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="material-symbols-outlined text-primary text-3xl">location_on</span>
+                    <h3 class="font-bold text-primary text-xl">{% trans "مصر" %}</h3>
+                </div>
+                <div class="space-y-4 text-sm text-on-surface-variant">
+                    <p class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">map</span>
+                        <span>{% trans "شارع التحرير، الدقي، الجيزة، القاهرة الكبرى" %}</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">call</span>
+                        <span dir="ltr">+20 2 3344 5566</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">mail</span>
+                        <a href="mailto:cairo@almaghrib.com" class="hover:text-primary hover:underline">cairo@almaghrib.com</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Gulf Office -->
+            <div class="p-8 bg-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-2 h-full bg-secondary"></div>
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="material-symbols-outlined text-secondary text-3xl">location_on</span>
+                    <h3 class="font-bold text-primary text-xl">{% trans "الخليج العربي" %}</h3>
+                </div>
+                <div class="space-y-4 text-sm text-on-surface-variant">
+                    <p class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">map</span>
+                        <span>{% trans "مدينة دبي للإعلام، مبنى رقم 4، دبي، الإمارات العربية المتحدة" %}</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">call</span>
+                        <span dir="ltr">+971 4 888 9999</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-outline text-[18px]">mail</span>
+                        <a href="mailto:gulf@almaghrib.com" class="hover:text-secondary hover:underline">gulf@almaghrib.com</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- General Inquiries -->
+            <div class="p-8 bg-[#0a1d37] text-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-2 h-full bg-secondary"></div>
+                <div class="flex items-center gap-3 mb-6">
+                    <span class="material-symbols-outlined text-secondary text-3xl">help_center</span>
+                    <h3 class="font-bold text-white text-xl">{% trans "الاستفسارات العامة" %}</h3>
+                </div>
+                <div class="space-y-4 text-sm text-white/80">
+                    <p class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">map</span>
+                        <span>{% trans "المكتب الرئيسي، لندن، المملكة المتحدة" %}</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">call</span>
+                        <span dir="ltr">+44 20 7946 0192</span>
+                    </p>
+                    <p class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary text-[18px]">mail</span>
+                        <a href="mailto:info@almaghrib.com" class="hover:text-secondary hover:underline">info@almaghrib.com</a>
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Feedback & Support Callout -->
+        <div class="bg-surface-container-low border border-outline-variant rounded-2xl p-8 md:p-12 text-center max-w-3xl mx-auto">
+            <h3 class="text-2xl font-bold text-primary mb-4">{% trans "هل ترغب في التواصل مع التحرير مباشرة؟" %}</h3>
+            <p class="text-on-surface-variant text-sm leading-relaxed mb-6">
+                {% trans "إذا كان لديك خبر، مقترح، أو ترغب في إرسال بيان صحفي، يمكنك استخدام نموذج الاتصال المباشر لإيصال رسالتك إلى قسم التحرير المعني مباشرة." %}
+            </p>
+            <a href="{% url 'core:contact' %}" class="inline-flex items-center gap-2 bg-primary text-on-primary px-6 py-3 rounded-full font-bold hover:opacity-90 transition-opacity">
+                <span class="material-symbols-outlined">send</span>
+                <span>{% trans "اذهب لنموذج الاتصال بنا" %}</span>
+            </a>
+        </div>
+
+    </div>
+</main>
+{% endblock %}

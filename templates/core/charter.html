@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "الميثاق التحريري" %} | {{ site_settings.site_name }}{% endblock %}
+
+{% block breadcrumbs %}
+    {% include 'includes/breadcrumbs.html' with breadcrumbs=breadcrumbs %}
+{% endblock %}
+
+{% block content %}
+<!-- Premium Hero Section -->
+<section class="relative bg-gradient-to-br from-[#0a1d37] via-[#0e274b] to-[#146c3c] text-white py-28 overflow-hidden">
+    <!-- Decorative Floating Gradients -->
+    <div class="absolute top-0 right-0 w-[400px] h-[400px] bg-secondary/20 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/40 rounded-full blur-[100px] pointer-events-none"></div>
+    
+    <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop relative z-10 text-center animate-fade-in">
+        <!-- Badge -->
+        <span class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white/10 text-secondary-fixed text-label-sm font-bold backdrop-blur-md border border-white/10 mb-6">
+            <span class="w-2 h-2 rounded-full bg-secondary"></span>
+            {% trans "معاييرنا الأخلاقية والمهنية" %}
+        </span>
+        
+        <h1 class="font-display-lg text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight leading-tight">
+            {% trans "الميثاق التحريري" %}
+        </h1>
+        <p class="font-body-lg text-lg md:text-xl max-w-3xl mx-auto text-white/80 leading-relaxed">
+            {% trans "الصحافة مسؤولية وأمانة. نلتزم بأعلى المعايير المهنية لضمان تقديم محتوى موثوق ودقيق لجمهورنا." %}
+        </p>
+    </div>
+</section>
+
+<!-- Content Section -->
+<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-20">
+    <div class="max-w-4xl mx-auto space-y-16">
+        
+        <!-- Intro Text -->
+        <div class="text-center space-y-4">
+            <h2 class="text-3xl font-bold text-primary">{% trans "مبادئ العمل الصحفي لدينا" %}</h2>
+            <div class="w-20 h-1 bg-secondary mx-auto rounded-full"></div>
+            <p class="text-on-surface-variant text-body-md leading-relaxed text-justify md:text-center mt-6">
+                {% trans "يمثل هذا الميثاق العهد المهني والأخلاقي الذي يلتزم به كافة الصحفيين والكتّاب والمحررين العاملين في منصتنا الإعلامية. نحن نؤمن بأن ثقة القارئ هي رأسمالنا الأكبر، ولذلك نعمل جاهدين لصونها والحفاظ عليها من خلال اتباع المعايير التحريرية الصارمة التالية." %}
+            </p>
+        </div>
+
+        <!-- Cards of Charter Principles -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Principle 1 -->
+            <div class="p-8 bg-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div class="w-12 h-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center mb-6">
+                    <span class="material-symbols-outlined text-2xl">done_all</span>
+                </div>
+                <h3 class="font-bold text-primary text-xl mb-3">{% trans "الدقة والتحقق من المعلومات" %}</h3>
+                <p class="text-sm text-on-surface-variant leading-relaxed">
+                    {% trans "نسعى جاهدين لنقل الأخبار بدقة تامة. نلتزم بالتحقق من صحة المعلومات من مصادر متعددة وموثوقة قبل النشر، مع الفصل التام بين الخبر والتحليل أو الرأي الشخصي." %}
+                </p>
+            </div>
+
+            <!-- Principle 2 -->
+            <div class="p-8 bg-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-6">
+                    <span class="material-symbols-outlined text-2xl">balance</span>
+                </div>
+                <h3 class="font-bold text-primary text-xl mb-3">{% trans "الموضوعية والحياد والتوازن" %}</h3>
+                <p class="text-sm text-on-surface-variant leading-relaxed">
+                    {% trans "نلتزم بعرض مختلف وجهات النظر بتوازن وموضوعية ودون تحيز. لا نسمح للميول الشخصية أو السياسية أو الفكرية بالتأثير على تغطيتنا الصحفية وصياغة الأخبار." %}
+                </p>
+            </div>
+
+            <!-- Principle 3 -->
+            <div class="p-8 bg-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center mb-6">
+                    <span class="material-symbols-outlined text-2xl">security</span>
+                </div>
+                <h3 class="font-bold text-primary text-xl mb-3">{% trans "حماية المصادر والسرية" %}</h3>
+                <p class="text-sm text-on-surface-variant leading-relaxed">
+                    {% trans "نحترم رغبة المصادر في عدم الكشف عن هويتها متى ما تطلب الأمر ذلك لحمايتها، ونلتزم بالسرية المهنية المطلقة وحماية سرية اتصالاتنا وتوثيقاتنا الصحفية." %}
+                </p>
+            </div>
+
+            <!-- Principle 4 -->
+            <div class="p-8 bg-white border border-outline-variant rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div class="w-12 h-12 rounded-xl bg-red-500/10 text-red-600 flex items-center justify-center mb-6">
+                    <span class="material-symbols-outlined text-2xl">shield</span>
+                </div>
+                <h3 class="font-bold text-primary text-xl mb-3">{% trans "المسؤولية الاجتماعية والأخلاقية" %}</h3>
+                <p class="text-sm text-on-surface-variant leading-relaxed">
+                    {% trans "نتجنب نشر ما يحرض على الكراهية، العنف، العنصرية، أو التمييز بكافة أشكاله. نحترم الخصوصية الفردية ونراعي القيم الإنسانية والقوانين المعمول بها." %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Ethics and Corrections Section -->
+        <div class="bg-surface-container-low border border-outline-variant rounded-2xl p-8 md:p-12">
+            <h3 class="text-2xl font-bold text-primary mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary">update</span>
+                {% trans "سياسة التصحيح والاعتذار" %}
+            </h3>
+            <p class="text-on-surface-variant text-sm leading-relaxed mb-6">
+                {% trans "المصداقية تتطلب الشجاعة في الاعتراف بالخطأ. إذا تبين لنا وجود خطأ غير مقصود في أي خبر أو تقرير منشور، فإننا نلتزم بتصحيحه وتحديث المادة الصحفية فوراً وبكل شفافية، مع الإشارة إلى أن المادة قد تم تعديلها لتصحيح الخطأ الوارد." %}
+            </p>
+            <div class="flex items-center gap-3 text-primary text-sm font-bold">
+                <span class="material-symbols-outlined text-secondary">mail</span>
+                <span>{% trans "للإبلاغ عن الأخطاء التحريرية أو طلب التصحيح:" %}</span>
+                <a href="mailto:editor@almaghrib.com" class="text-secondary hover:underline">editor@almaghrib.com</a>
+            </div>
+        </div>
+
+    </div>
+</main>
+{% endblock %}

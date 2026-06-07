@@ -19,7 +19,7 @@
 
 <!-- Search & Filters Card -->
 <div class="table-container" style="padding: 1.5rem; margin-bottom: 1.5rem;">
-    <form method="get" action="" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+    <form method="get" action="" class="search-filter-form" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
         <!-- Search Input -->
         <div style="flex-grow: 1; min-width: 250px;">
             <input type="text" name="q" value="{{ q }}" placeholder="{% trans "ابحث في العنوان أو المحتوى..." %}" class="search-input" style="width: 100%;">
@@ -63,7 +63,7 @@
 <form id="bulk-action-form" method="post" action="{% url 'dashboard:article_bulk_action' %}">
     {% csrf_token %}
     
-    <div style="display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem;">
+    <div class="bulk-actions-container" style="display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem;">
         <div style="display: flex; gap: 1rem; align-items: center;">
             <span class="icon" style="color: var(--text-secondary);">rule</span>
             <span style="font-weight: 600;">{% trans "العمليات الجماعية للمقالات المحددة:" %}</span>

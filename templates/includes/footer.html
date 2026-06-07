@@ -22,12 +22,13 @@
     <div class="max-w-container-max-width mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
         <div class="md:col-span-1">
             <div class="flex items-center gap-3 mb-6">
-                {% if site_settings.logo %}
-                    <img alt="{{ site_settings.site_name }}" class="h-10 w-10 brightness-0 invert object-contain" src="{{ site_settings.logo.url }}"/>
-                {% else %}
-                    <img alt="Logo" class="h-10 w-10 brightness-0 invert object-contain" src="https://ui-avatars.com/api/?name={{ site_settings.site_name }}&background=0a1d37&color=fff"/>
-                {% endif %}
-                <h2 class="text-headline-md font-bold uppercase tracking-tight">{{ site_settings.site_name|default:"Maghreb News" }}</h2>
+                <a href="{% url 'core:home' %}">
+                    {% if site_settings.logo %}
+                        <img alt="{{ site_settings.site_name }}" class="h-14 w-14 object-contain" src="{{ site_settings.logo.url }}"/>
+                    {% else %}
+                        <img alt="Logo" class="h-14 w-14 object-contain" src="https://ui-avatars.com/api/?name={{ site_settings.site_name }}&background=0a1d37&color=fff"/>
+                    {% endif %}
+                </a>
             </div>
             <p class="text-white/70 text-body-md mb-8 leading-relaxed">
                 {% if site_settings.footer_description %}
@@ -55,10 +56,10 @@
         <div>
             <h4 class="text-label-sm font-bold uppercase tracking-widest text-secondary mb-6">{% trans "عن المؤسسة" %}</h4>
             <ul class="flex flex-col gap-4 text-white/70">
-                <li><a class="hover:text-white transition-colors" href="#">{% trans "من نحن" %}</a></li>
-                <li><a class="hover:text-white transition-colors" href="#">{% trans "الميثاق التحريري" %}</a></li>
-                <li><a class="hover:text-white transition-colors" href="#">{% trans "اتصل بالمكتب" %}</a></li>
-                <li><a class="hover:text-white transition-colors" href="#">{% trans "فريق العمل" %}</a></li>
+                <li><a class="hover:text-white transition-colors" href="{% url 'core:about' %}">{% trans "من نحن" %}</a></li>
+                <li><a class="hover:text-white transition-colors" href="{% url 'core:charter' %}">{% trans "الميثاق التحريري" %}</a></li>
+                <li><a class="hover:text-white transition-colors" href="{% url 'core:contact_office' %}">{% trans "اتصل بالمكتب" %}</a></li>
+                <li><a class="hover:text-white transition-colors" href="{% url 'accounts:team_list' %}">{% trans "فريق العمل" %}</a></li>
             </ul>
         </div>
         
@@ -86,9 +87,9 @@
         <div>
             <h4 class="text-label-sm font-bold uppercase tracking-widest text-secondary mb-6">{% trans "قانوني" %}</h4>
             <ul class="flex flex-col gap-4 text-white/70">
-                <li><a class="hover:text-white transition-colors" href="#">{% trans "سياسة الخصوصية" %}</a></li>
-                <li><a class="hover:text-white transition-colors" href="#">{% trans "شروط الاستخدام" %}</a></li>
-                <li><a class="hover:text-white transition-colors" href="#">{% trans "الأرشيف" %}</a></li>
+                <li><a class="hover:text-white transition-colors" href="{% url 'core:privacy_policy' %}">{% trans "سياسة الخصوصية" %}</a></li>
+                <li><a class="hover:text-white transition-colors" href="{% url 'core:terms' %}">{% trans "شروط الاستخدام" %}</a></li>
+                <li><a class="hover:text-white transition-colors" href="{% url 'core:archive' %}">{% trans "الأرشيف" %}</a></li>
             </ul>
             <p class="mt-8 text-xs text-white/40">© {% now "Y" %} {{ site_settings.site_name|default:"Al-Maghrib Al-Arabi" }}. {% trans "Premium Journalism." %}</p>
         </div>

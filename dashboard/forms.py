@@ -76,6 +76,8 @@ class ArticleForm(forms.ModelForm):
             if current_status == 'archived':
                 choices.append(('archived', 'مؤرشف (Archived)'))
             self.fields['status'].choices = choices
+            if not self.instance.pk:
+                self.fields['status'].initial = 'draft'
             
         # Customize standard labels
         self.fields['title_ar'].label = "العنوان (عربي)"

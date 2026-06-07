@@ -143,7 +143,7 @@
             <h3 class="text-headline-md font-headline-md text-primary group-hover:text-secondary transition-colors leading-snug">
                 <a href="{{ article.get_absolute_url }}">{{ article.title }}</a>
             </h3>
-            <p class="text-body-md text-on-surface-variant line-clamp-2">{{ article.excerpt|default:article.body|truncatewords:15 }}</p>
+            <p class="text-body-md text-on-surface-variant line-clamp-2">{{ article.excerpt|default:article.body|striptags|truncatewords:15 }}</p>
         </div>
     </article>
     {% endfor %}

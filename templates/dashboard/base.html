@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% trans "لوحة التحكم" %}{% endblock %} - المغرب</title>
     <!-- Fonts -->
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=1.5">
     <!-- Material Symbols -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
     <style>
@@ -19,6 +19,42 @@
             font-size: 20px;
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
             vertical-align: middle;
+        }
+        /* Custom styled file input */
+        .custom-file-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        .custom-file-wrapper:hover {
+            border-color: var(--border-hover);
+        }
+        .custom-file-button {
+            background-color: var(--accent-color, #3b82f6);
+            color: #fff;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.35rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            user-select: none;
+            display: inline-block;
+        }
+        .custom-file-name {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
         }
         .header-left {
             display: flex;
@@ -102,15 +138,219 @@
             font-family: var(--font-english);
         }
         {% endif %}
+
+        /* Mobile Responsiveness Styles */
+        .mobile-only {
+            display: none !important;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(11, 15, 25, 0.7);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 99;
+            cursor: pointer;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .sidebar-overlay.open {
+            display: block;
+        }
+
+        /* Responsive Close Button Styles */
+        .sidebar-close-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        .sidebar-close-btn:hover, .sidebar-close-btn:active {
+            background-color: var(--accent-danger);
+            color: #fff;
+            border-color: transparent;
+            transform: scale(1.05);
+        }
+
+        /* Generic Responsive helper classes */
+        .responsive-flex-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 1024px) {
+            .mobile-only {
+                display: inline-flex !important;
+            }
+
+            .dashboard-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                width: 280px;
+                height: 100vh;
+                z-index: 100;
+                box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            /* RTL/LTR sidebar layout transitions */
+            [dir="rtl"] .sidebar {
+                right: 0;
+                left: auto;
+                transform: translateX(100%);
+                border-inline-end: none;
+                border-inline-start: 1px solid var(--border-color);
+            }
+
+            [dir="ltr"] .sidebar {
+                left: 0;
+                right: auto;
+                transform: translateX(-100%);
+            }
+
+            /* Unified open state */
+            .sidebar.open {
+                transform: translateX(0) !important;
+            }
+
+            .main-content {
+                padding: 1.5rem 1rem;
+                width: 100%;
+                overflow-x: hidden;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1.5rem;
+                margin-bottom: 2rem;
+            }
+
+            .header-left {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                width: 100%;
+            }
+
+            .header-title {
+                flex-grow: 1;
+            }
+
+            .header-title h1 {
+                font-size: 1.5rem;
+            }
+
+            .user-profile {
+                justify-content: space-between;
+                background-color: var(--bg-secondary);
+                padding: 0.75rem 1rem;
+                border-radius: 0.75rem;
+                border: 1px solid var(--border-color);
+                width: 100%;
+            }
+
+            .metrics-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                margin-bottom: 2rem;
+            }
+
+            .table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin-bottom: 1.5rem;
+                width: 100%;
+            }
+
+            .custom-table {
+                min-width: 600px;
+            }
+
+            /* Form grids and rows on mobile */
+            .form-row, .grid-2, .grid-3 {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            /* Form / filters responsive stacking classes */
+            .search-filter-form {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+            .search-filter-form > div {
+                width: 100%;
+            }
+            .search-filter-form select, 
+            .search-filter-form input, 
+            .search-filter-form button, 
+            .search-filter-form a {
+                width: 100% !important;
+                box-sizing: border-box;
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .bulk-actions-container {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 1rem;
+            }
+            .bulk-actions-container > div {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                width: 100%;
+                gap: 0.75rem !important;
+            }
+            .bulk-actions-container select, 
+            .bulk-actions-container button {
+                width: 100% !important;
+            }
+            .bulk-actions-container div[style*="font-size: 0.875rem"] {
+                text-align: center;
+                margin-top: 0.5rem;
+            }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body {% if LANGUAGE_BIDI %}dir="rtl"{% else %}dir="ltr"{% endif %}>
     <div class="dashboard-container">
+        <!-- Sidebar overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-logo">
-                AL MAGHRIB
+        <aside class="sidebar" id="sidebar">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <div class="sidebar-logo" style="margin-bottom: 0;">
+                    AL MAGHRIB
+                </div>
+                <button id="sidebar-close" class="sidebar-close-btn mobile-only" aria-label="Close sidebar">
+                    <span class="icon">close</span>
+                </button>
             </div>
             
             <ul class="sidebar-menu">
@@ -181,6 +421,9 @@
             <!-- Header -->
             <header class="header">
                 <div class="header-left">
+                    <button id="sidebar-toggle" class="btn btn-secondary mobile-only" style="padding: 0.5rem 0.75rem; border-radius: 0.5rem; align-items: center; justify-content: center;">
+                        <span class="icon">menu</span>
+                    </button>
                     <div class="header-title">
                         {% block header_title %}
                         <h1>{% trans "مرحباً بك" %}, {{ request.user.username }}</h1>
@@ -192,11 +435,11 @@
                 <div class="user-profile">
                     <!-- Language Switcher -->
                     {% if LANGUAGE_CODE == 'ar' %}
-                        <a href="/en/dashboard/{{ request.path|slice:'4:' }}" class="lang-switch">
+                        <a href="/en{{ request.path }}" class="lang-switch">
                             <span class="icon">language</span> English
                         </a>
                     {% else %}
-                        <a href="/ar/dashboard/{{ request.path|slice:'4:' }}" class="lang-switch">
+                        <a href="{{ request.path|slice:'3:' }}" class="lang-switch">
                             <span class="icon">language</span> عربي
                         </a>
                     {% endif %}
@@ -255,6 +498,138 @@
         </main>
     </div>
     
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Function to apply custom styling to file inputs
+            function styleFileInputs() {
+                try {
+                    document.querySelectorAll('input[type="file"]').forEach(function(input) {
+                        if (input.dataset.customFile === 'true') return;
+                        if (!input.parentNode) return;
+                        input.dataset.customFile = 'true';
+
+                        const isRtl = document.documentElement.dir === 'rtl';
+                        const chooseText = isRtl ? 'اختر ملف' : 'Choose File';
+                        const noFileText = isRtl ? 'لم يتم اختيار ملف' : 'No file chosen';
+
+                        // Create wrapper
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'custom-file-wrapper';
+                        
+                        // Create button
+                        const btn = document.createElement('span');
+                        btn.className = 'custom-file-button';
+                        btn.innerText = chooseText;
+                        
+                        // Create filename display
+                        const nameDisp = document.createElement('span');
+                        nameDisp.className = 'custom-file-name';
+                        nameDisp.innerText = noFileText;
+                        
+                        // Place wrapper in the DOM
+                        input.parentNode.insertBefore(wrapper, input);
+                        
+                        // Style input to overlay
+                        input.style.position = 'absolute';
+                        input.style.top = '0';
+                        input.style.left = '0';
+                        input.style.width = '100%';
+                        input.style.height = '100%';
+                        input.style.opacity = '0';
+                        input.style.cursor = 'pointer';
+                        input.style.zIndex = '10';
+                        
+                        // Append elements
+                        wrapper.appendChild(btn);
+                        wrapper.appendChild(nameDisp);
+                        wrapper.appendChild(input);
+                        
+                        // Update label when file changes
+                        input.addEventListener('change', function() {
+                            if (input.files && input.files.length > 0) {
+                                nameDisp.innerText = input.files[0].name;
+                                nameDisp.style.color = 'var(--text-primary)';
+                                nameDisp.style.fontWeight = '600';
+                            } else {
+                                nameDisp.innerText = noFileText;
+                                nameDisp.style.color = 'var(--text-secondary)';
+                                nameDisp.style.fontWeight = 'normal';
+                            }
+                        });
+                    });
+                } catch (e) {
+                    console.error("Error styling file inputs:", e);
+                }
+            }
+            
+            // Run on load
+            styleFileInputs();
+            
+            // Also run when dynamic content might be added (like inline formsets)
+            try {
+                const observer = new MutationObserver(function() {
+                    styleFileInputs();
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            } catch (e) {
+                console.error("Error setting up MutationObserver:", e);
+            }
+        });
+
+        // Robust Sidebar Toggle Logic for Mobile Devices
+        (function() {
+            function initSidebar() {
+                const toggleBtn = document.getElementById('sidebar-toggle');
+                const closeBtn = document.getElementById('sidebar-close');
+                const sidebar = document.getElementById('sidebar');
+                const overlay = document.getElementById('sidebar-overlay');
+
+                if (!sidebar || !overlay) return;
+
+                const openSidebar = function(e) {
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    sidebar.classList.add('open');
+                    overlay.classList.add('open');
+                    document.body.style.overflow = 'hidden';
+                };
+
+                const closeSidebar = function(e) {
+                    if (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('open');
+                    document.body.style.overflow = '';
+                };
+
+                if (toggleBtn) {
+                    toggleBtn.addEventListener('click', openSidebar);
+                    toggleBtn.addEventListener('touchstart', openSidebar, { passive: true });
+                }
+
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', closeSidebar);
+                    closeBtn.addEventListener('touchstart', closeSidebar, { passive: true });
+                }
+
+                if (overlay) {
+                    overlay.addEventListener('click', closeSidebar);
+                    overlay.addEventListener('touchstart', closeSidebar, { passive: true });
+                }
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initSidebar);
+            } else {
+                initSidebar();
+            }
+        })();
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

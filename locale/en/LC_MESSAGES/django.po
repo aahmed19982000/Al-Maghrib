@@ -1,0 +1,1988 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-07 09:11+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+#: accounts/models.py:23 templates/dashboard/base.html:264
+msgid "كاتب"
+msgstr "Author"
+
+#: accounts/models.py:24 templates/dashboard/base.html:262
+msgid "محرر"
+msgstr "Editor"
+
+#: accounts/models.py:25
+msgid "مدير/رئيس تحرير"
+msgstr ""
+
+#: core/views.py:100
+msgid "البحث"
+msgstr "Search"
+
+#: core/views.py:112 templates/core/contact.html:4
+msgid "اتصل بنا"
+msgstr "Contact Us"
+
+#: core/views.py:130
+msgid "رمز التحقق (CAPTCHA) غير صحيح. يرجى المحاولة مرة أخرى."
+msgstr "Incorrect CAPTCHA. Please try again."
+
+#: core/views.py:153
+msgid "تم إرسال رسالتكم بنجاح! سنتواصل معكم في أقرب وقت."
+msgstr "Your message has been sent successfully! We will contact you soon."
+
+#: core/views.py:156
+msgid "تم استلام رسالتكم بنجاح! (نمط التطوير الفعال)"
+msgstr "Your message was received successfully! (Development Mode)"
+
+#: core/views.py:166 templates/core/about.html:4 templates/core/about.html:25
+#: templates/includes/footer.html:59
+msgid "من نحن"
+msgstr "About Us"
+
+#: core/views.py:196 templates/core/charter.html:4
+#: templates/core/charter.html:25 templates/includes/footer.html:60
+msgid "الميثاق التحريري"
+msgstr "Editorial Charter"
+
+#: core/views.py:206 templates/core/contact.html:164
+#: templates/core/contact.html:175 templates/core/contact.html:186
+#: templates/core/contact.html:197 templates/core/contact.html:208
+#: templates/core/contact_office.html:4 templates/core/contact_office.html:25
+#: templates/includes/footer.html:61
+msgid "اتصل بالمكتب"
+msgstr "Contact Office"
+
+#: core/views.py:216 templates/core/privacy_policy.html:4
+#: templates/core/privacy_policy.html:19 templates/includes/footer.html:90
+msgid "سياسة الخصوصية"
+msgstr "Privacy Policy"
+
+#: core/views.py:226 templates/core/terms.html:4 templates/core/terms.html:19
+#: templates/includes/footer.html:91
+msgid "شروط الاستخدام"
+msgstr "Terms of Use"
+
+#: core/views.py:259 templates/core/archive.html:5
+#: templates/includes/footer.html:92
+msgid "الأرشيف"
+msgstr "Archive"
+
+#: news/models.py:62 templates/dashboard/article_preview.html:128
+#: templates/dashboard/articles.html:132
+#: templates/dashboard/author_detail_mgmt.html:141
+#: templates/dashboard/author_stats.html:121
+msgid "مسودة"
+msgstr "Draft"
+
+#: news/models.py:63 templates/dashboard/article_preview.html:129
+#: templates/dashboard/articles.html:133
+#: templates/dashboard/author_detail_mgmt.html:142
+#: templates/dashboard/author_stats.html:122
+msgid "مراجعة"
+msgstr "Review"
+
+#: news/models.py:64 templates/dashboard/article_preview.html:127
+#: templates/dashboard/articles.html:131
+#: templates/dashboard/author_detail_mgmt.html:140
+#: templates/dashboard/author_stats.html:120
+msgid "منشور"
+msgstr "Published"
+
+#: news/models.py:65 templates/dashboard/article_preview.html:130
+#: templates/dashboard/articles.html:134
+#: templates/dashboard/author_detail_mgmt.html:143
+#: templates/dashboard/author_stats.html:123
+msgid "مؤرشف"
+msgstr "Archived"
+
+#: news/views.py:116
+msgid "كل المقالات"
+msgstr "All Articles"
+
+#: news/views.py:169
+msgid "الكتاب"
+msgstr "Authors"
+
+#: news/views.py:195
+msgid "تم إضافة تعليقك بنجاح!"
+msgstr "Your comment has been added successfully!"
+
+#: news/views.py:197
+msgid "لا يمكن إضافة تعليق فارغ."
+msgstr "Cannot add an empty comment."
+
+#: news/views.py:207
+msgid "تم إزالة الإعجاب بالمقال."
+msgstr "Unlike article successful."
+
+#: news/views.py:209
+msgid "تم تسجيل إعجابك بالمقال!"
+msgstr "You liked the article!"
+
+#: news/views.py:218
+msgid "تم إزالة المقال من المحفوظات."
+msgstr "Article removed from bookmarks."
+
+#: news/views.py:220
+msgid "تم حفظ المقال في مفضلتك!"
+msgstr "Article saved to bookmarks!"
+
+#: templates/accounts/login.html:4 templates/accounts/login.html:12
+#: templates/news/article_detail.html:219
+msgid "تسجيل الدخول"
+msgstr "Login"
+
+#: templates/accounts/login.html:13
+msgid "مرحباً بك مجدداً. الرجاء إدخال بياناتك للمتابعة."
+msgstr "Welcome back. Please enter your credentials to continue."
+
+#: templates/accounts/login.html:19
+msgid "اسم المستخدم أو كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى."
+msgstr "Incorrect username or password. Please try again."
+
+#: templates/accounts/login.html:32
+msgid "اسم المستخدم"
+msgstr "Username"
+
+#: templates/accounts/login.html:33
+msgid "أدخل اسم المستخدم الخاص بك"
+msgstr "Enter your username"
+
+#: templates/accounts/login.html:38
+msgid "كلمة المرور"
+msgstr "Password"
+
+#: templates/accounts/login.html:44 templates/includes/navbar.html:71
+#: templates/includes/navbar.html:155
+msgid "دخول"
+msgstr "Login"
+
+#: templates/accounts/team_list.html:6 templates/accounts/team_list.html:19
+#: templates/includes/footer.html:62
+msgid "فريق العمل"
+msgstr "Editorial Team"
+
+#: templates/accounts/team_list.html:17
+msgid "صناع الخبر والمعرفة"
+msgstr ""
+
+#: templates/accounts/team_list.html:21
+msgid ""
+"نخبة من الكفاءات الصحفية والإعلامية والتقنية الذين يعملون بشغف لتقديم محتوى "
+"إعلامي صادق، موضوعي، ومتطور."
+msgstr ""
+
+#: templates/accounts/team_list.html:31
+msgid "إدارة ورئاسة التحرير"
+msgstr ""
+
+#: templates/accounts/team_list.html:58 templates/accounts/team_list.html:119
+#: templates/accounts/team_list.html:225
+msgid "تخصص"
+msgstr ""
+
+#: templates/accounts/team_list.html:68 templates/accounts/team_list.html:129
+#: templates/accounts/team_list.html:235 templates/core/contact.html:51
+#: templates/includes/footer.html:14 templates/news/article_detail.html:323
+msgid "البريد الإلكتروني"
+msgstr "Email Address"
+
+#: templates/accounts/team_list.html:84
+msgid "لا يوجد أعضاء مسجلين حالياً."
+msgstr ""
+
+#: templates/accounts/team_list.html:92
+msgid "هيئة التحرير والتدقيق"
+msgstr ""
+
+#: templates/accounts/team_list.html:151
+msgid "الإدارة الفنية والتطوير"
+msgstr ""
+
+#: templates/accounts/team_list.html:161 templates/accounts/team_list.html:168
+msgid "أحمد إبراهيم"
+msgstr ""
+
+#: templates/accounts/team_list.html:169
+msgid "مطور ومبرمج الموقع"
+msgstr ""
+
+#: templates/accounts/team_list.html:188
+msgid ""
+"المسؤول الفني والمبرمج للموقع. يقوم بتصميم وهندسة الواجهات وتطوير البنية "
+"البرمجية الخلفية لضمان كفاءة الموقع، سرعته الفائقة، توافقه التام مع محركات "
+"البحث، وحماية البيانات بأعلى المعايير الأمنية."
+msgstr ""
+
+#: templates/accounts/team_list.html:198
+msgid "الكتاب والصحفيون"
+msgstr ""
+
+#: templates/core/about.html:21
+msgid "صوت المغرب العربي والوطن العربي"
+msgstr ""
+
+#: templates/core/about.html:28
+msgid ""
+"منصة إعلامية إلكترونية عربية تسعى لبناء جسور التواصل وتقديم محتوى إخباري "
+"ومعرفي متميز وبأعلى درجات المصداقية."
+msgstr ""
+
+#: templates/core/about.html:42
+msgid "نطاق التغطية والجمهور"
+msgstr ""
+
+#: templates/core/about.html:51
+msgid "دول المغرب العربي"
+msgstr ""
+
+#: templates/core/about.html:52
+msgid "تغطية ميدانية شاملة لشؤون تونس، الجزائر، المغرب، ليبيا، وموريتانيا."
+msgstr ""
+
+#: templates/core/about.html:61
+msgid "دول الخليج العربي ومصر"
+msgstr ""
+
+#: templates/core/about.html:62
+msgid ""
+"ربط المشرق والمغرب العربي بجمهورية مصر العربية ومختلف دول الخليج العربي."
+msgstr ""
+
+#: templates/core/about.html:71
+msgid "المتابعون حول العالم"
+msgstr ""
+
+#: templates/core/about.html:72
+msgid ""
+"إيصال الصوت العربي والجسر المعرفي للجاليات والمتابعين في مختلف بلدان العالم."
+msgstr ""
+
+#: templates/core/about.html:82
+msgid "بناء جسور التواصل المعرفي العربي"
+msgstr ""
+
+#: templates/core/about.html:87
+msgid ""
+"موقع المغرب العربي هو منصة إعلامية إلكترونية عربية تهدف إلى تقديم محتوى "
+"إخباري ومعرفي وإعلامي متميز يخاطب جمهور دول المغرب العربي ودول الخليج العربي "
+"وجمهورية مصر العربية، إلى جانب المتابعين في مختلف أنحاء العالم."
+msgstr ""
+
+#: templates/core/about.html:91
+msgid ""
+"نسعى إلى بناء جسر للتواصل بين الشعوب العربية من خلال تقديم الأخبار "
+"والتحليلات والتقارير والمواد الإعلامية التي تواكب التطورات السياسية "
+"والاقتصادية والثقافية والاجتماعية، مع الالتزام بالمصداقية والمهنية "
+"والموضوعية."
+msgstr ""
+
+#: templates/core/about.html:95
+msgid ""
+"ويعمل الموقع على إبراز القضايا والفرص المشتركة بين دول المنطقة، وتعزيز "
+"التبادل المعرفي والثقافي، ليكون نافذة عربية شاملة تجمع بين الخبر والرأي "
+"والمعلومة في مكان واحد."
+msgstr ""
+
+#: templates/core/about.html:110
+msgid "رؤيتنا"
+msgstr ""
+
+#: templates/core/about.html:112
+msgid ""
+"أن نكون المنصة الإعلامية العربية الرائدة في تغطية شؤون المغرب العربي والخليج "
+"ومصر وربطها بالعالم."
+msgstr ""
+
+#: templates/core/about.html:126
+msgid "رسالتنا"
+msgstr ""
+
+#: templates/core/about.html:128
+msgid ""
+"تقديم محتوى إعلامي موثوق ومتوازن يسهم في نشر المعرفة وتعزيز التواصل والتقارب "
+"بين الشعوب العربية."
+msgstr ""
+
+#: templates/core/about.html:137
+msgid "قيمنا ومبادئنا"
+msgstr ""
+
+#: templates/core/about.html:146
+msgid "المصداقية"
+msgstr ""
+
+#: templates/core/about.html:148
+msgid ""
+"نلتزم بنقل الحقائق الدقيقة والأخبار الموثوقة من مصادرها الرسمية والميدانية."
+msgstr ""
+
+#: templates/core/about.html:156
+msgid "المهنية"
+msgstr ""
+
+#: templates/core/about.html:158
+msgid "نتبع أعلى المعايير الصحفية العالمية في التحرير والتحليل وعرض المعلومات."
+msgstr ""
+
+#: templates/core/about.html:166
+msgid "الموضوعية"
+msgstr ""
+
+#: templates/core/about.html:168
+msgid "نقف على مسافة واحدة من الجميع ونعرض مختلف وجهات النظر بتوازن وحيادية."
+msgstr ""
+
+#: templates/core/archive.html:21
+msgid "الأرشيف الصحفي"
+msgstr "Press Archive"
+
+#: templates/core/archive.html:24
+msgid "الأرشيف الإخباري"
+msgstr "News Archive"
+
+#: templates/core/archive.html:27
+msgid ""
+"تصفح كافة المقالات والتقارير والتحليلات التي تم نشرها في الموقع مرتبة ومصنفة "
+"بحسب تاريخ النشر."
+msgstr ""
+
+#: templates/core/archive.html:44
+msgid "تصفية الأرشيف لـ:"
+msgstr "Filter archive for:"
+
+#: templates/core/archive.html:55
+msgid "إلغاء التصفية"
+msgstr "Clear filter"
+
+#: templates/core/archive.html:87 templates/core/search.html:50
+#: templates/dashboard/article_preview.html:149
+#: templates/news/article_list.html:46 templates/news/category_list.html:79
+msgid "دقائق"
+msgstr "minutes"
+
+#: templates/core/archive.html:117 templates/core/search.html:77
+#: templates/dashboard/articles.html:168
+#: templates/dashboard/author_detail_mgmt.html:174
+#: templates/news/article_list.html:73 templates/news/author_detail.html:159
+#: templates/news/category_list.html:106
+msgid "السابق"
+msgstr "Previous"
+
+#: templates/core/archive.html:127 templates/core/search.html:87
+#: templates/dashboard/articles.html:178
+#: templates/dashboard/author_detail_mgmt.html:182
+#: templates/news/article_list.html:83 templates/news/author_detail.html:169
+#: templates/news/category_list.html:116
+msgid "التالي"
+msgstr "Next"
+
+#: templates/core/archive.html:136
+msgid "لا يوجد مقالات في هذا الأرشيف للفترة المحددة."
+msgstr "No articles found in this archive for the specified period."
+
+#: templates/core/archive.html:149
+msgid "تصفح حسب الشهر"
+msgstr "Browse by Month"
+
+#: templates/core/archive.html:180
+msgid "لا يوجد تاريخ أرشفة متاح حالياً."
+msgstr "No archive history available currently."
+
+#: templates/core/charter.html:21
+msgid "معاييرنا الأخلاقية والمهنية"
+msgstr "Our Ethical & Professional Standards"
+
+#: templates/core/charter.html:28
+msgid ""
+"الصحافة مسؤولية وأمانة. نلتزم بأعلى المعايير المهنية لضمان تقديم محتوى موثوق "
+"ودقيق لجمهورنا."
+msgstr ""
+
+#: templates/core/charter.html:39
+msgid "مبادئ العمل الصحفي لدينا"
+msgstr "Our Principles of Journalistic Work"
+
+#: templates/core/charter.html:42
+msgid ""
+"يمثل هذا الميثاق العهد المهني والأخلاقي الذي يلتزم به كافة الصحفيين والكتّاب "
+"والمحررين العاملين في منصتنا الإعلامية. نحن نؤمن بأن ثقة القارئ هي رأسمالنا "
+"الأكبر، ولذلك نعمل جاهدين لصونها والحفاظ عليها من خلال اتباع المعايير "
+"التحريرية الصارمة التالية."
+msgstr ""
+
+#: templates/core/charter.html:53
+msgid "الدقة والتحقق من المعلومات"
+msgstr "Accuracy & Verification of Information"
+
+#: templates/core/charter.html:55
+msgid ""
+"نسعى جاهدين لنقل الأخبار بدقة تامة. نلتزم بالتحقق من صحة المعلومات من مصادر "
+"متعددة وموثوقة قبل النشر، مع الفصل التام بين الخبر والتحليل أو الرأي الشخصي."
+msgstr ""
+
+#: templates/core/charter.html:64
+msgid "الموضوعية والحياد والتوازن"
+msgstr "Objectivity, Neutrality & Balance"
+
+#: templates/core/charter.html:66
+msgid ""
+"نلتزم بعرض مختلف وجهات النظر بتوازن وموضوعية ودون تحيز. لا نسمح للميول "
+"الشخصية أو السياسية أو الفكرية بالتأثير على تغطيتنا الصحفية وصياغة الأخبار."
+msgstr ""
+
+#: templates/core/charter.html:75
+msgid "حماية المصادر والسرية"
+msgstr "Protection of Sources & Confidentiality"
+
+#: templates/core/charter.html:77
+msgid ""
+"نحترم رغبة المصادر في عدم الكشف عن هويتها متى ما تطلب الأمر ذلك لحمايتها، "
+"ونلتزم بالسرية المهنية المطلقة وحماية سرية اتصالاتنا وتوثيقاتنا الصحفية."
+msgstr ""
+
+#: templates/core/charter.html:86
+msgid "المسؤولية الاجتماعية والأخلاقية"
+msgstr "Social & Ethical Responsibility"
+
+#: templates/core/charter.html:88
+msgid ""
+"نتجنب نشر ما يحرض على الكراهية، العنف، العنصرية، أو التمييز بكافة أشكاله. "
+"نحترم الخصوصية الفردية ونراعي القيم الإنسانية والقوانين المعمول بها."
+msgstr ""
+
+#: templates/core/charter.html:97
+msgid "سياسة التصحيح والاعتذار"
+msgstr "Correction & Apology Policy"
+
+#: templates/core/charter.html:100
+msgid ""
+"المصداقية تتطلب الشجاعة في الاعتراف بالخطأ. إذا تبين لنا وجود خطأ غير مقصود "
+"في أي خبر أو تقرير منشور، فإننا نلتزم بتصحيحه وتحديث المادة الصحفية فوراً "
+"وبكل شفافية، مع الإشارة إلى أن المادة قد تم تعديلها لتصحيح الخطأ الوارد."
+msgstr ""
+
+#: templates/core/charter.html:104
+msgid "للإبلاغ عن الأخطاء التحريرية أو طلب التصحيح:"
+msgstr "To report editorial errors or request corrections:"
+
+#: templates/core/contact.html:17
+msgid "تواصلوا مع صوت المغرب العربي"
+msgstr "Contact Voice of Al-Maghrib"
+
+#: templates/core/contact.html:19
+msgid ""
+"نحن هنا لنسمع منكم. سواء كان لديكم استفسار صحفي، اقتراح تقني، أو رغبة في "
+"التعاون الإعلاني، فإن فريقنا المتواجد في كافة أنحاء المنطقة مستعد للتواصل."
+msgstr ""
+
+#: templates/core/contact.html:30
+msgid "راسلنا مباشرة"
+msgstr "Message Us Directly"
+
+#: templates/core/contact.html:47
+msgid "الاسم الكامل"
+msgstr "Full Name"
+
+#: templates/core/contact.html:48
+msgid "أدخل اسمك"
+msgstr "Enter your name"
+
+#: templates/core/contact.html:57
+msgid "الموضوع"
+msgstr "Subject"
+
+#: templates/core/contact.html:59
+msgid "قسم التحرير"
+msgstr "Editorial Department"
+
+#: templates/core/contact.html:60
+msgid "الدعم التقني"
+msgstr "Technical Support"
+
+#: templates/core/contact.html:61
+msgid "الإعلان والتسويق"
+msgstr "Advertising & Marketing"
+
+#: templates/core/contact.html:62
+msgid "اقتراحات عامة"
+msgstr "General Suggestions"
+
+#: templates/core/contact.html:67
+msgid "رمز التحقق (CAPTCHA)"
+msgstr "CAPTCHA Verification"
+
+#: templates/core/contact.html:72
+msgid "أدخل ناتج العملية الحسابية"
+msgstr "Enter the result of the equation"
+
+#: templates/core/contact.html:77
+msgid "إرسال الرسالة"
+msgstr "Send Message"
+
+#: templates/core/contact.html:92
+msgid "عرض خريطة المكاتب"
+msgstr "Show Office Map"
+
+#: templates/core/contact.html:97
+msgid "قنوات الاتصال"
+msgstr "Communication Channels"
+
+#: templates/core/contact.html:104
+msgid "التحرير"
+msgstr "Editorial"
+
+#: templates/core/contact.html:113
+msgid "الإعلانات"
+msgstr "Advertising"
+
+#: templates/core/contact.html:122
+msgid "الهاتف الدولي"
+msgstr "International Phone"
+
+#: templates/core/contact.html:132
+msgid "تابعونا على"
+msgstr "Follow us on"
+
+#: templates/core/contact.html:149
+msgid "حضورنا الميداني"
+msgstr "Our Field Presence"
+
+#: templates/core/contact.html:150
+msgid "مكاتبنا الإقليمية"
+msgstr "Our Regional Offices"
+
+#: templates/core/contact.html:153
+msgid ""
+"نحن نؤمن بالقرب من الخبر، لذا نمتلك شبكة مكاتب متكاملة في كافة العواصم "
+"المغاربية."
+msgstr ""
+
+#: templates/core/contact.html:159
+msgid "الدار البيضاء"
+msgstr "Casablanca"
+
+#: templates/core/contact.html:160
+msgid "المقر الرئيسي"
+msgstr "Headquarters"
+
+#: templates/core/contact.html:161
+msgid "شارع الجيش الملكي، برج الأحباس، الدار البيضاء، المغرب"
+msgstr "Faraj Army Street, Al Habas Tower, Casablanca, Morocco"
+
+#: templates/core/contact.html:170 templates/core/contact_office.html:91
+msgid "الجزائر"
+msgstr "Algiers"
+
+#: templates/core/contact.html:171 templates/core/contact.html:182
+#: templates/core/contact.html:193 templates/core/contact.html:204
+msgid "مكتب إقليمي"
+msgstr "Regional Office"
+
+#: templates/core/contact.html:172
+msgid "نهج العقيد عميروش، وسط المدينة، الجزائر العاصمة"
+msgstr "Colonel Amirouche St, Downtown, Algiers"
+
+#: templates/core/contact.html:181 templates/core/contact_office.html:45
+msgid "تونس"
+msgstr "Tunis"
+
+#: templates/core/contact.html:183
+msgid "شارع الحبيب بورقيبة، تونس العاصمة، تونس"
+msgstr "Habib Bourguiba Avenue, Tunis, Tunisia"
+
+#: templates/core/contact.html:192
+msgid "طرابلس"
+msgstr "Tripoli"
+
+#: templates/core/contact.html:194
+msgid "ميدان الجزائر، مجمع المكاتب، طرابلس، ليبيا"
+msgstr "Algeria Square, Office Complex, Tripoli, Libya"
+
+#: templates/core/contact.html:203
+msgid "نواكشوط"
+msgstr "Nouakchott"
+
+#: templates/core/contact.html:205
+msgid "شارع جمال عبد الناصر، تفرغ زينة، نواكشوط"
+msgstr "Gamal Abdel Nasser Street, Tevragh Zeina, Nouakchott"
+
+#: templates/core/contact_office.html:21
+msgid "فروعنا ومكاتبنا الإقليمية"
+msgstr "Our Branches & Regional Offices"
+
+#: templates/core/contact_office.html:28
+msgid ""
+"شبكة مكاتبنا وصحفيينا تغطي مختلف دول المغرب العربي والشرق الأوسط لتزويدكم "
+"بالخبر فور حدوثه."
+msgstr ""
+
+#: templates/core/contact_office.html:50
+msgid "شارع الحبيب بورقيبة، عمارة المغرب العربي، تونس العاصمة"
+msgstr "Habib Bourguiba Avenue, Arab Maghrib Building, Tunis"
+
+#: templates/core/contact_office.html:68
+msgid "المغرب"
+msgstr ""
+
+#: templates/core/contact_office.html:73
+msgid "شارع محمد الخامس، برج الأعمال، الرباط"
+msgstr "Mohamed V Avenue, Business Tower, Rabat"
+
+#: templates/core/contact_office.html:96
+msgid "حي حيدرة، عمارة الصنوبر، الجزائر العاصمة"
+msgstr "Hydra District, Pine Building, Algiers"
+
+#: templates/core/contact_office.html:114
+msgid "مصر"
+msgstr ""
+
+#: templates/core/contact_office.html:119
+msgid "شارع التحرير، الدقي، الجيزة، القاهرة الكبرى"
+msgstr "El-Tahrir Street, Dokki, Giza, Greater Cairo"
+
+#: templates/core/contact_office.html:137
+msgid "الخليج العربي"
+msgstr ""
+
+#: templates/core/contact_office.html:142
+msgid "مدينة دبي للإعلام، مبنى رقم 4، دبي، الإمارات العربية المتحدة"
+msgstr "Dubai Media City, Building No. 4, Dubai, United Arab Emirates"
+
+#: templates/core/contact_office.html:160
+msgid "الاستفسارات العامة"
+msgstr ""
+
+#: templates/core/contact_office.html:165
+msgid "المكتب الرئيسي، لندن، المملكة المتحدة"
+msgstr ""
+
+#: templates/core/contact_office.html:182
+msgid "هل ترغب في التواصل مع التحرير مباشرة؟"
+msgstr "Do you wish to contact editorial directly?"
+
+#: templates/core/contact_office.html:184
+msgid ""
+"إذا كان لديك خبر، مقترح، أو ترغب في إرسال بيان صحفي، يمكنك استخدام نموذج "
+"الاتصال المباشر لإيصال رسالتك إلى قسم التحرير المعني مباشرة."
+msgstr ""
+
+#: templates/core/contact_office.html:188
+msgid "اذهب لنموذج الاتصال بنا"
+msgstr "Go to Contact Us Form"
+
+#: templates/core/home.html:5 templates/dashboard/home.html:4
+#: templates/includes/breadcrumbs.html:10
+msgid "الرئيسية"
+msgstr "Home"
+
+#: templates/core/home.html:41 templates/core/home.html:397
+msgid "إقرأ المزيد"
+msgstr "Read More"
+
+#: templates/core/home.html:80 templates/core/home.html:172
+#: templates/core/home.html:258
+msgid "المزيد"
+msgstr "More"
+
+#: templates/core/home.html:140 templates/news/article_detail.html:337
+msgid "عرض الكل"
+msgstr "View All"
+
+#: templates/core/home.html:228
+msgid "عرض المزيد"
+msgstr "View More"
+
+#: templates/core/home.html:305
+msgid "استكشف"
+msgstr "Explore"
+
+#: templates/core/home.html:376
+msgid "نخبة من المفكرين والكتاب يحللون الواقع المغاربي"
+msgstr "A selection of thinkers and writers analyzing the Maghreb reality"
+
+#: templates/core/privacy_policy.html:22
+msgid ""
+"خصوصيتك تهمنا. نوضح هنا كيفية جمعنا لبياناتك وحمايتها واستخدامها عند تصفح "
+"موقعنا."
+msgstr ""
+
+#: templates/core/privacy_policy.html:36
+msgid "مقدمة عامة"
+msgstr "General Introduction"
+
+#: templates/core/privacy_policy.html:39
+msgid ""
+"نحن نلتزم بحماية سرية وخصوصية بيانات المستخدمين والزوار على موقعنا. توضح هذه "
+"السياسة طبيعة المعلومات الشخصية التي نجمعها، وكيفية استخدامها وحمايتها، "
+"وحقوقك المتعلقة ببياناتك."
+msgstr ""
+
+#: templates/core/privacy_policy.html:46
+msgid "البيانات التي نجمعها"
+msgstr "Data We Collect"
+
+#: templates/core/privacy_policy.html:48
+msgid "قد نقوم بجمع الأنواع التالية من المعلومات عند استخدامك لموقعنا:"
+msgstr "We may collect the following types of information when you use our website:"
+
+#: templates/core/privacy_policy.html:50
+msgid ""
+"المعلومات الشخصية التي تقدمها طواعية عند الاشتراك في النشرة البريدية أو "
+"استخدام نموذج الاتصال (مثل الاسم والبريد الإلكتروني)."
+msgstr ""
+
+#: templates/core/privacy_policy.html:51
+msgid ""
+"بيانات التصفح والاستخدام، وتشمل عنوان البروتوكول (IP)، نوع المتصفح، الصفحات "
+"التي زرتها، ووقت الزيارة."
+msgstr ""
+
+#: templates/core/privacy_policy.html:52
+msgid ""
+"ملفات تعريف الارتباط (Cookies) لتحسين تجربة المستخدم وتحليل أداء الموقع "
+"وإظهار الإعلانات المناسبة."
+msgstr ""
+
+#: templates/core/privacy_policy.html:59
+msgid "كيفية استخدام بياناتك"
+msgstr "How We Use Your Data"
+
+#: templates/core/privacy_policy.html:61
+msgid "نستخدم البيانات التي نجمعها للأغراض التالية:"
+msgstr "We use the data we collect for the following purposes:"
+
+#: templates/core/privacy_policy.html:63
+msgid "تقديم محتوى الموقع الإخباري والخدمات المتاحة وتخصيصها لتناسب اهتماماتك."
+msgstr ""
+
+#: templates/core/privacy_policy.html:64
+msgid "إرسال النشرات الإخبارية والمستجدات التي قمت بالاشتراك فيها."
+msgstr ""
+
+#: templates/core/privacy_policy.html:65
+msgid "الرد على استفساراتك ورسائلك التي ترسلها لنا عبر نموذج الاتصال."
+msgstr "Responding to your inquiries and messages sent via the contact form."
+
+#: templates/core/privacy_policy.html:66
+msgid "تحليل حركة المرور وسلوك الزوار لتحسين وتطوير أداء الموقع وسرعته."
+msgstr "Analyzing traffic and visitor behavior to improve and develop site performance and speed."
+
+#: templates/core/privacy_policy.html:73
+msgid "حماية البيانات ومشاركتها"
+msgstr "Data Protection & Sharing"
+
+#: templates/core/privacy_policy.html:76
+msgid ""
+"نحن نطبق إجراءات أمنية تقنية وإدارية صارمة لمنع الوصول غير المصرح به إلى "
+"بياناتك أو تعديلها أو كشفها. نؤكد أننا لا نقوم ببيع أو تأجير أو مشاركة "
+"معلوماتك الشخصية مع أطراف ثالثة لأغراض تجارية، باستثناء الحالات التي يتطلبها "
+"القانون أو لحماية حقوقنا القانونية."
+msgstr ""
+
+#: templates/core/privacy_policy.html:83
+msgid "حقوق المستخدم"
+msgstr "User Rights"
+
+#: templates/core/privacy_policy.html:86
+msgid ""
+"لك الحق في الوصول إلى بياناتك الشخصية التي نحتفظ بها، أو طلب تصحيحها أو "
+"تعديلها، كما يمكنك في أي وقت إلغاء الاشتراك من النشرة البريدية عبر رابط "
+"إلغاء الاشتراك المتوفر في نهاية كل رسالة بريدية نرسلها إليك."
+msgstr ""
+
+#: templates/core/privacy_policy.html:93
+msgid "التعديلات على سياسة الخصوصية"
+msgstr "Amendments to Privacy Policy"
+
+#: templates/core/privacy_policy.html:96
+msgid ""
+"نحتفظ بالحق في تعديل أو تحديث سياسة الخصوصية هذه في أي وقت. سيتم نشر أي "
+"تغييرات هنا مع تحديث تاريخ آخر تعديل في أسفل الصفحة. ننصح بمراجعة هذه الصفحة "
+"بشكل دوري للوقوف على أي مستجدات."
+msgstr ""
+
+#: templates/core/privacy_policy.html:101 templates/core/terms.html:101
+msgid "آخر تحديث:"
+msgstr ""
+
+#: templates/core/privacy_policy.html:102 templates/core/terms.html:102
+msgid "موقع المغرب العربي"
+msgstr ""
+
+#: templates/core/search.html:5
+msgid "نتائج البحث"
+msgstr "Search Results"
+
+#: templates/core/search.html:18
+msgid "نتائج البحث عن"
+msgstr "Search results for"
+
+#: templates/core/search.html:21
+#, python-format
+msgid "تم العثور على %(count)s نتيجة تطابق كلمات البحث."
+msgstr "Found %(count)s matching results."
+
+#: templates/core/search.html:97
+msgid "لم نجد أي نتائج للمقالات"
+msgstr "No articles found"
+
+#: templates/core/search.html:99
+msgid ""
+"يرجى التحقق من صياغة كلمات البحث أو محاولة استخدام مصطلحات أعم وأشمل، أو "
+"تصفح الأقسام الرئيسية للموقع."
+msgstr ""
+
+#: templates/core/search.html:102
+msgid "تصفح آخر الأخبار"
+msgstr "Browse latest news"
+
+#: templates/core/search.html:112
+msgid "بحث جديد"
+msgstr "New Search"
+
+#: templates/core/search.html:114 templates/includes/navbar.html:115
+msgid "ابحث عن أخبار..."
+msgstr "Search for news..."
+
+#: templates/core/search.html:117
+msgid "ابحث الآن"
+msgstr "Search Now"
+
+#: templates/core/terms.html:22
+msgid ""
+"يرجى قراءة شروط الاستخدام بعناية قبل تصفح الموقع أو استخدام أي من خدماته "
+"الإخبارية."
+msgstr ""
+
+#: templates/core/terms.html:36
+msgid "الموافقة على الشروط"
+msgstr "Agreement to Terms"
+
+#: templates/core/terms.html:39
+msgid ""
+"دخولك وتصفحك لموقع المغرب العربي يعني موافقتك الكاملة واللامشروطة على "
+"الالتزام بجميع شروط الاستخدام المذكورة هنا، والامتثال لكافة القوانين "
+"واللوائح المعمول بها محلياً ودولياً. إذا كنت لا توافق على هذه الشروط، يرجى "
+"التوقف عن استخدام الموقع."
+msgstr ""
+
+#: templates/core/terms.html:46
+msgid "حقوق الملكية الفكرية"
+msgstr "Intellectual Property Rights"
+
+#: templates/core/terms.html:49
+msgid ""
+"جميع المحتويات المنشورة على الموقع، بما في ذلك الأخبار، المقالات، التحليلات، "
+"الصور، الفيديوهات، الشعارات، والتصميمات، هي ملكية فكرية حصرية لموقع المغرب "
+"العربي أو شركائه من وكالات الأنباء، وهي محمية بموجب قوانين الملكية الفكرية "
+"وحقوق النشر الدولية."
+msgstr ""
+
+#: templates/core/terms.html:52
+msgid ""
+"لا يُسمح بنسخ أو إعادة إنتاج أو نشر أو توزيع أي جزء من محتوى الموقع دون "
+"الحصول على إذن كتابي مسبق من إدارة الموقع، مع وجوب ذكر المصدر بوضوح ووضع "
+"رابط مباشر للمادة الأصلية عند الاقتباس المصرح به."
+msgstr ""
+
+#: templates/core/terms.html:59
+msgid "الاستخدام المقبول"
+msgstr "Acceptable Use"
+
+#: templates/core/terms.html:61
+msgid "عند استخدامك للموقع، فإنك تلتزم بعدم:"
+msgstr "When using the website, you commit not to:"
+
+#: templates/core/terms.html:63
+msgid ""
+"استخدام الموقع بأي طريقة تؤدي إلى إلحاق الضرر به أو تعطيل خوادمه أو شبكاته "
+"المتصلة."
+msgstr ""
+
+#: templates/core/terms.html:64
+msgid ""
+"نشر أو إرسال أي محتوى يحتوي على برمجيات خبيثة أو فيروسات تهدف إلى إتلاف أو "
+"اختراق الموقع."
+msgstr ""
+
+#: templates/core/terms.html:65
+msgid ""
+"استخدام أدوات آلية أو برمجيات كشط البيانات (Scraping) لجمع محتويات الموقع "
+"دون إذن مسبق."
+msgstr ""
+
+#: templates/core/terms.html:66
+msgid ""
+"استخدام الموقع للترويج لإعلانات تجارية غير مصرح بها أو إرسال رسائل غير مرغوب "
+"فيها (Spam)."
+msgstr ""
+
+#: templates/core/terms.html:73
+msgid "إخلاء المسؤولية"
+msgstr ""
+
+#: templates/core/terms.html:76
+msgid ""
+"يتم تقديم المحتوى الإخباري والمعلوماتي على هذا الموقع كما هو، للتعريف العام "
+"والتثقيف. على الرغم من بذلنا كافة الجهود لضمان صحة ودقة المعلومات، فإن "
+"الموقع لا يضمن خلو المحتوى تماماً من الأخطاء المطبعية أو الفنية غير المقصودة، "
+"ولا يتحمل أي مسؤولية عن القرارات التي يتخذها المستخدم بناءً على هذا المحتوى."
+msgstr ""
+
+#: templates/core/terms.html:83
+msgid "روابط الأطراف الثالثة"
+msgstr "Third-Party Links"
+
+#: templates/core/terms.html:86
+msgid ""
+"قد يحتوي موقعنا على روابط لمواقع إلكترونية خارجية تديرها أطراف أخرى. هذه "
+"الروابط متوفرة لسهولة وصولك فقط، ولا تعني مصادقتنا على محتوياتها أو تحملنا "
+"لأي مسؤولية عن ممارسات الخصوصية أو شروط الاستخدام الخاصة بتلك المواقع."
+msgstr ""
+
+#: templates/core/terms.html:93
+msgid "القانون الواجب التطبيق"
+msgstr "Applicable Law"
+
+#: templates/core/terms.html:96
+msgid ""
+"تخضع شروط الاستخدام هذه وتفسر وفقاً للقوانين المعمول بها. ويخضع أي نزاع قد "
+"ينشأ عن استخدام هذا الموقع للاختصاص الحصري للمحاكم المختصة."
+msgstr ""
+
+#: templates/dashboard/article_form.html:5
+#: templates/dashboard/article_form.html:90
+msgid "تعديل مقال"
+msgstr "Edit Article"
+
+#: templates/dashboard/article_form.html:5
+#: templates/dashboard/article_form.html:90
+#: templates/dashboard/articles.html:16
+msgid "إضافة مقال جديد"
+msgstr "Add New Article"
+
+#: templates/dashboard/article_form.html:91
+msgid "تحديث محتوى المقال الحالي وإعدادات النشر"
+msgstr "Update current article content and publishing settings"
+
+#: templates/dashboard/article_form.html:91
+msgid "اكتب مقالاً جديداً وقم بتعبئة بيانات اللغتين العربية والإنجليزية"
+msgstr "Write a new article and fill in both Arabic and English fields"
+
+#: templates/dashboard/article_form.html:102
+msgid "الترجمة التلقائية للإنجليزية"
+msgstr "Auto-translate to English"
+
+#: templates/dashboard/article_form.html:103
+msgid ""
+"عند تفعيل خيار الترجمة التلقائية (في الأسفل)، سيتم ترجمة المحتوى العربي إلى "
+"الإنجليزي تلقائياً وسيتم الكتابة فوق أي محتوى إنجليزي موجود. إذا كنت ترغب "
+"بكتابة النسخة الإنجليزية يدوياً، قم بإلغاء تفعيل هذا الخيار."
+msgstr ""
+
+#: templates/dashboard/article_form.html:111
+msgid "محتوى المقال الرئيسي (عربي وإنجليزي)"
+msgstr "Main Article Content (Arabic & English)"
+
+#: templates/dashboard/article_form.html:136
+msgid "الرابط الفرعي (Slug)"
+msgstr "Slug URL"
+
+#: templates/dashboard/article_form.html:139
+msgid "اتركه فارغاً ليتم إنشاؤه تلقائياً من العنوان"
+msgstr "Leave empty to generate automatically from title"
+
+#: templates/dashboard/article_form.html:146
+msgid "القسم الأساسي"
+msgstr "Primary Category"
+
+#: templates/dashboard/article_form.html:164
+msgid ""
+"يمكنك اختيار أقسام إضافية لظهور الخبر فيها عبر الضغط المستمر على زر (Ctrl أو "
+"Cmd)"
+msgstr ""
+
+#: templates/dashboard/article_form.html:173
+msgid "إعدادات النشر والوسائط"
+msgstr "Publishing & Media Settings"
+
+#: templates/dashboard/article_form.html:178
+msgid "حالة النشر"
+msgstr "Publishing Status"
+
+#: templates/dashboard/article_form.html:183
+msgid "الوسوم (مفصولة بفاصلة)"
+msgstr "Tags (separated by comma)"
+
+#: templates/dashboard/article_form.html:185
+msgid "مثال: سياسة, اقتصاد, عاجل"
+msgstr "e.g. politics, economy, breaking"
+
+#: templates/dashboard/article_form.html:201
+msgid "خيارات إضافية"
+msgstr "Additional Options"
+
+#: templates/dashboard/article_form.html:205
+msgid "مقال مميز (Featured)"
+msgstr "Featured Article"
+
+#: templates/dashboard/article_form.html:209
+msgid "خبر عاجل (Breaking)"
+msgstr "Breaking News"
+
+#: templates/dashboard/article_form.html:213
+msgid "السماح بالتعليقات"
+msgstr "Allow Comments"
+
+#: templates/dashboard/article_form.html:220
+msgid "صورة الغلاف"
+msgstr "Cover Image"
+
+#: templates/dashboard/article_form.html:225
+msgid "الصورة الحالية"
+msgstr "Current Image"
+
+#: templates/dashboard/article_form.html:242
+msgid "المقتطف والمحتوى الكامل"
+msgstr "Excerpt & Full Content"
+
+#: templates/dashboard/article_form.html:291
+#: templates/dashboard/category_form.html:132
+#: templates/dashboard/homepage_settings.html:17
+msgid "إعدادات محركات البحث (SEO)"
+msgstr "Search Engine Optimization (SEO) Settings"
+
+#: templates/dashboard/article_form.html:321
+msgid ""
+"تفعيل الترجمة التلقائية للإنجليزية (سيتم الكتابة فوق أي محتوى إنجليزي أدخلته)"
+msgstr ""
+
+#: templates/dashboard/article_form.html:329
+#: templates/dashboard/homepage_settings.html:180
+#: templates/dashboard/site_settings.html:104
+msgid "حفظ التغييرات"
+msgstr "Save Changes"
+
+#: templates/dashboard/article_form.html:332
+msgid "إلغاء وتراجع"
+msgstr "Cancel and Go Back"
+
+#: templates/dashboard/article_preview.html:4
+msgid "معاينة المقال"
+msgstr "Preview Article"
+
+#: templates/dashboard/article_preview.html:100
+msgid "معاينة مباشرة للمقال"
+msgstr "Live Article Preview"
+
+#: templates/dashboard/article_preview.html:101
+msgid "استعرض كيف سيظهر المقال للقراء باللغتين العربية والإنجليزية"
+msgstr "See how the article will appear to readers in both Arabic and English"
+
+#: templates/dashboard/article_preview.html:108
+msgid "تعديل هذا المقال"
+msgstr "Edit This Article"
+
+#: templates/dashboard/article_preview.html:111
+msgid "العودة للقائمة"
+msgstr "Back to List"
+
+#: templates/dashboard/article_preview.html:124
+msgid "حالة المقال"
+msgstr "Article Status"
+
+#: templates/dashboard/article_preview.html:136
+#: templates/dashboard/articles.html:97
+#: templates/dashboard/authors_list.html:31
+msgid "الكاتب"
+msgstr "Author"
+
+#: templates/dashboard/article_preview.html:140
+#: templates/dashboard/articles.html:99
+#: templates/dashboard/author_detail_mgmt.html:124
+#: templates/dashboard/author_stats.html:103 templates/dashboard/home.html:115
+msgid "القسم"
+msgstr "Category"
+
+#: templates/dashboard/article_preview.html:144
+#: templates/dashboard/articles.html:101
+#: templates/dashboard/author_detail_mgmt.html:126
+#: templates/dashboard/author_stats.html:105 templates/dashboard/home.html:116
+msgid "المشاهدات"
+msgstr "Views"
+
+#: templates/dashboard/article_preview.html:148
+msgid "وقت القراءة"
+msgstr "Read Time"
+
+#: templates/dashboard/article_preview.html:152
+msgid "تاريخ النشر"
+msgstr "Publish Date"
+
+#: templates/dashboard/article_preview.html:159
+msgid "المسودة العربية"
+msgstr "Arabic Draft"
+
+#: templates/dashboard/article_preview.html:160
+msgid "English Draft"
+msgstr "English Draft"
+
+#: templates/dashboard/article_preview.html:179
+msgid "بيانات السيو (RTL SEO)"
+msgstr "SEO Metadata (RTL)"
+
+#: templates/dashboard/article_preview.html:180
+msgid "عنوان SEO:"
+msgstr "SEO Title:"
+
+#: templates/dashboard/article_preview.html:181
+msgid "وصف SEO:"
+msgstr "SEO Description:"
+
+#: templates/dashboard/articles.html:4 templates/dashboard/articles.html:7
+msgid "إدارة المقالات"
+msgstr "Manage Articles"
+
+#: templates/dashboard/articles.html:8
+msgid "تصفية وتعديل وإجراء عمليات جماعية على المقالات"
+msgstr "Filter, edit, and perform bulk operations on articles"
+
+#: templates/dashboard/articles.html:13
+msgid "قائمة المقالات"
+msgstr "Articles List"
+
+#: templates/dashboard/articles.html:25
+msgid "ابحث في العنوان أو المحتوى..."
+msgstr "Search in title or content..."
+
+#: templates/dashboard/articles.html:31
+#: templates/dashboard/author_detail_mgmt.html:97
+#: templates/news/author_detail.html:98
+msgid "كل الأقسام"
+msgstr "All Categories"
+
+#: templates/dashboard/articles.html:43
+#: templates/dashboard/author_detail_mgmt.html:106
+msgid "كل الحالات"
+msgstr "All Statuses"
+
+#: templates/dashboard/articles.html:54
+#: templates/dashboard/author_detail_mgmt.html:115
+#: templates/news/author_detail.html:109
+msgid "تصفية"
+msgstr "Filter"
+
+#: templates/dashboard/articles.html:57
+msgid "إعادة تعيين"
+msgstr "Reset"
+
+#: templates/dashboard/articles.html:69
+msgid "العمليات الجماعية للمقالات المحددة:"
+msgstr "Bulk operations on selected articles:"
+
+#: templates/dashboard/articles.html:71
+msgid "اختر الإجراء..."
+msgstr "Choose action..."
+
+#: templates/dashboard/articles.html:72
+msgid "نشر"
+msgstr "Publish"
+
+#: templates/dashboard/articles.html:73
+msgid "تحويل إلى مسودة"
+msgstr "Convert to Draft"
+
+#: templates/dashboard/articles.html:74
+msgid "إرسال للمراجعة"
+msgstr "Send for Review"
+
+#: templates/dashboard/articles.html:75
+msgid "أرشفة"
+msgstr "Archive"
+
+#: templates/dashboard/articles.html:76
+msgid "حذف مؤقت (سلة المحذوفات)"
+msgstr "Soft Delete (Trash)"
+
+#: templates/dashboard/articles.html:79
+msgid "تطبيق الإجراء"
+msgstr "Apply Action"
+
+#: templates/dashboard/articles.html:83
+msgid "مجموع المقالات المعروضة"
+msgstr "Total Articles Displayed"
+
+#: templates/dashboard/articles.html:95
+#: templates/dashboard/author_detail_mgmt.html:123
+#: templates/dashboard/home.html:114
+msgid "المقال"
+msgstr "Article"
+
+#: templates/dashboard/articles.html:100
+#: templates/dashboard/author_detail_mgmt.html:125
+#: templates/dashboard/author_stats.html:104
+#: templates/dashboard/authors_list.html:33
+msgid "الحالة"
+msgstr "Status"
+
+#: templates/dashboard/articles.html:102
+#: templates/dashboard/author_stats.html:106
+msgid "تاريخ الإنشاء"
+msgstr "Creation Date"
+
+#: templates/dashboard/articles.html:103
+#: templates/dashboard/author_detail_mgmt.html:127
+#: templates/dashboard/authors_list.html:38
+msgid "العمليات"
+msgstr "Operations"
+
+#: templates/dashboard/articles.html:142
+#: templates/dashboard/author_detail_mgmt.html:150
+msgid "تعديل"
+msgstr "Edit"
+
+#: templates/dashboard/articles.html:145
+msgid "معاينة مباشرة"
+msgstr "Live Preview"
+
+#: templates/dashboard/articles.html:154
+msgid "لا يوجد مقالات تطابق خيارات التصفية الحالية."
+msgstr "No articles match the current filter options."
+
+#: templates/dashboard/articles.html:173
+msgid "الصفحة"
+msgstr "Page"
+
+#: templates/dashboard/articles.html:173
+msgid "من"
+msgstr "of"
+
+#: templates/dashboard/author_create.html:5
+#: templates/dashboard/author_create.html:58
+#: templates/dashboard/author_create.html:199
+msgid "تسجيل كاتب جديد"
+msgstr "Register New Author"
+
+#: templates/dashboard/author_create.html:59
+msgid "قم بإنشاء حساب مستخدم جديد ككاتب أو محرر وعيّن صلاحياته الفردية مباشرة"
+msgstr "Create a new user account as author or editor and set individual permissions directly"
+
+#: templates/dashboard/author_create.html:70
+msgid "بيانات الحساب وتسجيل الدخول"
+msgstr "Account & Login Information"
+
+#: templates/dashboard/author_create.html:113
+msgid "الملف التعريفي للكاتب (Public Profile)"
+msgstr "Public Author Profile"
+
+#: templates/dashboard/author_create.html:120
+msgid "الاسم الذي يظهر للقراء في المقالات"
+msgstr "Display name shown to readers"
+
+#: templates/dashboard/author_create.html:160
+msgid "إعدادات الدور والصلاحيات"
+msgstr "Role & Permissions Settings"
+
+#: templates/dashboard/author_create.html:177
+msgid "تحديد صلاحيات الكاتب الإضافية"
+msgstr "Specify Additional Author Permissions"
+
+#: templates/dashboard/author_create.html:202
+#: templates/dashboard/category_form.html:176
+#: templates/news/article_detail.html:280 templates/news/author_detail.html:113
+msgid "إلغاء"
+msgstr "Cancel"
+
+#: templates/dashboard/author_detail_mgmt.html:4
+msgid "إدارة الكاتب"
+msgstr "Author Management"
+
+#: templates/dashboard/author_detail_mgmt.html:46
+msgid "إدارة صلاحيات وبيانات الكاتب"
+msgstr "Manage Author Permissions & Info"
+
+#: templates/dashboard/author_detail_mgmt.html:47
+msgid "تحرير الصلاحيات المخصصة واستعراض أداء مقالات الكاتب"
+msgstr "Edit custom permissions and review author's article performance"
+
+#: templates/dashboard/author_detail_mgmt.html:55
+msgid "العودة لقائمة الكتاب"
+msgstr "Back to Authors List"
+
+#: templates/dashboard/author_detail_mgmt.html:59
+msgid "الصفحة العامة للكاتب"
+msgstr "Public Author Page"
+
+#: templates/dashboard/author_detail_mgmt.html:70
+msgid "المقالات المكتوبة"
+msgstr "Written Articles"
+
+#: templates/dashboard/author_detail_mgmt.html:78
+msgid "مشاهدات المقالات"
+msgstr "Article Views"
+
+#: templates/dashboard/author_detail_mgmt.html:89
+msgid "مقالات الكاتب"
+msgstr "Author's Articles"
+
+#: templates/dashboard/author_detail_mgmt.html:94
+msgid "البحث في مقالات الكاتب..."
+msgstr "Search in author's articles..."
+
+#: templates/dashboard/author_detail_mgmt.html:153
+msgid "معاينة"
+msgstr "Preview"
+
+#: templates/dashboard/author_detail_mgmt.html:162
+msgid "لا يوجد مقالات مكتوبة مطابقة للبحث."
+msgstr "No written articles match the search."
+
+#: templates/dashboard/author_detail_mgmt.html:194
+msgid "البيانات والصلاحيات"
+msgstr "Data & Permissions"
+
+#: templates/dashboard/author_detail_mgmt.html:221
+msgid "مجالات التغطية والخبرة (المعروضة للجمهور)"
+msgstr "Coverage Areas & Expertise (Publicly Displayed)"
+
+#: templates/dashboard/author_detail_mgmt.html:228
+#: templates/dashboard/author_stats.html:102
+msgid "العنوان"
+msgstr "Title"
+
+#: templates/dashboard/author_detail_mgmt.html:232
+msgid "الوصف"
+msgstr "Description"
+
+#: templates/dashboard/author_detail_mgmt.html:236
+msgid "الأيقونة"
+msgstr "Icon"
+
+#: templates/dashboard/author_detail_mgmt.html:242
+msgid "حذف هذا المجال"
+msgstr "Delete this area"
+
+#: templates/dashboard/author_detail_mgmt.html:251
+msgid "تحديث الإعدادات والصلاحيات"
+msgstr "Update Settings & Permissions"
+
+#: templates/dashboard/author_stats.html:4
+#: templates/dashboard/author_stats.html:7 templates/dashboard/base.html:174
+msgid "إحصائيات الكاتب"
+msgstr "Author Statistics"
+
+#: templates/dashboard/author_stats.html:8
+msgid "استعرض تفاصيل ملفك المهني وإحصائيات قراءة مقالاتك"
+msgstr "Review your professional profile details and article reading statistics"
+
+#: templates/dashboard/author_stats.html:36
+msgid "التخصص"
+msgstr "Specialization"
+
+#: templates/dashboard/author_stats.html:63
+msgid "إجمالي المقالات المكتوبة"
+msgstr "Total Written Articles"
+
+#: templates/dashboard/author_stats.html:67
+msgid "تتضمن المقالات المنشورة والمسودات والأرشيف"
+msgstr "Includes published, draft, and archived articles"
+
+#: templates/dashboard/author_stats.html:73
+msgid "إجمالي مشاهدات مقالاتك"
+msgstr "Total views of your articles"
+
+#: templates/dashboard/author_stats.html:77
+msgid "متوسط القراءات لكل مقال"
+msgstr "Average views per article"
+
+#: templates/dashboard/author_stats.html:88
+msgid "تاريخ الانضمام للفريق"
+msgstr "Date Joined Team"
+
+#: templates/dashboard/author_stats.html:97
+msgid "مقالاتك الأخيرة"
+msgstr "Your Recent Articles"
+
+#: templates/dashboard/author_stats.html:133
+msgid "لم تقم بكتابة أي مقالات بعد."
+msgstr "You haven't written any articles yet."
+
+#: templates/dashboard/authors_list.html:4
+#: templates/dashboard/authors_list.html:7
+msgid "إدارة كتّاب الموقع"
+msgstr "Manage Site Authors"
+
+#: templates/dashboard/authors_list.html:8
+msgid "استعرض إحصائيات الكتاب، الأدوار، والصلاحيات المخصصة لكل كاتب"
+msgstr "Review author stats, roles, and custom permissions assigned to each author"
+
+#: templates/dashboard/authors_list.html:15
+msgid "قائمة الكتّاب المسجلين"
+msgstr "Registered Authors List"
+
+#: templates/dashboard/authors_list.html:19
+msgid "إضافة كاتب جديد"
+msgstr "Add New Author"
+
+#: templates/dashboard/authors_list.html:24
+msgid "إجمالي الكتاب"
+msgstr "Total Authors"
+
+#: templates/dashboard/authors_list.html:32
+msgid "الدور"
+msgstr "Role"
+
+#: templates/dashboard/authors_list.html:34
+msgid "عدد المقالات"
+msgstr "Articles Count"
+
+#: templates/dashboard/authors_list.html:35
+msgid "إجمالي المشاهدات"
+msgstr "Total Views"
+
+#: templates/dashboard/authors_list.html:36
+msgid "الصلاحيات الممنوحة"
+msgstr "Granted Permissions"
+
+#: templates/dashboard/authors_list.html:37
+msgid "تاريخ الانضمام"
+msgstr "Joined Date"
+
+#: templates/dashboard/authors_list.html:66
+#: templates/dashboard/categories.html:44
+msgid "نشط"
+msgstr "Active"
+
+#: templates/dashboard/authors_list.html:68
+#: templates/dashboard/categories.html:46
+msgid "معطل"
+msgstr "Disabled"
+
+#: templates/dashboard/authors_list.html:80
+msgid "نشر مباشر بدون مراجعة"
+msgstr "Direct publishing without review"
+
+#: templates/dashboard/authors_list.html:81
+msgid "نشر مباشر"
+msgstr "Direct Publish"
+
+#: templates/dashboard/authors_list.html:85
+msgid "تعديل مقالات الكتاب الآخرين"
+msgstr "Edit other authors' articles"
+
+#: templates/dashboard/authors_list.html:86
+msgid "تعديل للغير"
+msgstr "Edit Others"
+
+#: templates/dashboard/authors_list.html:90
+msgid "حذف المقالات"
+msgstr "Delete Articles"
+
+#: templates/dashboard/authors_list.html:91 templates/dashboard/home.html:179
+msgid "حذف"
+msgstr "Delete"
+
+#: templates/dashboard/authors_list.html:95
+msgid "صلاحيات قياسية"
+msgstr "Standard Permissions"
+
+#: templates/dashboard/authors_list.html:104
+msgid "إدارة"
+msgstr "Manage"
+
+#: templates/dashboard/authors_list.html:106
+msgid "عرض الصفحة العامة للكاتب"
+msgstr "View public author page"
+
+#: templates/dashboard/authors_list.html:115
+msgid "لا يوجد كتاب مسجلين حالياً."
+msgstr "No registered authors found."
+
+#: templates/dashboard/base.html:10 templates/dashboard/base.html:156
+msgid "لوحة التحكم"
+msgstr "Dashboard"
+
+#: templates/dashboard/base.html:162
+msgid "المقالات"
+msgstr "Articles"
+
+#: templates/dashboard/base.html:168 templates/includes/footer.html:67
+msgid "الأقسام"
+msgstr "Categories"
+
+#: templates/dashboard/base.html:181
+msgid "إعدادات الرئيسية"
+msgstr "Homepage Settings"
+
+#: templates/dashboard/base.html:187 templates/dashboard/site_settings.html:4
+msgid "إعدادات الموقع العامة"
+msgstr "General Site Settings"
+
+#: templates/dashboard/base.html:193
+msgid "إدارة الكتاب"
+msgstr "Manage Authors"
+
+#: templates/dashboard/base.html:203
+msgid "زيارة الموقع"
+msgstr "Visit Site"
+
+#: templates/dashboard/base.html:209
+msgid "تسجيل الخروج"
+msgstr "Logout"
+
+#: templates/dashboard/base.html:222
+msgid "مرحباً بك"
+msgstr "Welcome"
+
+#: templates/dashboard/base.html:223
+msgid "هذه هي لوحة التحكم المخصصة لإدارة المحتوى"
+msgstr "This is the content management dashboard"
+
+#: templates/dashboard/base.html:260
+msgid "مدير الموقع"
+msgstr "Site Administrator"
+
+#: templates/dashboard/categories.html:4 templates/dashboard/categories.html:7
+msgid "الأقسام والتصنيفات"
+msgstr "Categories & Classifications"
+
+#: templates/dashboard/categories.html:8
+msgid "استعرض شجرة تصنيفات المقالات المتاحة في النظام"
+msgstr "Browse the article categories tree available in the system"
+
+#: templates/dashboard/categories.html:15
+msgid "شجرة الأقسام"
+msgstr "Categories Tree"
+
+#: templates/dashboard/categories.html:19
+#: templates/dashboard/category_form.html:5
+#: templates/dashboard/category_form.html:38
+#: templates/dashboard/homepage_settings.html:173
+msgid "إضافة قسم جديد"
+msgstr "Add New Category"
+
+#: templates/dashboard/categories.html:24
+msgid "إجمالي الأقسام"
+msgstr "Total Categories"
+
+#: templates/dashboard/categories.html:49
+#: templates/dashboard/category_form.html:5
+#: templates/dashboard/category_form.html:38
+msgid "تعديل القسم"
+msgstr "Edit Category"
+
+#: templates/dashboard/categories.html:59
+#: templates/dashboard/categories.html:61
+msgid "القسم الأب"
+msgstr "Parent Category"
+
+#: templates/dashboard/categories.html:61
+msgid "رئيسي"
+msgstr "Main"
+
+#: templates/dashboard/categories.html:63
+msgid "ترتيب العرض"
+msgstr "Display Order"
+
+#: templates/dashboard/categories.html:68
+msgid "لا يوجد أقسام مسجلة في النظام حالياً."
+msgstr "No categories registered in the system currently."
+
+#: templates/dashboard/category_form.html:39
+msgid "تحديث بيانات القسم الحالي وإعدادات الأرشفة والترتيب"
+msgstr "Update current category info, archiving, and order settings"
+
+#: templates/dashboard/category_form.html:39
+msgid "قم بإنشاء قسم مقالات جديد وتعبئة البيانات باللغتين العربية والإنجليزية"
+msgstr "Create a new article category and fill in data in both Arabic and English"
+
+#: templates/dashboard/category_form.html:50
+msgid "معلومات القسم الأساسية (عربي وإنجليزي)"
+msgstr "Category Basic Info (Arabic & English)"
+
+#: templates/dashboard/category_form.html:74
+msgid "اتركه فارغاً ليتم توليده تلقائياً من الاسم"
+msgstr "Leave empty to generate automatically from name"
+
+#: templates/dashboard/category_form.html:93
+msgid "إعدادات المظهر والترتيب"
+msgstr "Appearance & Ordering Settings"
+
+#: templates/dashboard/category_form.html:100
+msgid "اسم الأيقونة من Material Symbols مثل (folder, article, book)"
+msgstr "Icon name from Material Symbols e.g. (folder, article, book)"
+
+#: templates/dashboard/category_form.html:108
+msgid "رمز اللون بالصيغة الست عشرية (مثال: #3b82f6)"
+msgstr "Hex color code (e.g. #3b82f6)"
+
+#: templates/dashboard/category_form.html:173
+msgid "حفظ القسم"
+msgstr "Save Category"
+
+#: templates/dashboard/home.html:37
+msgid "لوحة القيادة والتحكم"
+msgstr "Control & Dashboard Panel"
+
+#: templates/dashboard/home.html:38
+msgid "نظرة عامة على أداء المحتوى والنشاطات الأخيرة"
+msgstr "Overview of content performance and recent activities"
+
+#: templates/dashboard/home.html:47
+msgid "الزوار الفريدين (تقديري)"
+msgstr "Unique Visitors (Estimated)"
+
+#: templates/dashboard/home.html:51
+msgid "معدل تفاعل الزوار اليومي"
+msgstr "Daily Visitor Engagement Rate"
+
+#: templates/dashboard/home.html:57
+msgid "إجمالي مشاهدات المقالات"
+msgstr "Total Article Views"
+
+#: templates/dashboard/home.html:61
+msgid "مقارنة بالشهر الماضي"
+msgstr "Compared to last month"
+
+#: templates/dashboard/home.html:67
+msgid "المقالات الجديدة"
+msgstr "New Articles"
+
+#: templates/dashboard/home.html:72
+msgid "اليوم"
+msgstr "Today"
+
+#: templates/dashboard/home.html:72
+msgid "هذا الأسبوع"
+msgstr "This Week"
+
+#: templates/dashboard/home.html:79 templates/news/article_detail.html:201
+msgid "التعليقات"
+msgstr "Comments"
+
+#: templates/dashboard/home.html:83
+msgid "تفاعل القراء مع منشوراتك"
+msgstr "Readers' interaction with your posts"
+
+#: templates/dashboard/home.html:91
+msgid "معدل نشر المقالات (آخر 7 أيام)"
+msgstr "Articles publishing rate (last 7 days)"
+
+#: templates/dashboard/home.html:99
+msgid "توزيع المقالات حسب الأقسام"
+msgstr "Articles distribution by categories"
+
+#: templates/dashboard/home.html:110
+msgid "المقالات الأكثر قراءة"
+msgstr "Most Read Articles"
+
+#: templates/dashboard/home.html:139
+msgid "لا يوجد مقالات معروضة حالياً."
+msgstr "No articles currently displayed."
+
+#: templates/dashboard/home.html:149
+msgid "التعليقات المعلقة بانتظار المراجعة"
+msgstr "Pending Comments Awaiting Review"
+
+#: templates/dashboard/home.html:155
+msgid "على"
+msgstr "on"
+
+#: templates/dashboard/home.html:169
+msgid "موافقة"
+msgstr "Approve"
+
+#: templates/dashboard/home.html:187
+msgid "كل التعليقات تمت مراجعتها والموافقة عليها!"
+msgstr "All comments have been reviewed and approved!"
+
+#: templates/dashboard/home.html:197
+msgid "سجل النشاطات الأخيرة"
+msgstr "Recent Activity Log"
+
+#: templates/dashboard/home.html:215
+msgid "العملية بواسطة"
+msgstr "Operation by"
+
+#: templates/dashboard/home.html:221
+msgid "لا يوجد نشاطات مسجلة."
+msgstr "No registered activities."
+
+#: templates/dashboard/home.html:249 templates/news/author_detail.html:121
+msgid "المقالات المنشورة"
+msgstr "Published Articles"
+
+#: templates/dashboard/homepage_settings.html:4
+#: templates/dashboard/homepage_settings.html:6
+msgid "إعدادات الصفحة الرئيسية"
+msgstr "Homepage Settings"
+
+#: templates/dashboard/homepage_settings.html:55
+msgid "الأقسام الرئيسية (العلوية والجانبية)"
+msgstr "Main Categories (Header & Footer)"
+
+#: templates/dashboard/homepage_settings.html:59
+msgid "إظهار/إخفاء"
+msgstr "Show/Hide"
+
+#: templates/dashboard/homepage_settings.html:84
+msgid "الإعدادات الرقمية"
+msgstr "Numerical Settings"
+
+#: templates/dashboard/homepage_settings.html:119
+msgid "الأقسام الإخبارية (في وسط الصفحة)"
+msgstr "News Sections (Center of Page)"
+
+#: templates/dashboard/homepage_settings.html:122
+msgid ""
+"أضف الأقسام التي تريد ظهورها ورتبها من الأعلى للأسفل. يمكنك اختيار تصميم "
+"العرض لكل قسم."
+msgstr ""
+
+#: templates/dashboard/site_settings.html:6
+msgid "إعدادات الموقع العامة (الهيدر والفوتر)"
+msgstr "General Site Settings (Header & Footer)"
+
+#: templates/dashboard/site_settings.html:17
+msgid "المعلومات الأساسية"
+msgstr "Basic Information"
+
+#: templates/dashboard/site_settings.html:47
+msgid "إعدادات القائمة العلوية (Navbar)"
+msgstr "Header Menu Settings (Navbar)"
+
+#: templates/dashboard/site_settings.html:61
+msgid "إعدادات الفوتر (Footer)"
+msgstr "Footer Settings"
+
+#: templates/includes/footer.html:8
+msgid "اشترك في نشرتنا الإخبارية"
+msgstr "Subscribe to our newsletter"
+
+#: templates/includes/footer.html:9
+msgid ""
+"احصل على أهم الأخبار والتحليلات الحصرية مباشرة في بريدك الإلكتروني كل صباح."
+msgstr ""
+
+#: templates/includes/footer.html:15 templates/news/article_detail.html:324
+msgid "اشترك الآن"
+msgstr "Subscribe Now"
+
+#: templates/includes/footer.html:37
+msgid ""
+"المصدر الأول للأخبار والتحليلات المعمقة في المنطقة المغاربية. صحافة احترافية "
+"تلتزم بالدقة والموضوعية."
+msgstr ""
+
+#: templates/includes/footer.html:57
+msgid "عن المؤسسة"
+msgstr "About the Institution"
+
+#: templates/includes/footer.html:78
+msgid "سياسة إقليمية"
+msgstr "Regional Politics"
+
+#: templates/includes/footer.html:79
+msgid "توجهات اقتصادية"
+msgstr "Economic Trends"
+
+#: templates/includes/footer.html:80
+msgid "تراث وثقافة"
+msgstr "Heritage & Culture"
+
+#: templates/includes/footer.html:81
+msgid "الساحة الرياضية"
+msgstr "Sports Arena"
+
+#: templates/includes/footer.html:88
+msgid "قانوني"
+msgstr "Legal"
+
+#: templates/includes/footer.html:94
+msgid "Premium Journalism."
+msgstr "Premium Journalism."
+
+#: templates/includes/navbar.html:33
+msgid "السياسة"
+msgstr "Politics"
+
+#: templates/includes/navbar.html:34
+msgid "الاقتصاد"
+msgstr "Economy"
+
+#: templates/includes/navbar.html:35
+msgid "الثقافة"
+msgstr "Culture"
+
+#: templates/includes/navbar.html:36
+msgid "الرياضة"
+msgstr "Sports"
+
+#: templates/includes/navbar.html:57
+msgid "ابحث عن..."
+msgstr "Search..."
+
+#: templates/includes/navbar.html:85
+msgid "عاجل"
+msgstr "Breaking"
+
+#: templates/news/article_detail.html:107
+msgid "دقائق قراءة"
+msgstr "minutes read"
+
+#: templates/news/article_detail.html:131
+msgid "مشاركة"
+msgstr "Share"
+
+#: templates/news/article_detail.html:136
+msgid "حفظ"
+msgstr "Save"
+
+#: templates/news/article_detail.html:142
+msgid "إعجاب"
+msgstr "Like"
+
+#: templates/news/article_detail.html:206
+msgid "أضف تعليقاً"
+msgstr "Add a Comment"
+
+#: templates/news/article_detail.html:210
+msgid "اكتب تعليقك هنا..."
+msgstr "Write your comment here..."
+
+#: templates/news/article_detail.html:212
+msgid "إرسال التعليق"
+msgstr "Submit Comment"
+
+#: templates/news/article_detail.html:217
+msgid "يرجى تسجيل الدخول لتتمكن من التعليق على المقال."
+msgstr "Please login to be able to comment on the article."
+
+#: templates/news/article_detail.html:241
+msgid "رد"
+msgstr "Reply"
+
+#: templates/news/article_detail.html:277
+msgid "اكتب ردك هنا..."
+msgstr "Write your reply here..."
+
+#: templates/news/article_detail.html:283
+msgid "إرسال الرد"
+msgstr "Submit Reply"
+
+#: templates/news/article_detail.html:290
+msgid "كن أول من يعلق على هذا المقال."
+msgstr "Be the first to comment on this article."
+
+#: templates/news/article_detail.html:303
+msgid "مقالات ذات صلة"
+msgstr "Related Articles"
+
+#: templates/news/article_detail.html:313
+msgid "لا يوجد مقالات ذات صلة"
+msgstr "No related articles found"
+
+#: templates/news/article_detail.html:319
+msgid "النشرة البريدية"
+msgstr "Newsletter"
+
+#: templates/news/article_detail.html:320
+msgid "احصل على أهم الأخبار مباشرة في بريدك."
+msgstr "Get the most important news directly in your inbox."
+
+#: templates/news/article_detail.html:336
+msgid "اقرأ أيضاً"
+msgstr "Read Also"
+
+#: templates/news/article_detail.html:365
+msgid "تم نسخ الرابط بنجاح!"
+msgstr "Link copied successfully!"
+
+#: templates/news/article_list.html:5
+msgid "كل الأخبار والمقالات"
+msgstr "All News & Articles"
+
+#: templates/news/article_list.html:17
+msgid "كل المقالات والأخبار"
+msgstr "All Articles & News"
+
+#: templates/news/article_list.html:18
+msgid ""
+"تصفح الأرشيف الكامل للتغطيات الصحفية والتحليلات الخاصة بمنطقة المغرب العربي."
+msgstr ""
+
+#: templates/news/article_list.html:90
+msgid "لا يوجد مقالات منشورة حالياً"
+msgstr "No articles published currently"
+
+#: templates/news/article_list.html:98 templates/news/category_list.html:133
+msgid "النشرة الإخبارية"
+msgstr "Newsletter"
+
+#: templates/news/article_list.html:99
+msgid "اشترك لتصلك آخر التحليلات والأخبار العاجلة مباشرة في بريدك الإلكتروني."
+msgstr "Subscribe to receive the latest analysis and breaking news directly in your email."
+
+#: templates/news/article_list.html:104 templates/news/category_list.html:139
+msgid "اشتراك الآن"
+msgstr "Subscribe Now"
+
+#: templates/news/author_detail.html:5
+msgid "صفحة الكاتب"
+msgstr "Author's Page"
+
+#: templates/news/author_detail.html:94
+msgid "ابحث في مقالات الكاتب..."
+msgstr "Search in author's articles..."
+
+#: templates/news/author_detail.html:122
+msgid "مقال"
+msgstr "Article"
+
+#: templates/news/author_detail.html:179
+msgid "لا يوجد مقالات منشورة تطابق بحثك حالياً"
+msgstr "No published articles match your search currently"
+
+#: templates/news/category_list.html:17
+msgid "قسم"
+msgstr "Category"
+
+#: templates/news/category_list.html:28
+msgid "الأقسام الفرعية"
+msgstr "Subcategories"
+
+#: templates/news/category_list.html:41
+msgid "ترتيب حسب"
+msgstr "Sort By"
+
+#: templates/news/category_list.html:45
+msgid "الأحدث"
+msgstr "Latest"
+
+#: templates/news/category_list.html:48
+msgid "الأكثر قراءة"
+msgstr "Most Read"
+
+#: templates/news/category_list.html:124
+msgid "لا يوجد مقالات في هذا القسم حالياً"
+msgstr "No articles in this category currently"
+
+#: templates/news/category_list.html:134
+msgid "اشترك لتصلك آخر التحليلات والأخبار العاجلة في هذا القسم."
+msgstr "Subscribe to receive the latest analysis and breaking news in this category."

@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 class UserProfile(models.Model):
@@ -20,9 +20,9 @@ class UserProfile(models.Model):
 
 class AuthorProfile(models.Model):
     ROLE_CHOICES = (
-        ('writer', 'Writer'),
-        ('editor', 'Editor'),
-        ('admin', 'Admin/Chief Editor'),
+        ('writer', _('كاتب')),
+        ('editor', _('محرر')),
+        ('admin', _('مدير/رئيس تحرير')),
     )
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='author_profile')
     display_name = models.CharField(max_length=150, blank=True, null=True)

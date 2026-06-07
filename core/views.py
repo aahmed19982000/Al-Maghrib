@@ -186,3 +186,78 @@ class NewsletterSubscribeView(View):
             
         next_url = request.META.get('HTTP_REFERER') or '/'
         return HttpResponseRedirect(next_url)
+
+class CharterView(TemplateView):
+    template_name = 'core/charter.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['breadcrumbs'] = [
+            {'name': _('الميثاق التحريري'), 'url': ''}
+        ]
+        return context
+
+class ContactOfficeView(TemplateView):
+    template_name = 'core/contact_office.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['breadcrumbs'] = [
+            {'name': _('اتصل بالمكتب'), 'url': ''}
+        ]
+        return context
+
+class PrivacyPolicyView(TemplateView):
+    template_name = 'core/privacy_policy.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['breadcrumbs'] = [
+            {'name': _('سياسة الخصوصية'), 'url': ''}
+        ]
+        return context
+
+class TermsView(TemplateView):
+    template_name = 'core/terms.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['breadcrumbs'] = [
+            {'name': _('شروط الاستخدام'), 'url': ''}
+        ]
+        return context
+
+from django.db.models.functions import TruncMonth
+from django.db.models import Count
+
+class ArchiveView(ListView):
+    model = Article
+    template_name = 'core/archive.html'
+    context_object_name = 'articles'
+    paginate_by = 12
+
+    def get_queryset(self):
+        queryset = Article.objects.filter(status='published').order_by('-published_at')
+        year = self.request.GET.get('year')
+        month = self.request.GET.get('month')
+        if year:
+            try:
+                queryset = queryset.filter(published_at__year=int(year))
+                if month:
+                    queryset = queryset.filter(published_at__month=int(month))
+            except ValueError:
+                pass
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['archive_months'] = Article.objects.filter(status='published').annotate(
+            month_date=TruncMonth('published_at')
+        ).values('month_date').annotate(count=Count('id')).order_by('-month_date')
+        
+        context['breadcrumbs'] = [
+            {'name': _('الأرشيف'), 'url': ''}
+        ]
+        context['selected_year'] = self.request.GET.get('year')
+        context['selected_month'] = self.request.GET.get('month')
+        return context

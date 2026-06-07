@@ -319,3 +319,133 @@ a {
     background: var(--bg-tertiary);
     border-radius: 4px;
 }
+
+/* Mobile Responsiveness Styles */
+.mobile-only {
+    display: none !important;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(11, 15, 25, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 99;
+    animation: fadeIn 0.2s ease;
+}
+
+.sidebar-overlay.open {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .mobile-only {
+        display: inline-flex !important;
+    }
+
+    .dashboard-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 100;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* RTL sidebar transition */
+    body[dir="rtl"] .sidebar {
+        right: 0;
+        left: auto;
+        transform: translateX(100%);
+        border-inline-end: none;
+        border-inline-start: 1px solid var(--border-color);
+    }
+
+    /* LTR sidebar transition */
+    body[dir="ltr"] .sidebar {
+        left: 0;
+        right: auto;
+        transform: translateX(-100%);
+    }
+
+    /* Open states */
+    body[dir="rtl"] .sidebar.open {
+        transform: translateX(0);
+    }
+
+    body[dir="ltr"] .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .main-content {
+        padding: 1.5rem 1rem;
+        width: 100%;
+        overflow-x: hidden;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .header-title {
+        flex-grow: 1;
+    }
+
+    .header-title h1 {
+        font-size: 1.5rem;
+    }
+
+    .user-profile {
+        justify-content: space-between;
+        background-color: var(--bg-secondary);
+        padding: 0.75rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border-color);
+        width: 100%;
+    }
+
+    .metrics-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 1.5rem;
+        width: 100%;
+    }
+
+    .custom-table {
+        min-width: 600px;
+    }
+
+    /* Form rows and grids on mobile */
+    .form-row, .grid-2, .grid-3 {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
