@@ -1,3 +1,38 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0a1d37;
+  --color-secondary: #146c3c;
+  --color-on-primary: #ffffff;
+  --color-on-secondary: #ffffff;
+  --color-background: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-outline: #75777e;
+  --color-outline-variant: #c5c6ce;
+  --color-on-surface: #191c1d;
+  --color-on-surface-variant: #44474d;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f4f5;
+  --color-error: #ba1a1a;
+
+  --radius-default: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 8px;
+  --radius-full: 9999px;
+
+  --spacing-base-unit: 8px;
+  --spacing-margin-mobile: 16px;
+  --spacing-container-max-width: 1280px;
+  --spacing-margin-desktop: 64px;
+  --spacing-gutter: 24px;
+
+  --font-headline-lg: "Noto Kufi Arabic";
+  --font-body-md: "Noto Kufi Arabic";
+  --font-headline-md: "Noto Kufi Arabic";
+
+  --font-size-display-lg: 48px;
+  --font-size-headline-lg: 32px;
+  --font-size-headline-md: 24px;
+  --font-size-body-md: 16px;
+  --font-size-label-sm: 12px;
+}
