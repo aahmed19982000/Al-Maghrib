@@ -25,16 +25,16 @@ class HomepageView(TemplateView):
         context['home_settings'] = settings
         
         if settings.show_breaking_news:
-            context['breaking_articles'] = Article.objects.filter(status='published', is_breaking=True).order_by('-published_at')[:5]
+            context['breaking_articles'] = Article.objects.filter(status='published', is_breaking=True).select_related('category').order_by('-published_at')[:5]
         
         if settings.show_slider:
-            context['slider_articles'] = Article.objects.filter(status='published', cover_image__gt='').order_by('-published_at')[:settings.slider_count]
+            context['slider_articles'] = Article.objects.filter(status='published', cover_image__gt='').select_related('category').order_by('-published_at')[:settings.slider_count]
             
         if settings.show_featured:
-            context['featured_articles'] = Article.objects.filter(status='published', is_featured=True).order_by('-published_at')[:settings.featured_count]
+            context['featured_articles'] = Article.objects.filter(status='published', is_featured=True).select_related('category').order_by('-published_at')[:settings.featured_count]
             
         if settings.show_popular:
-            context['popular_articles'] = Article.objects.filter(status='published').order_by('-views_count')[:settings.popular_count]
+            context['popular_articles'] = Article.objects.filter(status='published').select_related('category').order_by('-views_count')[:settings.popular_count]
             
         # Dynamic Categorized news columns
         categories_data = []
@@ -43,7 +43,7 @@ class HomepageView(TemplateView):
             articles = Article.objects.filter(
                 Q(category__in=cats) | Q(additional_categories__in=cats),
                 status='published'
-            ).distinct().order_by('-published_at')[:home_cat.article_count]
+            ).select_related('category').distinct().order_by('-published_at')[:home_cat.article_count]
             if articles.exists():
                 categories_data.append({
                     'category': home_cat.category,
@@ -58,7 +58,7 @@ class HomepageView(TemplateView):
                 articles = Article.objects.filter(
                     Q(category__in=cats) | Q(additional_categories__in=cats),
                     status='published'
-                ).distinct().order_by('-published_at')[:4]
+                ).select_related('category').distinct().order_by('-published_at')[:4]
                 if articles.exists():
                     categories_data.append({
                         'category': cat,
