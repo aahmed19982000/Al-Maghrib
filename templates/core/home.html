@@ -21,12 +21,12 @@
     <div class="absolute inset-0 transition-opacity duration-1000 ease-in-out slider-slide {% if forloop.first %}opacity-100 z-10{% else %}opacity-0 z-0{% endif %}">
         {% if art.cover_image %}
             {% thumbnail art.cover_image "1600x900" crop="center" as im %}
-                <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('{{ im.url }}')"></div>
+                <img src="{{ im.url }}" alt="{{ art.title }}" class="absolute inset-0 w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
             {% empty %}
-                <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1600')"></div>
+                <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1600" alt="Placeholder" class="absolute inset-0 w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
             {% endthumbnail %}
         {% else %}
-            <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1600')"></div>
+            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1600" alt="Placeholder" class="absolute inset-0 w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
         {% endif %}
         
         <div class="hero-overlay absolute inset-0 flex flex-col justify-end p-margin-mobile md:p-margin-desktop">
