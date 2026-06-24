@@ -21,3 +21,4 @@ django-compressor
 django-storages
 boto3
 deep-translator
+django-celery-beat
