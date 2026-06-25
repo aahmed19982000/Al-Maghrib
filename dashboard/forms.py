@@ -55,6 +55,14 @@ class ArticleForm(forms.ModelForm):
         if can_assign_author:
             self.fields['author'].queryset = User.objects.filter(is_active=True)
             self.fields['author'].label = "الكاتب المسؤول (Author)"
+            
+            def get_author_label(obj):
+                if hasattr(obj, 'author_profile') and obj.author_profile.display_name:
+                    return obj.author_profile.display_name
+                full_name = obj.get_full_name()
+                return full_name if full_name else obj.username
+            
+            self.fields['author'].label_from_instance = get_author_label
         else:
             if 'author' in self.fields:
                 del self.fields['author']
