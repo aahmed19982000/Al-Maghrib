@@ -32,10 +32,10 @@
         {% thumbnail author.avatar "300x300" crop="center" as im %}
             <img src="{{ im.url }}" alt="{{ author }}" class="w-full h-full object-cover">
         {% empty %}
-            <img src="https://ui-avatars.com/api/?name={{ author }}&background=146c3c&color=fff" alt="{{ author }}" class="w-full h-full object-cover">
+            <img src="https://ui-avatars.com/api/?name={{ author|urlencode }}&background=146c3c&color=fff" alt="{{ author }}" class="w-full h-full object-cover">
         {% endthumbnail %}
     {% else %}
-        <img src="https://ui-avatars.com/api/?name={{ author }}&background=146c3c&color=fff" alt="{{ author }}" class="w-full h-full object-cover">
+        <img src="https://ui-avatars.com/api/?name={{ author|urlencode }}&background=146c3c&color=fff" alt="{{ author }}" class="w-full h-full object-cover">
     {% endif %}
 </div>
 <div class="absolute -bottom-2 start-4 bg-secondary text-on-secondary px-3 py-1 rounded-full text-label-sm font-label-sm shadow-md">

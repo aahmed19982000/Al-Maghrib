@@ -10,7 +10,7 @@
                     {% if site_settings.logo %}
                         <img alt="{{ site_settings.site_name }}" class="h-16 w-16 object-contain" src="{{ site_settings.logo.url }}"/>
                     {% else %}
-                        <img alt="{{ site_settings.site_name }}" class="h-16 w-16 object-contain" src="https://ui-avatars.com/api/?name={{ site_settings.site_name }}&background=0a1d37&color=fff"/>
+                        <img alt="{{ site_settings.site_name }}" class="h-16 w-16 object-contain" src="https://ui-avatars.com/api/?name={{ site_settings.site_name|urlencode }}&background=0a1d37&color=fff"/>
                     {% endif %}
                 </a>
             </div>

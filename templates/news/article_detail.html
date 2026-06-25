@@ -84,10 +84,10 @@
         {% thumbnail article.author.author_profile.avatar "150x150" crop="center" as im %}
             <img alt="{{ article.author.author_profile.display_name|default:article.author.username }}" class="w-12 h-12 rounded-full object-cover grayscale" src="{{ im.url }}"/>
         {% empty %}
-            <img alt="{{ article.author.author_profile.display_name|default:article.author.username }}" class="w-12 h-12 rounded-full object-cover grayscale" src="https://ui-avatars.com/api/?name={{ article.author.username }}&background=146c3c&color=fff"/>
+            <img alt="{{ article.author.author_profile.display_name|default:article.author.username }}" class="w-12 h-12 rounded-full object-cover grayscale" src="https://ui-avatars.com/api/?name={{ article.author.username|urlencode }}&background=146c3c&color=fff"/>
         {% endthumbnail %}
     {% else %}
-        <img alt="{{ article.author.author_profile.display_name|default:article.author.username }}" class="w-12 h-12 rounded-full object-cover grayscale" src="https://ui-avatars.com/api/?name={{ article.author.username }}&background=146c3c&color=fff"/>
+        <img alt="{{ article.author.author_profile.display_name|default:article.author.username }}" class="w-12 h-12 rounded-full object-cover grayscale" src="https://ui-avatars.com/api/?name={{ article.author.username|urlencode }}&background=146c3c&color=fff"/>
     {% endif %}
 <div class="text-right">
 {% if article.author.author_profile %}
