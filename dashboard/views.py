@@ -222,7 +222,15 @@ class ArticleUpdateView(LoginRequiredMixin, DashboardAccessRequiredMixin, Update
     def dispatch(self, request, *args, **kwargs):
         obj = self.get_object()
         # Enforce object-level permission check using django-guardian and Django permissions
-        if not request.user.has_perm('news.change_article', obj):
+        can_edit = False
+        if request.user.has_perm('news.change_article', obj):
+            can_edit = True
+        elif request.user.is_superuser or request.user.is_staff:
+            can_edit = True
+        elif hasattr(request.user, 'author_profile') and request.user.author_profile.can_edit_others:
+            can_edit = True
+            
+        if not can_edit:
             raise PermissionDenied("ليس لديك الصلاحية لتعديل هذا المقال.")
         return super().dispatch(request, *args, **kwargs)
 
@@ -267,7 +275,15 @@ class ArticlePreviewView(LoginRequiredMixin, DashboardAccessRequiredMixin, Detai
     def dispatch(self, request, *args, **kwargs):
         obj = self.get_object()
         # Enforce object-level permission check using django-guardian and Django permissions
-        if not request.user.has_perm('news.view_article', obj):
+        can_view = False
+        if request.user.has_perm('news.view_article', obj):
+            can_view = True
+        elif request.user.is_superuser or request.user.is_staff:
+            can_view = True
+        elif hasattr(request.user, 'author_profile') and request.user.author_profile.can_edit_others:
+            can_view = True
+            
+        if not can_view:
             raise PermissionDenied("ليس لديك الصلاحية لمعاينة هذا المقال.")
         return super().dispatch(request, *args, **kwargs)
 
@@ -284,8 +300,10 @@ class ArticleBulkActionView(LoginRequiredMixin, DashboardAccessRequiredMixin, Vi
         
         # Filter articles where the user has change_article permission
         authorized_articles = []
+        can_edit_others = request.user.is_superuser or request.user.is_staff or (hasattr(request.user, 'author_profile') and request.user.author_profile.can_edit_others)
+        
         for article in articles:
-            if request.user.has_perm('news.change_article', article):
+            if can_edit_others or request.user.has_perm('news.change_article', article):
                 authorized_articles.append(article)
                 
         count = len(authorized_articles)
@@ -298,8 +316,9 @@ class ArticleBulkActionView(LoginRequiredMixin, DashboardAccessRequiredMixin, Vi
         
         if action == 'publish':
             # Enforce can_publish permission per article
+            can_publish_others = request.user.is_superuser or request.user.is_staff or (hasattr(request.user, 'author_profile') and request.user.author_profile.can_publish_directly)
             for article in authorized_articles:
-                if not request.user.has_perm('news.can_publish', article):
+                if not (can_publish_others or request.user.has_perm('news.can_publish', article)):
                     messages.error(request, f"ليس لديك صلاحية لنشر المقال: {article.title}")
                     return HttpResponseRedirect(reverse('dashboard:articles'))
             authorized_qs.update(status='published', published_at=timezone.now())
@@ -315,8 +334,9 @@ class ArticleBulkActionView(LoginRequiredMixin, DashboardAccessRequiredMixin, Vi
             messages.success(request, f"تم أرشفة {count} مقالات.")
         elif action == 'delete':
             # Check permissions for soft-deleting articles
+            can_delete_others = request.user.is_superuser or request.user.is_staff or (hasattr(request.user, 'author_profile') and request.user.author_profile.can_delete_articles)
             for article in authorized_articles:
-                if not request.user.has_perm('news.delete_article', article):
+                if not (can_delete_others or request.user.has_perm('news.delete_article', article)):
                     messages.error(request, f"ليس لديك صلاحية لحذف المقال: {article.title}")
                     return HttpResponseRedirect(reverse('dashboard:articles'))
                 

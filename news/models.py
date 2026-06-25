@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
-from taggit.managers import TaggableManager
 
 # Soft Delete Manager and QuerySet
 class SoftDeleteQuerySet(models.QuerySet):
@@ -50,13 +49,6 @@ class Category(MPTTModel):
         from django.urls import reverse
         return reverse('news:category_list', kwargs={'slug': self.slug})
 
-class Tag(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    slug = models.SlugField(max_length=50, unique=True, allow_unicode=True)
-
-    def __str__(self):
-        return self.name
-
 class Article(models.Model):
     STATUS_CHOICES = (
         ('draft', _('مسودة')),
@@ -71,7 +63,6 @@ class Article(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='articles')
     category = TreeForeignKey(Category, on_delete=models.PROTECT, related_name='articles')
     additional_categories = models.ManyToManyField(Category, related_name='additional_articles', blank=True, help_text="أقسام فرعية إضافية (اختياري)")
-    tags = TaggableManager(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     published_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

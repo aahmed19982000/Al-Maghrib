@@ -12,7 +12,7 @@ class ArticleForm(forms.ModelForm):
             'author',
             'body_ar', 'body_en',
             'excerpt_ar', 'excerpt_en',
-            'category', 'additional_categories', 'tags',
+            'category', 'additional_categories',
             'status', 'is_featured', 'is_breaking', 'auto_translate',
             'cover_image', 'allow_comments',
             'meta_title_ar', 'meta_title_en',
@@ -29,7 +29,6 @@ class ArticleForm(forms.ModelForm):
             'excerpt_en': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Excerpt in English'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
             'additional_categories': forms.SelectMultiple(attrs={'class': 'form-control', 'style': 'height: 100px;'}),
-            'tags': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'tag1, tag2, ...'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'meta_title_ar': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'عنوان سيو بالعربية'}),
             'meta_title_en': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'SEO Title in English'}),
@@ -92,7 +91,6 @@ class ArticleForm(forms.ModelForm):
         self.fields['meta_desc_en'].label = "SEO Description (English)"
         self.fields['auto_translate'].label = "الترجمة التلقائية للإنجليزية (Auto-translate)"
         self.fields['cover_image'].widget.attrs.update({'class': 'form-control'})
-        self.fields['tags'].required = False
 
 class CategoryForm(forms.ModelForm):
     class Meta:

@@ -166,14 +166,6 @@
     {{ article.body|safe }}
 </div>
 
-<!-- Tags -->
-{% if article.tags.all %}
-<div class="flex flex-wrap gap-2 mt-12 pt-8 border-t border-outline-variant">
-    {% for tag in article.tags.all %}
-    <span class="px-4 py-1 bg-surface-container text-on-surface-variant text-label-sm rounded-full">#{{ tag.name }}</span>
-    {% endfor %}
-</div>
-{% endif %}
 
 <!-- Mobile Share & Like Bar (Hidden on desktop) -->
 <div class="flex md:hidden items-center justify-between gap-4 mt-8 py-4 border-t border-b border-outline-variant">

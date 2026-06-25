@@ -53,3 +53,20 @@ Thumbs.db
 
 tailwindcss.exe
 tailwindcss-linux-x64
+tailwindcss-macos-arm64
+tailwindcss-macos-x64
+
+# Database dumps and exports
+db_dump.json
+data_export.json
+*.dump
+*.sql
+
+# Scratch and temporary directories
+scratch/
+
+# Compiled translation files
+*.mo
+
+# Node modules
+node_modules/
