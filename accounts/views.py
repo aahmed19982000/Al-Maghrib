@@ -12,7 +12,7 @@ class TeamListView(ListView):
     context_object_name = 'team_members'
 
     def get_queryset(self):
-        return AuthorProfile.objects.filter(is_active=True)
+        return AuthorProfile.objects.filter(is_active=True, show_in_team_page=True)
 
 class ProfileEditView(LoginRequiredMixin, UpdateView):
     model = UserProfile

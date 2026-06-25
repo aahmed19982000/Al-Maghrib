@@ -8,7 +8,7 @@ class AuthorProfileForm(forms.ModelForm):
         fields = [
             'display_name', 'bio', 'avatar', 'role', 
             'twitter', 'linkedin', 'email_public', 
-            'specialization', 'is_active',
+            'specialization', 'is_active', 'show_in_team_page',
             'can_publish_directly', 'can_edit_others', 'can_delete_articles'
         ]
         widgets = {
@@ -32,11 +32,12 @@ class AuthorProfileForm(forms.ModelForm):
         self.fields['email_public'].label = "البريد الإلكتروني العام"
         self.fields['specialization'].label = "التخصص العلمي/الصحفي"
         self.fields['is_active'].label = "الحساب نشط (Active)"
+        self.fields['show_in_team_page'].label = "إظهار في صفحة فريق العمل"
         self.fields['can_publish_directly'].label = "صلاحية النشر المباشر دون مراجعة"
         self.fields['can_edit_others'].label = "صلاحية تعديل مقالات الكتاب الآخرين"
         self.fields['can_delete_articles'].label = "صلاحية حذف المقالات (حذف مؤقت)"
         
-        for field_name in ['is_active', 'can_publish_directly', 'can_edit_others', 'can_delete_articles']:
+        for field_name in ['is_active', 'show_in_team_page', 'can_publish_directly', 'can_edit_others', 'can_delete_articles']:
             self.fields[field_name].required = False
 
 class AuthorExpertiseForm(forms.ModelForm):

@@ -34,6 +34,7 @@ class AuthorProfile(models.Model):
     email_public = models.EmailField(blank=True, null=True)
     specialization = models.CharField(max_length=100, blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    show_in_team_page = models.BooleanField(default=True, verbose_name=_('إظهار في صفحة فريق العمل'))
     joined_date = models.DateField(default=timezone.localdate)
     
     # Custom permissions
