@@ -2163,10 +2163,10 @@
 }
 @keyframes scroll {
   0% {
-    transform: translateX(-100vw);
+    transform: translateX(100vw);
   }
   100% {
-    transform: translateX(100vw);
+    transform: translateX(-100%);
   }
 }
 @property --tw-translate-x {

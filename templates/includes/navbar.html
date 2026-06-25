@@ -81,9 +81,9 @@
     
     {% if home_settings and home_settings.show_breaking_news and breaking_articles %}
     <div class="breaking-news-gradient text-on-primary py-2 overflow-hidden whitespace-nowrap border-t border-white/10">
-        <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop flex items-center gap-6">
-            <span class="flex items-center gap-2 text-label-sm font-bold bg-error px-2 py-0.5 rounded animate-pulse">{% trans "عاجل" %}</span>
-            <div class="flex gap-12 text-label-sm overflow-hidden" style="animation: scroll 30s linear infinite;">
+        <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop flex items-center gap-6 relative">
+            <span class="flex items-center gap-2 text-label-sm font-bold bg-error px-3 py-1 rounded animate-pulse z-10 whitespace-nowrap shadow-sm">{% trans "عاجل" %}</span>
+            <div class="flex gap-12 text-label-sm shrink-0 whitespace-nowrap" style="animation: scroll 30s linear infinite;">
                 {% for art in breaking_articles %}
                     <a href="{{ art.get_absolute_url }}" class="hover:underline cursor-pointer">{{ art.title }}</a>
                 {% endfor %}
