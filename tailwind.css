@@ -36,3 +36,8 @@
   --font-size-body-md: 16px;
   --font-size-label-sm: 12px;
 }
+
+@keyframes scroll {
+  0% { transform: translateX(-100vw); }
+  100% { transform: translateX(100vw); }
+}
