@@ -1,4 +1,5 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth import logout
 from django.views.generic import ListView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
@@ -22,3 +23,8 @@ class ProfileEditView(LoginRequiredMixin, UpdateView):
     def get_object(self, queryset=None):
         profile, created = UserProfile.objects.get_or_create(user=self.request.user)
         return profile
+
+def custom_logout(request):
+    if request.user.is_authenticated:
+        logout(request)
+    return redirect('/')
