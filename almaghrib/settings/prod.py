@@ -2,6 +2,9 @@ from .base import *
 
 DEBUG = False
 
+ALLOWED_HOSTS = ['maghrebnews.online', 'www.maghrebnews.online', '161.97.90.45']
+CSRF_TRUSTED_ORIGINS = ['https://maghrebnews.online', 'https://www.maghrebnews.online', 'http://maghrebnews.online', 'http://www.maghrebnews.online']
+
 # Production Database (Requires PostgreSQL)
 DATABASES = {
     'default': env.db('DATABASE_URL')
