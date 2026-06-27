@@ -243,16 +243,7 @@
 </div>
 </div>
 
-<!-- Newsletter CTA -->
-<div class="p-8 border-2 border-dashed border-secondary rounded-xl bg-secondary/5">
-<h3 class="text-headline-md font-headline-md text-secondary mb-2">تلقَّ رؤى أسبوعية</h3>
-<p class="text-body-md text-on-surface-variant mb-6">احصل على موجز لأحدث مقالات {{ author }} مباشرة في بريدك الوارد.</p>
-<form method="post" action="{% url 'core:newsletter_subscribe' %}" class="space-y-3">
-{% csrf_token %}
-<input type="email" name="email" class="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant focus:border-secondary focus:ring-1 focus:ring-secondary outline-none rounded-lg transition-all text-primary" placeholder="عنوان بريدك الإلكتروني" required/>
-<button type="submit" class="w-full py-3 bg-primary text-on-primary font-bold rounded-lg hover:opacity-90 transition-opacity">اشترك الآن</button>
-</form>
-</div>
+
 </aside>
 </div>
 </main>

@@ -37,7 +37,12 @@
   --font-size-label-sm: 12px;
 }
 
-@keyframes scroll {
+@keyframes scroll-ltr {
+  0% { transform: translateX(-100vw); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes scroll-rtl {
   0% { transform: translateX(100vw); }
   100% { transform: translateX(-100%); }
 }

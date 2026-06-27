@@ -93,18 +93,7 @@
 
             <!-- Sidebar (4 cols) -->
             <aside class="lg:col-span-4 space-y-8">
-                <!-- Newsletter Widget -->
-                <div class="bg-surface-container-low p-6 border border-outline-variant rounded-lg">
-                    <h4 class="font-bold text-primary mb-4 text-label-sm tracking-widest uppercase">{% trans "النشرة الإخبارية" %}</h4>
-                    <p class="text-xs text-on-surface-variant mb-4">{% trans "اشترك لتصلك آخر التحليلات والأخبار العاجلة مباشرة في بريدك الإلكتروني." %}</p>
-                    <form action="{% url 'core:newsletter_subscribe' %}" method="post" class="flex flex-col gap-3">
-                        {% csrf_token %}
-                        <input type="email" name="email" placeholder="email@example.com" class="w-full bg-surface border border-outline px-4 py-3 text-sm outline-none focus:border-secondary text-primary" required>
-                        <button type="submit" class="bg-primary text-on-primary w-full py-3 font-bold hover:opacity-90 text-sm">
-                            {% trans "اشتراك الآن" %}
-                        </button>
-                    </form>
-                </div>
+
             </aside>
 
         </div>

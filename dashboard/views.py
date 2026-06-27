@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from django.views.generic import TemplateView, ListView, CreateView, UpdateView, DetailView, View
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.utils import timezone
@@ -266,6 +266,78 @@ class ArticleUpdateView(LoginRequiredMixin, DashboardAccessRequiredMixin, Update
         )
         messages.success(self.request, "تم تحديث المقال بنجاح.")
         return response
+
+class ArticleAutoSaveView(LoginRequiredMixin, DashboardAccessRequiredMixin, View):
+    def post(self, request, *args, **kwargs):
+        article_id = request.POST.get('article_id')
+        title_ar = request.POST.get('title_ar') or "مسودة بدون عنوان"
+        body_ar = request.POST.get('body_ar', '')
+        category_id = request.POST.get('category')
+        
+        # If no valid title, do not save
+        if not request.POST.get('title_ar') and not request.POST.get('title_en'):
+            return JsonResponse({'status': 'ignored'})
+
+        category_obj = None
+        if category_id:
+            try:
+                category_obj = Category.objects.get(pk=category_id)
+            except Category.DoesNotExist:
+                pass
+                
+        article = None
+        if article_id and article_id != 'new':
+            try:
+                article = Article.objects.get(pk=article_id)
+                # Check permission
+                if not (request.user.is_superuser or request.user.is_staff or 
+                        (hasattr(request.user, 'author_profile') and request.user.author_profile.can_edit_others) or 
+                        article.author == request.user):
+                    return JsonResponse({'status': 'error', 'message': 'Permission Denied'}, status=403)
+            except Article.DoesNotExist:
+                pass
+
+        if not article:
+            article = Article(
+                author=request.user,
+                status='draft',
+            )
+
+        article.title_ar = title_ar
+        if request.POST.get('title_en'):
+            article.title_en = request.POST.get('title_en')
+            
+        article.body_ar = body_ar
+        if request.POST.get('title_en'):
+            article.body_en = request.POST.get('body_en')
+            
+        if category_obj:
+            article.category = category_obj
+
+        # Generate slug if empty
+        if not article.slug:
+            title = article.title_en or article.title_ar or "article"
+            slug = slugify(title, allow_unicode=True)
+            base_slug = slug
+            counter = 1
+            while Article.objects.filter(slug=slug).exclude(pk=article.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            article.slug = slug
+
+        # Since it's autosave, we don't update published_at or do heavy processing
+        article.save()
+
+        # Try to assign permission if new
+        if article_id == 'new' or not article_id:
+            assign_perm('change_article', article.author, article)
+            assign_perm('delete_article', article.author, article)
+
+        return JsonResponse({
+            'status': 'success',
+            'article_id': article.pk,
+            'url': reverse('dashboard:article_edit', kwargs={'pk': article.pk})
+        })
 
 class ArticlePreviewView(LoginRequiredMixin, DashboardAccessRequiredMixin, DetailView):
     model = Article

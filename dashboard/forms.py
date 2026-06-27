@@ -11,7 +11,6 @@ class ArticleForm(forms.ModelForm):
             'slug',
             'author',
             'body_ar', 'body_en',
-            'excerpt_ar', 'excerpt_en',
             'category', 'additional_categories',
             'status', 'is_featured', 'is_breaking', 'auto_translate',
             'cover_image', 'allow_comments',
@@ -25,8 +24,6 @@ class ArticleForm(forms.ModelForm):
             'author': forms.Select(attrs={'class': 'form-control'}),
             'body_ar': CKEditor5Widget(config_name='extends', attrs={'class': 'django_ckeditor_5'}),
             'body_en': CKEditor5Widget(config_name='extends_en', attrs={'class': 'django_ckeditor_5'}),
-            'excerpt_ar': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'المقتطف بالعربية'}),
-            'excerpt_en': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Excerpt in English'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
             'additional_categories': forms.SelectMultiple(attrs={'class': 'form-control', 'style': 'height: 100px;'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
@@ -91,8 +88,6 @@ class ArticleForm(forms.ModelForm):
         self.fields['title_en'].label = "Title (English)"
         self.fields['body_ar'].label = "المحتوى (عربي)"
         self.fields['body_en'].label = "Content (English)"
-        self.fields['excerpt_ar'].label = "مقتطف (عربي)"
-        self.fields['excerpt_en'].label = "Excerpt (English)"
         self.fields['meta_title_ar'].label = "عنوان SEO (عربي)"
         self.fields['meta_title_en'].label = "SEO Title (English)"
         self.fields['meta_desc_ar'].label = "وصف SEO (عربي)"

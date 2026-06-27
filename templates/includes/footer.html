@@ -1,21 +1,6 @@
 {% load i18n %}
 
-<!-- Newsletter Subscription -->
-<section class="py-20 px-margin-mobile md:px-margin-desktop">
-    <div class="max-w-4xl mx-auto bg-primary p-10 md:p-16 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-8 text-on-primary shadow-xl relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-32 h-32 bg-secondary opacity-20 -mr-16 -mt-16 rounded-full"></div>
-        <div class="relative z-10">
-            <h3 class="text-headline-md md:text-3xl font-bold mb-3">{% trans "اشترك في نشرتنا الإخبارية" %}</h3>
-            <p class="text-white/80 max-w-sm">{% trans "احصل على أهم الأخبار والتحليلات الحصرية مباشرة في بريدك الإلكتروني كل صباح." %}</p>
-        </div>
-        
-        <form method="post" action="{% url 'core:newsletter_subscribe' %}" class="w-full md:w-auto flex flex-col sm:flex-row gap-4 relative z-10">
-            {% csrf_token %}
-            <input name="email" class="w-full sm:w-72 bg-white/10 border border-white/20 text-white placeholder:text-white/50 px-4 py-3 rounded focus:ring-2 focus:ring-secondary focus:border-transparent outline-none transition-all" placeholder="{% trans 'البريد الإلكتروني' %}" type="email" required/>
-            <button type="submit" class="bg-secondary text-white px-8 py-3 rounded font-bold hover:opacity-90 transition-opacity whitespace-nowrap">{% trans "اشترك الآن" %}</button>
-        </form>
-    </div>
-</section>
+
 
 <!-- Footer -->
 <footer class="w-full py-16 px-margin-mobile md:px-margin-desktop bg-primary text-on-primary">

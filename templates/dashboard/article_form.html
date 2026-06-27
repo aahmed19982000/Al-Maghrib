@@ -229,31 +229,12 @@
         </div>
     </div>
 
-    <!-- Section 3: Excerpt & Bodies (Translation inputs) -->
+    <!-- Section 3: Body (Translation inputs) -->
     <div class="form-card">
         <h3 class="form-section-title">
             <span class="icon">subject</span>
-            <span>{% trans "المقتطف والمحتوى الكامل" %}</span>
+            <span>{% trans "المحتوى" %}</span>
         </h3>
-        
-        <div class="form-grid">
-            <div class="form-group">
-                <label class="form-label" for="{{ form.excerpt_ar.id_for_label }}">{{ form.excerpt_ar.label }}</label>
-                {{ form.excerpt_ar }}
-                {% if form.excerpt_ar.errors %}
-                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.excerpt_ar.errors }}</span>
-                {% endif %}
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="{{ form.excerpt_en.id_for_label }}">
-                    {{ form.excerpt_en.label }}
-                </label>
-                {{ form.excerpt_en }}
-                {% if form.excerpt_en.errors %}
-                    <span style="color: var(--accent-danger); font-size: 0.85rem;">{{ form.excerpt_en.errors }}</span>
-                {% endif %}
-            </div>
-        </div>
 
         <div class="form-group" style="margin-top: 2rem;">
             <label class="form-label" for="{{ form.body_ar.id_for_label }}">{{ form.body_ar.label }}</label>
@@ -363,6 +344,90 @@
 
         if (titleInput) titleInput.addEventListener('input', updateSlug);
         if (titleEnInput) titleEnInput.addEventListener('input', updateSlug);
+    });
+
+    // --- Server-Side Auto-Save Logic ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        if (!form) return;
+        
+        let articleId = "{{ object.pk|default:'new' }}";
+        const autoSaveUrl = "{% url 'dashboard:article_auto_save' %}";
+        
+        // Create status element near the save button
+        const statusEl = document.createElement('span');
+        statusEl.className = "text-sm text-on-surface-variant font-bold mx-4";
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.parentNode.insertBefore(statusEl, submitBtn.nextSibling);
+        }
+
+        function getFormData() {
+            const formData = new FormData(form);
+            formData.append('article_id', articleId);
+            
+            // Handle CKEditor 5 instances if they exist
+            if (typeof window.editors !== 'undefined') {
+                for (let id in window.editors) {
+                    formData.set(id, window.editors[id].getData());
+                }
+            }
+            return formData;
+        }
+
+        let timeoutId;
+        function triggerAutoSave() {
+            // Don't autosave if both titles are empty to avoid saving completely blank drafts
+            const titleAr = document.getElementById('{{ form.title_ar.id_for_label }}')?.value;
+            const titleEn = document.getElementById('{{ form.title_en.id_for_label }}')?.value;
+            if (!titleAr && !titleEn) return;
+
+            statusEl.textContent = "جاري الحفظ في السيرفر...";
+            statusEl.style.color = "var(--on-surface-variant)";
+            
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                const formData = getFormData();
+                
+                fetch(autoSaveUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const now = new Date();
+                        const timeStr = now.toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'});
+                        statusEl.textContent = `تم حفظ المسودة في السيرفر (${timeStr}) ✓`;
+                        statusEl.style.color = "var(--accent-primary)";
+                        
+                        if (articleId === 'new') {
+                            articleId = data.article_id;
+                            // Change the URL so refresh doesn't create a new article
+                            window.history.replaceState({}, '', data.url);
+                            // Also update form action to point to the edit URL instead of create
+                            form.action = data.url;
+                        }
+                    } else if (data.status === 'error') {
+                        statusEl.textContent = "خطأ في الحفظ التلقائي ✗";
+                        statusEl.style.color = "var(--accent-danger)";
+                    }
+                })
+                .catch(err => {
+                    console.error("Autosave error", err);
+                    statusEl.textContent = "تعذر الاتصال بالسيرفر ✗";
+                    statusEl.style.color = "var(--accent-danger)";
+                });
+                
+            }, 3000);
+        }
+
+        // Listen for changes
+        form.addEventListener('input', triggerAutoSave);
+        form.addEventListener('change', triggerAutoSave);
     });
 </script>
 {% endblock %}

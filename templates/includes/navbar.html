@@ -42,12 +42,12 @@
                 <div class="hidden md:flex items-center gap-2">
                     <!-- Language Switcher -->
                     {% if LANGUAGE_CODE == 'ar' %}
-                        <a href="/en{{ request.path }}" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" title="Switch to English">
-                            language
+                        <a href="/en{{ request.path }}" class="text-on-surface-variant font-bold text-sm cursor-pointer hover:text-primary transition-colors flex items-center px-2 py-1 rounded border border-outline-variant hover:border-primary" title="Switch to English">
+                            EN
                         </a>
                     {% else %}
-                        <a href="{{ request.path|slice:'3:'|default:'/' }}" class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" title="تغيير إلى العربية">
-                            language
+                        <a href="{{ request.path|slice:'3:'|default:'/' }}" class="text-on-surface-variant font-bold text-sm cursor-pointer hover:text-primary transition-colors flex items-center px-2 py-1 rounded border border-outline-variant hover:border-primary" title="تغيير إلى العربية">
+                            عربي
                         </a>
                     {% endif %}
                     
@@ -62,8 +62,6 @@
                             </button>
                         </form>
                     </div>
-                    
-                    <span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">notifications</span>
                 </div>
                 
                 {% if not request.user.is_authenticated %}
@@ -80,16 +78,38 @@
     </div>
     
     {% if home_settings and home_settings.show_breaking_news and breaking_articles %}
-    <div class="breaking-news-gradient text-on-primary py-2 overflow-hidden whitespace-nowrap border-t border-white/10">
-        <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop flex items-center gap-6 relative">
-            <span class="flex items-center gap-2 text-label-sm font-bold bg-error px-3 py-1 rounded animate-pulse z-10 whitespace-nowrap shadow-sm">{% trans "عاجل" %}</span>
-            <div class="flex gap-12 text-label-sm shrink-0 whitespace-nowrap" style="animation: scroll 30s linear infinite;">
+    <div class="breaking-news-gradient text-on-primary py-2 overflow-hidden border-t border-white/10 relative h-10">
+        <div class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop flex items-center h-full gap-4 relative">
+            <span class="flex items-center gap-2 text-label-sm font-bold bg-error px-3 py-1 rounded animate-pulse z-20 shadow-sm shrink-0">{% trans "عاجل" %}</span>
+            <div class="relative flex-1 h-full flex items-center overflow-hidden" id="breaking-news-ticker">
                 {% for art in breaking_articles %}
-                    <a href="{{ art.get_absolute_url }}" class="hover:underline cursor-pointer">{{ art.title }}</a>
+                    <a href="{{ art.get_absolute_url }}" class="hover:underline cursor-pointer absolute inset-y-0 flex items-center transition-opacity duration-700 ease-in-out text-sm truncate {% if forloop.first %}opacity-100 z-10 pointer-events-auto{% else %}opacity-0 z-0 pointer-events-none{% endif %}" data-ticker-item>
+                        {{ art.title }}
+                    </a>
                 {% endfor %}
             </div>
         </div>
     </div>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const items = document.querySelectorAll('[data-ticker-item]');
+        if (items.length > 1) {
+            let currentIndex = 0;
+            setInterval(() => {
+                // Hide current
+                items[currentIndex].classList.remove('opacity-100', 'z-10', 'pointer-events-auto');
+                items[currentIndex].classList.add('opacity-0', 'z-0', 'pointer-events-none');
+                
+                // Move to next
+                currentIndex = (currentIndex + 1) % items.length;
+                
+                // Show next
+                items[currentIndex].classList.remove('opacity-0', 'z-0', 'pointer-events-none');
+                items[currentIndex].classList.add('opacity-100', 'z-10', 'pointer-events-auto');
+            }, 4000);
+        }
+    });
+    </script>
     {% endif %}
 </header>
 
@@ -140,12 +160,12 @@
         <div class="p-4 border-t border-outline-variant mt-auto space-y-4">
             <div class="flex items-center justify-center gap-4 border-b border-outline-variant/50 pb-4">
                 {% if LANGUAGE_CODE == 'ar' %}
-                    <a href="/en{{ request.path }}" class="flex items-center gap-2 text-on-surface-variant cursor-pointer hover:text-primary transition-colors" title="Switch to English">
-                        <span class="material-symbols-outlined">language</span> English
+                    <a href="/en{{ request.path }}" class="flex items-center justify-center gap-2 text-on-surface-variant font-bold cursor-pointer hover:text-primary transition-colors w-full py-2 border border-outline-variant rounded hover:border-primary" title="Switch to English">
+                        English
                     </a>
                 {% else %}
-                    <a href="{{ request.path|slice:'3:'|default:'/' }}" class="flex items-center gap-2 text-on-surface-variant cursor-pointer hover:text-primary transition-colors" title="تغيير إلى العربية">
-                        <span class="material-symbols-outlined">language</span> العربية
+                    <a href="{{ request.path|slice:'3:'|default:'/' }}" class="flex items-center justify-center gap-2 text-on-surface-variant font-bold cursor-pointer hover:text-primary transition-colors w-full py-2 border border-outline-variant rounded hover:border-primary" title="تغيير إلى العربية">
+                        العربية
                     </a>
                 {% endif %}
             </div>

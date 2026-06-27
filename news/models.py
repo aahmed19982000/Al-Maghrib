@@ -61,7 +61,7 @@ class Article(models.Model):
     body = models.TextField()
     excerpt = models.TextField(blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='articles')
-    category = TreeForeignKey(Category, on_delete=models.PROTECT, related_name='articles')
+    category = TreeForeignKey(Category, on_delete=models.PROTECT, related_name='articles', null=True, blank=True)
     additional_categories = models.ManyToManyField(Category, related_name='additional_articles', blank=True, help_text="أقسام فرعية إضافية (اختياري)")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='published')
     published_at = models.DateTimeField(blank=True, null=True)

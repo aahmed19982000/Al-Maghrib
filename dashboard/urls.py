@@ -6,6 +6,7 @@ from .views import (
     ArticleUpdateView, 
     ArticlePreviewView, 
     ArticleBulkActionView,
+    ArticleAutoSaveView,
     CategoryTreeView, 
     CategoryCreateView,
     CategoryUpdateView,
@@ -23,6 +24,7 @@ app_name = 'dashboard'
 urlpatterns = [
     path('', DashboardHomeView.as_view(), name='home'),
     path('articles/', ArticleAdminView.as_view(), name='articles'),
+    path('articles/auto-save/', ArticleAutoSaveView.as_view(), name='article_auto_save'),
     path('articles/create/', ArticleCreateView.as_view(), name='article_create'),
     path('articles/<int:pk>/edit/', ArticleUpdateView.as_view(), name='article_edit'),
     path('articles/<int:pk>/preview/', ArticlePreviewView.as_view(), name='article_preview'),
