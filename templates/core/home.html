@@ -19,21 +19,25 @@
 <section class="relative w-full aspect-[21/9] min-h-[450px] md:min-h-[550px] overflow-hidden" id="hero-slider">
     {% for art in slider_articles %}
     <div class="absolute inset-0 transition-opacity duration-1000 ease-in-out slider-slide {% if forloop.first %}opacity-100 z-10{% else %}opacity-0 z-0{% endif %}">
-        {% if art.cover_image %}
-            {% thumbnail art.cover_image "1600x900" crop="center" as im %}
-                <img src="{{ im.url }}" alt="{{ art.title }}" class="absolute inset-0 w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
-            {% empty %}
-                <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1600" alt="Placeholder" class="absolute inset-0 w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
-            {% endthumbnail %}
-        {% else %}
-            <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1600" alt="Placeholder" class="absolute inset-0 w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
-        {% endif %}
+        <a href="{{ art.get_absolute_url }}" class="absolute inset-0 block z-0">
+            {% if art.cover_image %}
+                {% thumbnail art.cover_image "1600x900" crop="center" as im %}
+                    <img src="{{ im.url }}" alt="{{ art.title }}" class="w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
+                {% empty %}
+                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1600" alt="Placeholder" class="w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
+                {% endthumbnail %}
+            {% else %}
+                <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1600" alt="Placeholder" class="w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
+            {% endif %}
+        </a>
         
-        <div class="hero-overlay absolute inset-0 flex flex-col justify-end p-margin-mobile md:p-margin-desktop">
-            <div class="max-w-container-max-width mx-auto w-full">
+        <div class="hero-overlay absolute inset-0 flex flex-col justify-end p-margin-mobile md:p-margin-desktop pointer-events-none">
+            <div class="max-w-container-max-width mx-auto w-full pointer-events-auto">
                 <div class="max-w-3xl">
                     <span class="inline-block bg-secondary text-on-secondary text-label-sm font-bold px-3 py-1 mb-4 rounded-sm">{{ art.category.name }}</span>
-                    <h2 class="text-3xl md:text-display-lg text-white mb-6 leading-tight">{{ art.title }}</h2>
+                    <a href="{{ art.get_absolute_url }}" class="hover:underline">
+                        <h2 class="text-3xl md:text-display-lg text-white mb-6 leading-tight">{{ art.title }}</h2>
+                    </a>
                     <p class="text-body-md text-white/90 mb-8 max-w-2xl hidden md:block">
                         {{ art.excerpt|default:art.body|striptags|truncatewords:25 }}
                     </p>
@@ -46,6 +50,15 @@
         </div>
     </div>
     {% endfor %}
+    {% if slider_articles|length > 1 %}
+    <!-- Slider Controls -->
+    <button id="slider-prev-btn" class="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/30 hover:bg-black/60 text-white flex items-center justify-center transition-all duration-300 backdrop-blur-sm focus:outline-none" aria-label="{% trans 'السابق' %}">
+        <span class="material-symbols-outlined text-2xl">chevron_right</span>
+    </button>
+    <button id="slider-next-btn" class="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/30 hover:bg-black/60 text-white flex items-center justify-center transition-all duration-300 backdrop-blur-sm focus:outline-none" aria-label="{% trans 'التالي' %}">
+        <span class="material-symbols-outlined text-2xl">chevron_left</span>
+    </button>
+    {% endif %}
 </section>
 
 <!-- JavaScript slider integration -->
@@ -53,17 +66,51 @@
     let currentSlide = 0;
     const slides = document.querySelectorAll('.slider-slide');
     const totalSlides = slides.length;
-    function nextSlide() {
+    
+    function showSlide(index) {
         if (totalSlides > 1) {
             slides[currentSlide].classList.remove('opacity-100', 'z-10');
             slides[currentSlide].classList.add('opacity-0', 'z-0');
-            currentSlide = (currentSlide + 1) % totalSlides;
+            currentSlide = index;
             slides[currentSlide].classList.remove('opacity-0', 'z-0');
             slides[currentSlide].classList.add('opacity-100', 'z-10');
         }
     }
+    
+    function nextSlide() {
+        showSlide((currentSlide + 1) % totalSlides);
+    }
+    
+    function prevSlide() {
+        showSlide((currentSlide - 1 + totalSlides) % totalSlides);
+    }
+    
+    let slideInterval = null;
+    function startAutoSlide() {
+        if (totalSlides > 1) {
+            slideInterval = setInterval(nextSlide, 7000);
+        }
+    }
+    
+    function resetAutoSlide() {
+        if (slideInterval) {
+            clearInterval(slideInterval);
+            startAutoSlide();
+        }
+    }
+    
     if (totalSlides > 1) {
-        setInterval(nextSlide, 7000);
+        startAutoSlide();
+        
+        document.getElementById('slider-prev-btn')?.addEventListener('click', () => {
+            prevSlide();
+            resetAutoSlide();
+        });
+        
+        document.getElementById('slider-next-btn')?.addEventListener('click', () => {
+            nextSlide();
+            resetAutoSlide();
+        });
     }
 </script>
 {% endif %}

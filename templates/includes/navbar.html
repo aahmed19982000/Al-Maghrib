@@ -83,7 +83,7 @@
             <span class="flex items-center gap-2 text-label-sm font-bold bg-error px-3 py-1 rounded animate-pulse z-20 shadow-sm shrink-0">{% trans "عاجل" %}</span>
             <div class="relative flex-1 h-full flex items-center overflow-hidden" id="breaking-news-ticker">
                 {% for art in breaking_articles %}
-                    <a href="{{ art.get_absolute_url }}" class="hover:underline cursor-pointer absolute inset-y-0 flex items-center transition-opacity duration-700 ease-in-out text-sm truncate {% if forloop.first %}opacity-100 z-10 pointer-events-auto{% else %}opacity-0 z-0 pointer-events-none{% endif %}" data-ticker-item>
+                    <a href="{{ art.get_absolute_url }}" class="hover:underline cursor-pointer absolute inset-0 flex items-center transition-opacity duration-700 ease-in-out text-sm whitespace-nowrap truncate {% if forloop.first %}opacity-100 z-10 pointer-events-auto{% else %}opacity-0 z-0 pointer-events-none{% endif %}" data-ticker-item>
                         {{ art.title }}
                     </a>
                 {% endfor %}
