@@ -392,120 +392,120 @@ def run_ai_generation_cycle():
             if Article.all_objects.filter(slug=generate_slug_for_title(item['title'])).exists():
                 continue
                 
-            if not wp_sites:
-                # Case 1: No external WordPress sites, just publish locally
-                prompt = (
-                    f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
-                    f"استناداً إلى المعلومات والخبر التالي:\n"
-                    f"المصدر: {source.name}\n"
-                    f"عنوان الخبر الأصلي: {item['title']}\n"
-                    f"تفاصيل الخبر: {item['description']}\n\n"
-                    f"الرجاء الالتزام التام بالتعليمات التالية:\n"
-                    f"1. اكتب الخبر باللغة العربية الفصحى وبأسلوب صحفي متميز وجذاب ومحايد.\n"
-                    f"2. يجب أن لا يزيد حجم الخبر الإجمالي عن {ai_settings.max_words} كلمة إطلاقاً (تأكد أن يتراوح طول الخبر بين 300 إلى 450 كلمة كحد أقصى لتفادي الإطالة).\n"
-                    f"3. قم بصياغة عنوان مميز وجذاب ومختلف عن العنوان الأصلي.\n"
-                    f"4. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
-                    f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
-                    f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
-                    f"- \"title\": عنوان الخبر الجديد\n"
-                    f"- \"excerpt\": ملخص الخبر\n"
-                    f"- \"body\": محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً.\n"
-                    f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n\n"
-                    f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}"
+            # Always generate and publish locally first (Case 1)
+            prompt = (
+                f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
+                f"استناداً إلى المعلومات والخبر التالي:\n"
+                f"المصدر: {source.name}\n"
+                f"عنوان الخبر الأصلي: {item['title']}\n"
+                f"تفاصيل الخبر: {item['description']}\n\n"
+                f"الرجاء الالتزام التام بالتعليمات التالية:\n"
+                f"1. اكتب الخبر باللغة العربية الفصحى وبأسلوب صحفي متميز وجذاب ومحايد.\n"
+                f"2. يجب أن لا يزيد حجم الخبر الإجمالي عن {ai_settings.max_words} كلمة إطلاقاً (تأكد أن يتراوح طول الخبر بين 300 إلى 450 كلمة كحد أقصى لتفادي الإطالة).\n"
+                f"3. قم بصياغة عنوان مميز وجذاب ومختلف عن العنوان الأصلي.\n"
+                f"4. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
+                f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+                f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
+                f"- \"title\": عنوان الخبر الجديد\n"
+                f"- \"excerpt\": ملخص الخبر\n"
+                f"- \"body\": محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً.\n"
+                f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n\n"
+                f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}"
+            )
+            
+            ai_response = call_gemini_api(prompt, api_key=api_key)
+            if not ai_response:
+                AIImportLog.objects.create(
+                    source=source,
+                    source_url=item['link'],
+                    title=item['title'],
+                    status='failed',
+                    error_message="لم يستجب الـ API الخاص بـ Gemini أو فشل استخراج النص."
+                )
+                continue
+                
+            try:
+                cleaned_response = ai_response.strip()
+                if cleaned_response.startswith("```json"):
+                    cleaned_response = cleaned_response[7:]
+                if cleaned_response.endswith("```"):
+                    cleaned_response = cleaned_response[:-3]
+                cleaned_response = cleaned_response.strip()
+                
+                data = json.loads(cleaned_response)
+                new_title = data.get("title", "").strip()
+                new_excerpt = data.get("excerpt", "").strip()
+                new_body = data.get("body", "").strip()
+                try:
+                    chosen_cat_id = int(data.get("category_id"))
+                except (ValueError, TypeError):
+                    chosen_cat_id = None
+                    
+                if not new_title or not new_body:
+                    raise ValueError("بيانات العنوان أو المحتوى فارغة في استجابة الذكاء الاصطناعي.")
+                    
+                category = None
+                if chosen_cat_id:
+                    category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
+                if not category and allowed_cats:
+                    category = allowed_cats[0]
+                    
+                from core.utils import translate_text
+                title_en = translate_text(new_title)
+                body_en = translate_text(new_body)
+                excerpt_en = translate_text(new_excerpt)
+                
+                author = ai_settings.default_author or get_or_create_ai_author()
+                article = Article(
+                    title=new_title,
+                    title_ar=new_title,
+                    title_en=title_en,
+                    slug=generate_slug_for_title(new_title),
+                    body=new_body,
+                    body_ar=new_body,
+                    body_en=body_en,
+                    excerpt=new_excerpt,
+                    excerpt_ar=new_excerpt,
+                    excerpt_en=excerpt_en,
+                    author=author,
+                    category=category,
+                    status='published',
+                    published_at=timezone.now(),
+                    is_featured=False,
+                    is_breaking=False,
+                    auto_translate=False
+                )
+                if item.get('image_url'):
+                    img_file = fetch_image_file(item['image_url'])
+                    if img_file:
+                        article.cover_image = img_file
+                        
+                article.save()
+                
+                AIImportLog.objects.create(
+                    source=source,
+                    article=article,
+                    wp_site=None,
+                    source_url=item['link'],
+                    published_url=article.get_absolute_url() if article else '',
+                    title=new_title,
+                    status='success'
                 )
                 
-                ai_response = call_gemini_api(prompt, api_key=api_key)
-                if not ai_response:
-                    AIImportLog.objects.create(
-                        source=source,
-                        source_url=item['link'],
-                        title=item['title'],
-                        status='failed',
-                        error_message="لم يستجب الـ API الخاص بـ Gemini أو فشل استخراج النص."
-                    )
-                    continue
-                    
-                try:
-                    cleaned_response = ai_response.strip()
-                    if cleaned_response.startswith("```json"):
-                        cleaned_response = cleaned_response[7:]
-                    if cleaned_response.endswith("```"):
-                        cleaned_response = cleaned_response[:-3]
-                    cleaned_response = cleaned_response.strip()
-                    
-                    data = json.loads(cleaned_response)
-                    new_title = data.get("title", "").strip()
-                    new_excerpt = data.get("excerpt", "").strip()
-                    new_body = data.get("body", "").strip()
-                    try:
-                        chosen_cat_id = int(data.get("category_id"))
-                    except (ValueError, TypeError):
-                        chosen_cat_id = None
-                        
-                    if not new_title or not new_body:
-                        raise ValueError("بيانات العنوان أو المحتوى فارغة في استجابة الذكاء الاصطناعي.")
-                        
-                    category = None
-                    if chosen_cat_id:
-                        category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
-                    if not category and allowed_cats:
-                        category = allowed_cats[0]
-                        
-                    from core.utils import translate_text
-                    title_en = translate_text(new_title)
-                    body_en = translate_text(new_body)
-                    excerpt_en = translate_text(new_excerpt)
-                    
-                    author = ai_settings.default_author or get_or_create_ai_author()
-                    article = Article(
-                        title=new_title,
-                        title_ar=new_title,
-                        title_en=title_en,
-                        slug=generate_slug_for_title(new_title),
-                        body=new_body,
-                        body_ar=new_body,
-                        body_en=body_en,
-                        excerpt=new_excerpt,
-                        excerpt_ar=new_excerpt,
-                        excerpt_en=excerpt_en,
-                        author=author,
-                        category=category,
-                        status='published',
-                        published_at=timezone.now(),
-                        is_featured=False,
-                        is_breaking=False,
-                        auto_translate=False
-                    )
-                    if item.get('image_url'):
-                        img_file = fetch_image_file(item['image_url'])
-                        if img_file:
-                            article.cover_image = img_file
-                            
-                    article.save()
-                    
-                    AIImportLog.objects.create(
-                        source=source,
-                        article=article,
-                        wp_site=None,
-                        source_url=item['link'],
-                        published_url=article.get_absolute_url() if article else '',
-                        title=new_title,
-                        status='success'
-                    )
-                    
-                    generated_count += 1
-                except Exception as ex:
-                    logger.error(f"Failed to parse/save local article: {ex}")
-                    AIImportLog.objects.create(
-                        source=source,
-                        source_url=item['link'],
-                        title=item['title'],
-                        status='failed',
-                        error_message=f"فشل معالجة استجابة الـ JSON: {str(ex)}"
-                    )
-            else:
-                # Case 2: External WordPress sites connected!
-                # Generate a unique article for each site
+                generated_count += 1
+            except Exception as ex:
+                logger.error(f"Failed to parse/save local article: {ex}")
+                AIImportLog.objects.create(
+                    source=source,
+                    source_url=item['link'],
+                    title=item['title'],
+                    status='failed',
+                    error_message=f"فشل معالجة استجابة الـ JSON: {str(ex)}"
+                )
+            
+            # Case 2: External WordPress sites connected!
+            # Generate a unique article for each site
+            if wp_sites:
                 for wp_site in wp_sites:
                     if generated_count >= limit:
                         break
@@ -580,7 +580,7 @@ def run_ai_generation_cycle():
                             excerpt_en=excerpt_en,
                             author=author,
                             category=category,
-                            status='published',
+                            status='draft',
                             published_at=timezone.now(),
                             is_featured=False,
                             is_breaking=False,
