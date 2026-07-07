@@ -288,6 +288,7 @@ class AISettings(models.Model):
     is_active = models.BooleanField(default=True, help_text="Toggle AI news fetching on or off.")
     default_author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_settings', verbose_name="الكاتب الافتراضي للأخبار")
     categories = models.ManyToManyField(Category, blank=True, related_name='ai_settings', verbose_name="الأقسام المتاحة للنشر")
+    local_sources = models.ManyToManyField('AISource', blank=True, related_name='local_ai_settings', verbose_name="مصادر الأخبار المغذية لموقع المغرب العربي", help_text="إذا تركت هذا الحقل فارغاً سيستخدم النظام جميع المصادر النشطة للنشر المحلي.")
     last_run = models.DateTimeField(blank=True, null=True)
 
     class Meta:

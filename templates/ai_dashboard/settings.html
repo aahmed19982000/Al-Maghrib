@@ -80,6 +80,24 @@
                 </div>
             </div>
 
+            <!-- Local Site Sources Selection -->
+            <div class="space-y-4 pt-6 border-t border-slate-800">
+                <h4 class="text-sm font-bold text-slate-300"><i class="fa-solid fa-globe text-teal-400 ml-2"></i>مصادر الأخبار المغذية لموقع المغرب العربي</h4>
+                <p class="text-xs text-slate-500">حدد المصادر التي تريد النشر منها على موقع المغرب العربي مباشرة. إذا تركت الكل بدون تحديد سيستخدم النظام جميع المصادر النشطة تلقائياً.</p>
+                <div class="grid grid-cols-2 gap-3">
+                    {% for source in all_sources %}
+                    <label class="flex items-center gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800 cursor-pointer hover:border-teal-500/50 transition-colors">
+                        <input type="checkbox" name="local_sources" value="{{ source.id }}"
+                            {% if source.id in local_source_ids %}checked{% endif %}
+                            class="w-4 h-4 text-teal-600 bg-slate-900 border-slate-700 rounded focus:ring-teal-500">
+                        <span class="text-sm text-slate-300">{{ source.name }}</span>
+                    </label>
+                    {% empty %}
+                    <p class="text-xs text-slate-500 italic col-span-2">لا توجد مصادر نشطة مضافة بعد. أضف مصادر أخبار أولاً من قسم "مصادر الأخبار".</p>
+                    {% endfor %}
+                </div>
+            </div>
+
             <!-- WordPress Sites Limits -->
             <div class="space-y-4 pt-6 border-t border-slate-800">
                 <h4 class="text-sm font-bold text-slate-300"><i class="fa-solid fa-earth-americas text-teal-400 ml-2"></i>الحدود اليومية لمواقع ووردبريس المتصلة</h4>

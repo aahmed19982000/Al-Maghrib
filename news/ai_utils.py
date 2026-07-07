@@ -354,8 +354,9 @@ def run_ai_generation_cycle():
         logger.error("Gemini API key is not configured. Aborting run.")
         return 0
 
-    # Get active news sources
-    sources = AISource.objects.filter(is_active=True)
+    # Get active news sources (filtered by local_sources if configured)
+    local_sources_qs = ai_settings.local_sources.filter(is_active=True)
+    sources = local_sources_qs if local_sources_qs.exists() else AISource.objects.filter(is_active=True)
     if not sources.exists():
         logger.warning("No active AI sources configured.")
         return 0

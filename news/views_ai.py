@@ -50,12 +50,21 @@ class SettingsUpdateView(StaffRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         from .models import WordPressSite
         context['wp_sites'] = WordPressSite.objects.filter(is_active=True)
+        context['all_sources'] = AISource.objects.filter(is_active=True)
+        context['local_source_ids'] = list(self.get_object().local_sources.values_list('id', flat=True))
         return context
 
     def form_valid(self, form):
         from .models import WordPressSite
         response = super().form_valid(form)
         
+        # Save local_sources M2M selection
+        settings_obj = self.get_object()
+        selected_local_sources = self.request.POST.getlist('local_sources')
+        settings_obj.local_sources.set(
+            AISource.objects.filter(id__in=[int(x) for x in selected_local_sources if x.isdigit()])
+        )
+
         # Process and save WordPress site limits from POST
         active_sites = WordPressSite.objects.filter(is_active=True)
         for site in active_sites:
