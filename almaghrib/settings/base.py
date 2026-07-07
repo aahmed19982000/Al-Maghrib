@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'core.middleware.SubdomainRoutingMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware', # Whitenoise Middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -164,6 +165,204 @@ CELERY_BEAT_SCHEDULE = {
     'send-daily-newsletter': {
         'task': 'core.tasks.send_daily_newsletter',
         'schedule': crontab(hour=8, minute=0),  # daily at 8:00 AM
+    },
+    'scrape-and-generate-news-every-4-hours': {
+        'task': 'news.tasks.scrape_and_generate_news_task',
+        'schedule': crontab(minute=0, hour='*/4'),  # every 4 hours
+    },
+}
+
+# Email Backend Configuration
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@almaghrib.com')
+CONTACT_EMAIL = env('CONTACT_EMAIL', default='contact@almaghrib.com')
+
+# CKEditor 5 Configurations
+CKEDITOR_5_CONFIGS = {
+    'default': {
+        'language': 'ar',
+        'toolbar': ['heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote', 'imageUpload', 'alignment'],
+    },
+    'extends': {
+        'language': 'ar',
+        'blockToolbar': [
+            'paragraph', 'heading1', 'heading2', 'heading3',
+            '|',
+            'bulletedList', 'numberedList',
+            '|',
+            'blockQuote',
+        ],
+        'toolbar': [
+            'heading', '|', 'outdent', 'indent', '|', 'bold', 'italic', 'underline', 'strikethrough', 'link',
+            'alignment', '|', 'bulletedList', 'numberedList', 'todoList', '|',
+            'blockQuote', 'imageUpload', 'insertTable', 'mediaEmbed', '|',
+            'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+            'removeFormat', 'sourceEditing'
+        ],
+        'image': {
+            'toolbar': ['imageTextAlternative', '|', 'imageStyle:alignLeft',
+                        'imageStyle:alignRight', 'imageStyle:alignCenter', 'imageStyle:side',  '|'],
+            'styles': [
+                'full',
+                'side',
+                'alignLeft',
+                'alignRight',
+                'alignCenter',
+            ]
+        },
+        'table': {
+            'contentToolbar': [ 'tableColumn', 'tableRow', 'mergeTableCells',
+            'tableProperties', 'tableCellProperties' ]
+        },
+        'header': {
+            'options': [
+                {'model': 'paragraph', 'title': 'Paragraph', 'class': 'ck-heading_paragraph'},
+                {'model': 'heading1', 'view': 'h1', 'title': 'Heading 1', 'class': 'ck-heading_heading1'},
+                {'model': 'heading2', 'view': 'h2', 'title': 'Heading 2', 'class': 'ck-heading_heading2'},
+                {'model': 'heading3', 'view': 'h3', 'title': 'Heading 3', 'class': 'ck-heading_heading3'}
+            ]
+        }
+    },
+    'extends_en': {
+        'language': 'en',
+        'blockToolbar': [
+            'paragraph', 'heading1', 'heading2', 'heading3',
+            '|',
+            'bulletedList', 'numberedList',
+            '|',
+            'blockQuote',
+        ],
+        'toolbar': [
+            'heading', '|', 'outdent', 'indent', '|', 'bold', 'italic', 'underline', 'strikethrough', 'link',
+            'alignment', '|', 'bulletedList', 'numberedList', 'todoList', '|',
+            'blockQuote', 'imageUpload', 'insertTable', 'mediaEmbed', '|',
+            'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+            'removeFormat', 'sourceEditing'
+        ],
+        'image': {
+            'toolbar': ['imageTextAlternative', '|', 'imageStyle:alignLeft',
+                        'imageStyle:alignRight', 'imageStyle:alignCenter', 'imageStyle:side',  '|'],
+            'styles': [
+                'full',
+                'side',
+                'alignLeft',
+                'alignRight',
+                'alignCenter',
+            ]
+        },
+        'table': {
+            'contentToolbar': [ 'tableColumn', 'tableRow', 'mergeTableCells',
+            'tableProperties', 'tableCellProperties' ]
+        },
+        'header': {
+            'options': [
+                {'model': 'paragraph', 'title': 'Paragraph', 'class': 'ck-heading_paragraph'},
+                {'model': 'heading1', 'view': 'h1', 'title': 'Heading 1', 'class': 'ck-heading_heading1'},
+                {'model': 'heading2', 'view': 'h2', 'title': 'Heading 2', 'class': 'ck-heading_heading2'},
+                {'model': 'heading3', 'view': 'h3', 'title': 'Heading 3', 'class': 'ck-heading_heading3'}
+            ]
+        }
+    }
+}
+CKEDITOR_5_FILE_UPLOAD_PERMISSION = "staff"
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
+)
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'compressor.finders.CompressorFinder',
+]
+
+COMPRESS_ENABLED = True
+
+# Caching Strategy: Redis Cache Backend
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.caches.backends.redis.RedisCache',
+        'LOCATION': env('REDIS_CACHE_URL', default='redis://127.0.0.1:6379/1'),
+    }
+}
+
+# Media Optimization: S3/DigitalOcean Spaces for Production
+USE_SPACES = env.bool('USE_SPACES', default=False)
+if USE_SPACES:
+    AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = env('AWS_S3_ENDPOINT_URL', default='https://ams3.digitaloceanspaces.com')
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_QUERYSTRING_AUTH = False
+    
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# Media files
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Celery Configurations
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Run tasks synchronously in dev when Redis is unavailable
+CELERY_TASK_ALWAYS_EAGER = env.bool('CELERY_TASK_ALWAYS_EAGER', default=True)
+CELERY_TASK_EAGER_PROPAGATES = True
+
+# Celery Beat Scheduler
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Celery Beat periodic task schedules
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'process-email-queue-every-minute': {
+        'task': 'notifications.tasks.process_email_queue',
+        'schedule': 60.0,  # every 60 seconds
+    },
+    'cleanup-expired-records-daily': {
+        'task': 'core.tasks.cleanup_expired_and_deleted_records',
+        'schedule': crontab(hour=3, minute=0),  # daily at 3:00 AM
+    },
+    'send-daily-newsletter': {
+        'task': 'core.tasks.send_daily_newsletter',
+        'schedule': crontab(hour=8, minute=0),  # daily at 8:00 AM
+    },
+    'scrape-and-generate-news-every-4-hours': {
+        'task': 'news.tasks.scrape_and_generate_news_task',
+        'schedule': crontab(minute=0, hour='*/4'),  # every 4 hours
     },
 }
 
@@ -309,3 +508,11 @@ THUMBNAIL_FORMAT = 'WEBP'
 THUMBNAIL_QUALITY = 85
 
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'api.auth.APITokenAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ),
+}

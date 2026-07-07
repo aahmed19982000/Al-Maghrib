@@ -49,3 +49,19 @@ def compress_article_image_task(self, article_id):
     except Exception as exc:
         logger.error(f"Failed to compress image for article {article_id}: {exc}")
         raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=1, default_retry_delay=60)
+def scrape_and_generate_news_task(self):
+    """
+    Periodic task to scrape news sources and write unique articles using Gemini AI.
+    """
+    try:
+        from news.ai_utils import run_ai_generation_cycle
+        count = run_ai_generation_cycle()
+        logger.info(f"AI news generation cycle completed. Generated {count} articles.")
+        return f"Success: {count} articles generated"
+    except Exception as exc:
+        logger.error(f"AI news generation cycle failed: {exc}")
+        raise self.retry(exc=exc)
+

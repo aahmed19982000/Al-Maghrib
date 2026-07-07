@@ -71,7 +71,7 @@ class Article(models.Model):
     
     is_featured = models.BooleanField(default=False)
     is_breaking = models.BooleanField(default=True)
-    auto_translate = models.BooleanField(default=True, help_text="ترجمة تلقائية للإنجليزية (Auto-translate to English)")
+    auto_translate = models.BooleanField(default=False, help_text="ترجمة تلقائية للإنجليزية (Auto-translate to English)")
     cover_image = models.ImageField(upload_to='articles/', blank=True, null=True)
     views_count = models.PositiveIntegerField(default=0)
     read_time = models.PositiveIntegerField(default=0, help_text="Read time in minutes")
@@ -271,3 +271,105 @@ def ensure_latest_news_category_on_m2m(sender, instance, action, **kwargs):
                         instance.additional_categories.add(latest_category)
             except Exception:
                 pass
+
+
+def generate_api_token():
+    import secrets
+    return f"am_{secrets.token_hex(24)}"
+
+
+class AISettings(models.Model):
+    gemini_api_key = models.CharField(max_length=255, blank=True, null=True, help_text="Gemini API Key. If empty, uses environment variable.")
+    api_token = models.CharField(max_length=255, default=generate_api_token, unique=True, help_text="مفتاح الأمان للربط الآمن بالووردبريس (Django API Token).")
+    telegram_bot_token = models.CharField(max_length=255, blank=True, null=True, help_text="رمز توكن بوت تليجرام (Telegram Bot Token) للتحكم بالنظام.")
+    telegram_allowed_chats = models.TextField(blank=True, null=True, help_text="معرفات محادثات تليجرام المسموحة، مفصولة بفاصلة (مثال: 1234567, 9876543).")
+    articles_per_day = models.PositiveIntegerField(default=3, help_text="Number of articles to publish daily.")
+    max_words = models.PositiveIntegerField(default=500, help_text="Max word count per article.")
+    is_active = models.BooleanField(default=True, help_text="Toggle AI news fetching on or off.")
+    default_author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_settings', verbose_name="الكاتب الافتراضي للأخبار")
+    categories = models.ManyToManyField(Category, blank=True, related_name='ai_settings', verbose_name="الأقسام المتاحة للنشر")
+    last_run = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = "AI Global Settings"
+        verbose_name_plural = "AI Global Settings"
+
+    def __str__(self):
+        return f"AI Settings (Active: {self.is_active}, {self.articles_per_day} daily)"
+
+    @classmethod
+    def get_settings(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+
+class AISource(models.Model):
+    LANGUAGE_CHOICES = (
+        ('ar', 'عربي (Arabic)'),
+        ('en', 'إنجليزي/عالمي (English/Global)'),
+        ('both', 'مختلط (Mixed)'),
+    )
+    name = models.CharField(max_length=255, verbose_name="اسم الموقع المصدر")
+    url = models.URLField(max_length=500, unique=True, verbose_name="رابط التغذية RSS أو الموقع")
+    is_active = models.BooleanField(default=True, verbose_name="نشط")
+    language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='ar', verbose_name="لغة المصدر")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "AI News Source"
+        verbose_name_plural = "AI News Sources"
+
+    def __str__(self):
+        return self.name
+
+
+class AIImportLog(models.Model):
+    STATUS_CHOICES = (
+        ('success', 'نجاح (Success)'),
+        ('failed', 'فشل (Failed)'),
+    )
+    source = models.ForeignKey(AISource, on_delete=models.SET_NULL, null=True, related_name='logs', verbose_name="المصدر")
+    article = models.ForeignKey(Article, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_logs', verbose_name="الخبر المنشور")
+    wp_site = models.ForeignKey('WordPressSite', on_delete=models.SET_NULL, null=True, blank=True, related_name='import_logs', verbose_name="الموقع المستهدف")
+    source_url = models.URLField(max_length=500, verbose_name="رابط الخبر الأصلي")
+    published_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="رابط الخبر المنشور")
+    title = models.CharField(max_length=255, blank=True, null=True, verbose_name="عنوان الخبر")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='success')
+    error_message = models.TextField(blank=True, null=True, verbose_name="رسالة الخطأ")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "AI Import Log"
+        verbose_name_plural = "AI Import Logs"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title or self.source_url} - {self.status}"
+
+
+class WordPressSite(models.Model):
+    name = models.CharField(max_length=255, verbose_name="اسم الموقع")
+    url = models.URLField(max_length=500, verbose_name="رابط الموقع (WordPress URL)")
+    username = models.CharField(max_length=150, verbose_name="اسم المستخدم في ووردبريس")
+    application_password = models.CharField(max_length=255, verbose_name="كلمة مرور التطبيق (Application Password)")
+    daily_limit = models.PositiveIntegerField(default=3, verbose_name="الحد الأقصى للنشر اليومي")
+    is_active = models.BooleanField(default=True, verbose_name="نشط")
+    sources = models.ManyToManyField(AISource, related_name='wp_sites', verbose_name="مصادر الأخبار المرتبطة", blank=True)
+    category_mapping = models.TextField(default="{}", help_text="خريطة الأقسام بتنسيق JSON، مثال: {\"اسم القسم المحلي\": معرف_القسم_في_ووردبريس}", verbose_name="خريطة الأقسام")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "WordPress Site"
+        verbose_name_plural = "WordPress Sites"
+
+    def __str__(self):
+        return f"{self.name} ({self.url})"
+
+    def get_category_mappings(self):
+        import json
+        try:
+            return json.loads(self.category_mapping)
+        except Exception:
+            return {}
+
+

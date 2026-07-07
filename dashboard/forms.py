@@ -269,3 +269,35 @@ class SiteSettingsForm(forms.ModelForm):
         self.fields['contact_phone'].label = "رقم هاتف التواصل"
 
 
+from news.models import AISettings, Category
+from django.contrib.auth.models import User
+
+class DashboardAISettingsForm(forms.ModelForm):
+    categories = forms.ModelMultipleChoiceField(
+        queryset=Category.objects.filter(is_active=True),
+        required=False,
+        widget=forms.SelectMultiple(attrs={'class': 'form-control select2', 'style': 'height: 180px;'}),
+        label="أقسام النشر الآلي"
+    )
+    default_author = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_active=True, is_staff=True),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label="الكاتب الافتراضي للأخبار"
+    )
+
+    class Meta:
+        model = AISettings
+        fields = ['articles_per_day', 'categories', 'is_active', 'default_author']
+        widgets = {
+            'articles_per_day': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['articles_per_day'].label = "عدد الأخبار اليومي"
+        self.fields['is_active'].label = "تفعيل النشر التلقائي عبر الذكاء الاصطناعي"
+
+
+

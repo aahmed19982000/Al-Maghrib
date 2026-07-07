@@ -392,6 +392,12 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{% url 'dashboard:ai_settings' %}" class="sidebar-link {% if request.resolver_match.url_name == 'ai_settings' %}active{% endif %}">
+                        <span class="icon">smart_toy</span>
+                        <span>{% trans "إعدادات النشر بالذكاء الاصطناعي" %}</span>
+                    </a>
+                </li>
+                <li>
                     <a href="{% url 'dashboard:authors_list' %}" class="sidebar-link {% if 'authors_list' in request.resolver_match.url_name or 'author_detail_mgmt' in request.resolver_match.url_name %}active{% endif %}">
                         <span class="icon">group</span>
                         <span>{% trans "إدارة الكتاب" %}</span>

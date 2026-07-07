@@ -760,3 +760,37 @@ class SiteSettingsView(LoginRequiredMixin, StaffAdminRequiredMixin, TemplateView
         context = self.get_context_data(form=form)
         return self.render_to_response(context)
 
+
+from dashboard.forms import DashboardAISettingsForm
+from news.models import AISettings
+
+class DashboardAISettingsView(LoginRequiredMixin, StaffAdminRequiredMixin, TemplateView):
+    template_name = 'dashboard/ai_settings.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        settings_obj = AISettings.get_settings()
+        if 'form' not in context:
+            context['form'] = DashboardAISettingsForm(instance=settings_obj)
+        return context
+
+    def post(self, request, *args, **kwargs):
+        settings_obj = AISettings.get_settings()
+        form = DashboardAISettingsForm(request.POST, instance=settings_obj)
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "تم تحديث إعدادات النشر بالذكاء الاصطناعي بنجاح.")
+            
+            ActivityLog.objects.create(
+                user=request.user,
+                action_type="تحديث الإعدادات",
+                description="تحديث إعدادات توليد الأخبار بالذكاء الاصطناعي"
+            )
+            return HttpResponseRedirect(reverse('dashboard:ai_settings'))
+            
+        messages.error(request, "يرجى مراجعة الأخطاء في النموذج أدناه.")
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
+
+

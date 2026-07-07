@@ -1,0 +1,178 @@
+{% extends 'dashboard/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "إعدادات النشر بالذكاء الاصطناعي" %}{% endblock %}
+
+{% block page_title %}{% trans "إعدادات النشر بالذكاء الاصطناعي (AI)" %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card custom-settings-wrapper">
+    <form method="post" id="ai-settings-form">
+        {% csrf_token %}
+        
+        <!-- Section 1: Activation & Config -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">smart_toy</span>
+                {% trans "حالة النظام وتخصيص الكاتب" %}
+            </h2>
+            <div class="custom-grid grid-2">
+                <!-- Toggle Active -->
+                <div class="form-group flex-checkbox-container" style="grid-column: span 2;">
+                    <div class="form-check form-switch custom-switch-wrapper">
+                        {{ form.is_active }}
+                        <label class="form-check-label font-weight-bold" for="id_is_active">
+                            <strong>{{ form.is_active.label }}</strong>
+                        </label>
+                    </div>
+                    <p class="text-secondary" style="font-size: 0.85rem; margin-top: 0.5rem; margin-right: 2.2rem;">تفعيل أو تعطيل النشر التلقائي للذكاء الاصطناعي على الموقع بالكامل بشكل مؤقت.</p>
+                </div>
+
+                <!-- Articles per Day -->
+                <div class="form-group">
+                    <label class="form-label">{{ form.articles_per_day.label }}</label>
+                    {{ form.articles_per_day }}
+                    <p class="text-secondary" style="font-size: 0.8rem; margin-top: 0.4rem;">عدد الأخبار التي سيقوم الذكاء الاصطناعي بنشرها يومياً كحد أقصى.</p>
+                    {% if form.articles_per_day.errors %}<div class="text-danger">{{ form.articles_per_day.errors }}</div>{% endif %}
+                </div>
+
+                <!-- Default Author -->
+                <div class="form-group">
+                    <label class="form-label">{{ form.default_author.label }}</label>
+                    {{ form.default_author }}
+                    <p class="text-secondary" style="font-size: 0.8rem; margin-top: 0.4rem;">الكاتب الذي سيتم تسجيل الأخبار المولدة تلقائياً باسمه.</p>
+                    {% if form.default_author.errors %}<div class="text-danger">{{ form.default_author.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Target Categories -->
+        <div class="settings-section">
+            <h2 class="section-title">
+                <span class="icon">category</span>
+                {% trans "تحديد الأقسام المستهدفة للنشر" %}
+            </h2>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">{{ form.categories.label }}</label>
+                <p class="text-secondary" style="font-size: 0.85rem; margin-bottom: 0.75rem;">حدد الأقسام التي يسمح للذكاء الاصطناعي بالنشر عليها تلقائياً (اضغط باستمرار على زر Ctrl أو Cmd لاختيار أكثر من قسم).</p>
+                {{ form.categories }}
+                {% if form.categories.errors %}<div class="text-danger">{{ form.categories.errors }}</div>{% endif %}
+            </div>
+        </div>
+
+        <div class="sticky-footer">
+            <button type="submit" class="btn btn-primary save-btn">
+                <span class="icon">save</span>
+                {% trans "حفظ الإعدادات" %}
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .custom-settings-wrapper {
+        padding: 2rem;
+        background-color: var(--bg-secondary);
+        border-radius: 10px;
+        color: var(--text-primary);
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .settings-section {
+        margin-bottom: 3rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--accent-color);
+    }
+
+    .custom-grid {
+        display: grid;
+        gap: 1.5rem;
+    }
+
+    .custom-grid.grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.6rem 0.8rem;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 0.9rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .form-control:focus {
+        border-color: var(--accent-color);
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .flex-checkbox-container {
+        padding: 1rem;
+        background-color: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+    }
+
+    .custom-switch-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .custom-switch-wrapper input[type="checkbox"] {
+        width: 2.5rem;
+        height: 1.25rem;
+        cursor: pointer;
+    }
+
+    .sticky-footer {
+        position: sticky;
+        bottom: 0;
+        padding: 1.5rem;
+        background-color: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        margin: 2rem -2rem -2rem -2rem;
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+        box-shadow: 0 -4px 6px rgba(0,0,0,0.1);
+        z-index: 100;
+    }
+
+    .save-btn {
+        padding: 0.8rem 2.5rem;
+        font-size: 1.1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .text-danger {
+        color: var(--accent-danger, #ef4444);
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+    }
+
+    @media (max-width: 768px) {
+        .custom-grid.grid-2 {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

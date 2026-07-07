@@ -16,7 +16,8 @@ from .views import (
     AuthorCreateView,
     CommentActionView,
     HomePageSettingsView,
-    SiteSettingsView
+    SiteSettingsView,
+    DashboardAISettingsView
 )
 
 app_name = 'dashboard'
@@ -35,6 +36,7 @@ urlpatterns = [
     path('stats/', AuthorStatsView.as_view(), name='stats'),
     path('settings/home/', HomePageSettingsView.as_view(), name='homepage_settings'),
     path('settings/site/', SiteSettingsView.as_view(), name='site_settings'),
+    path('settings/ai/', DashboardAISettingsView.as_view(), name='ai_settings'),
     
     # Comments moderation
     path('comments/<int:pk>/action/', CommentActionView.as_view(), name='comment_action'),

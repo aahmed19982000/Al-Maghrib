@@ -1,0 +1,100 @@
+{% extends 'ai_dashboard/base.html' %}
+
+{% block title %}سجل العمليات - بوابة الذكاء الاصطناعي{% endblock %}
+{% block header_title %}سجل العمليات والأخطاء{% endblock %}
+
+{% block content %}
+<div class="glass-panel p-6 rounded-2xl border border-slate-800">
+    <div class="mb-6">
+        <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-file-invoice text-teal-400 ml-2"></i>تفاصيل عمليات الجلب والتوليد</h3>
+        <p class="text-xs text-slate-400 mt-1">تتبع حالة فحص الأخبار، والنشر الناجح أو تفاصيل المشاكل والأخطاء التي يواجهها النظام.</p>
+    </div>
+
+    <!-- Logs Table -->
+    {% if logs %}
+    <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40">
+        <table class="w-full text-right border-collapse">
+            <thead>
+                <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase bg-slate-900/80">
+                    <th scope="col" class="px-6 py-4 font-bold">التاريخ والوقت</th>
+                    <th scope="col" class="px-6 py-4 font-bold">الموقع المصدر</th>
+                    <th scope="col" class="px-6 py-4 font-bold">الخبر المستهدف / الأصلي</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-center">الحالة</th>
+                    <th scope="col" class="px-6 py-4 font-bold">الخبر المنشور / رسالة الخطأ</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 text-sm text-slate-300">
+                {% for log in logs %}
+                <tr class="hover:bg-slate-800/30 transition duration-150 align-top">
+                    <td class="px-6 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+                    <td class="px-6 py-4 font-semibold text-slate-200 whitespace-nowrap">{{ log.source.name|default:"مصدر محذوف" }}</td>
+                    <td class="px-6 py-4 max-w-xs">
+                        <div class="font-medium text-slate-300 truncate" title="{{ log.title }}">{{ log.title|default:"بدون عنوان" }}</div>
+                        <a href="{{ log.source_url }}" target="_blank" class="text-[10px] text-teal-500 hover:underline truncate block mt-0.5 font-mono" title="{{ log.source_url }}">{{ log.source_url }}</a>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if log.status == 'success' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><i class="fa-solid fa-check ml-1"></i>نجح</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20"><i class="fa-solid fa-xmark ml-1"></i>فشل</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 max-w-md">
+                        {% if log.status == 'success' %}
+                            {% if log.published_url %}
+                                <a href="{{ log.published_url }}" target="_blank" class="text-xs text-teal-450 hover:underline flex items-center font-medium">
+                                    {% if log.wp_site %}
+                                        <i class="fa-solid fa-earth-americas ml-1.5 text-sky-400" title="تم النشر على ووردبريس"></i>
+                                        <span class="truncate" title="رابط الخبر على {{ log.wp_site.name }}">[{{ log.wp_site.name }}] {{ log.title|default:log.article.title }}</span>
+                                    {% else %}
+                                        <i class="fa-solid fa-square-rss ml-1.5 text-teal-400"></i>
+                                        <span class="truncate">{{ log.title|default:log.article.title }}</span>
+                                    {% endif %}
+                                </a>
+                            {% elif log.article %}
+                                <a href="{{ log.article.get_absolute_url }}" target="_blank" class="text-xs text-teal-400 hover:underline flex items-center font-medium">
+                                    <i class="fa-solid fa-square-rss ml-1.5"></i>
+                                    <span class="truncate">{{ log.article.title }}</span>
+                                </a>
+                            {% else %}
+                                <span class="text-xs text-slate-500 italic">تم النشر بنجاح</span>
+                            {% endif %}
+                        {% elif log.status == 'failed' %}
+                            <div class="text-xs text-rose-450 bg-rose-950/30 p-2.5 rounded-lg border border-rose-900/50 break-words font-mono">
+                                {% if log.wp_site %}<strong>[{{ log.wp_site.name }}]</strong> {% endif %}{{ log.error_message }}
+                            </div>
+                        {% else %}
+                            <span class="text-xs text-slate-500 italic">لا يوجد سجل منشور أو محذوف</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="flex items-center justify-between border-t border-slate-800 pt-6 mt-6">
+        <div class="text-xs text-slate-400">
+            صفحة <strong>{{ page_obj.number }}</strong> من أصل <strong>{{ paginator.num_pages }}</strong> صفحة.
+        </div>
+        <div class="flex space-x-2 space-x-reverse">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition">السابق</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition">التالي</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="text-center py-16 text-slate-500">
+        <i class="fa-solid fa-file-invoice text-5xl mb-4 block text-slate-600"></i>
+        <p>سجل العمليات فارغ تماماً.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

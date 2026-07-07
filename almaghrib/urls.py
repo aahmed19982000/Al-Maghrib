@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/', include('api.urls')),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('ckeditor5/', include('django_ckeditor_5.urls')),
+    path('ai-dashboard/', include('news.urls_ai')),
 ]
 
 urlpatterns += i18n_patterns(

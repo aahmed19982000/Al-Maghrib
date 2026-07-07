@@ -7,7 +7,8 @@ from .views import (
     CategoryAPIView,
     AuthorAPIView,
     AuthorDetailAPIView,
-    SearchAPIView
+    SearchAPIView,
+    AISettingsAPIView
 )
 
 app_name = 'api'
@@ -21,4 +22,5 @@ urlpatterns = [
     path('authors/', AuthorAPIView.as_view(), name='author_list'),
     path('authors/<int:pk>/', AuthorDetailAPIView.as_view(), name='author_detail'),
     path('search/', SearchAPIView.as_view(), name='search'),
+    path('ai-settings/', AISettingsAPIView.as_view(), name='ai_settings'),
 ]
