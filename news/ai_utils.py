@@ -76,7 +76,14 @@ def fetch_news_items_from_source(source_url):
         response.raise_for_status()
         content = response.content
         
-        soup = BeautifulSoup(content, 'xml')
+        # Try parsing as RSS/XML with fallback
+        try:
+            soup = BeautifulSoup(content, 'lxml-xml')
+        except Exception:
+            try:
+                soup = BeautifulSoup(content, 'xml')
+            except Exception:
+                soup = BeautifulSoup(content, 'html.parser')
         channel_items = soup.find_all('item')
         
         if channel_items:
