@@ -5,49 +5,60 @@
 
 {% block content %}
 <!-- Overview Stats Grid -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
     
     <!-- Stat 1: Active Sources -->
-    <div class="glass-card p-6 rounded-2xl flex items-center justify-between">
-        <div class="space-y-2">
-            <p class="text-sm font-medium text-slate-400">المصادر النشطة</p>
-            <h3 class="text-3xl font-bold text-white">{{ active_sources_count }} <span class="text-sm text-slate-500">/ {{ sources_count }}</span></h3>
+    <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
+        <div class="space-y-1">
+            <p class="text-xs font-medium text-slate-400">المصادر النشطة</p>
+            <h3 class="text-2xl font-bold text-white">{{ active_sources_count }} <span class="text-xs text-slate-500">/ {{ sources_count }}</span></h3>
         </div>
-        <div class="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center border border-teal-500/20">
-            <i class="fa-solid fa-rss text-xl text-teal-400"></i>
+        <div class="w-10 h-10 bg-teal-500/10 rounded-xl flex items-center justify-center border border-teal-500/20">
+            <i class="fa-solid fa-rss text-lg text-teal-400"></i>
         </div>
     </div>
 
     <!-- Stat 2: Total Success Imports -->
-    <div class="glass-card p-6 rounded-2xl flex items-center justify-between">
-        <div class="space-y-2">
-            <p class="text-sm font-medium text-slate-400">الأخبار المولدة بنجاح</p>
-            <h3 class="text-3xl font-bold text-emerald-400">{{ total_articles_generated }}</h3>
+    <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
+        <div class="space-y-1">
+            <p class="text-xs font-medium text-slate-400">الأخبار المولدة بنجاح</p>
+            <h3 class="text-2xl font-bold text-emerald-400">{{ total_articles_generated }}</h3>
         </div>
-        <div class="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
-            <i class="fa-solid fa-square-check text-xl text-emerald-400"></i>
+        <div class="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20">
+            <i class="fa-solid fa-square-check text-lg text-emerald-400"></i>
         </div>
     </div>
 
     <!-- Stat 3: Failed attempts -->
-    <div class="glass-card p-6 rounded-2xl flex items-center justify-between">
-        <div class="space-y-2">
-            <p class="text-sm font-medium text-slate-400">محاولات فشلت</p>
-            <h3 class="text-3xl font-bold {% if total_failures > 0 %}text-rose-400{% else %}text-slate-400{% endif %}">{{ total_failures }}</h3>
+    <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
+        <div class="space-y-1">
+            <p class="text-xs font-medium text-slate-400">محاولات فشلت</p>
+            <h3 class="text-2xl font-bold {% if total_failures > 0 %}text-rose-400{% else %}text-slate-400{% endif %}">{{ total_failures }}</h3>
         </div>
-        <div class="w-12 h-12 {% if total_failures > 0 %}bg-rose-500/10 border-rose-500/20{% else %}bg-slate-500/10 border-slate-500/20{% endif %} rounded-xl flex items-center justify-center border">
-            <i class="fa-solid fa-triangle-exclamation text-xl {% if total_failures > 0 %}text-rose-400{% else %}text-slate-400{% endif %}"></i>
+        <div class="w-10 h-10 {% if total_failures > 0 %}bg-rose-500/10 border-rose-500/20{% else %}bg-slate-500/10 border-slate-500/20{% endif %} rounded-xl flex items-center justify-center border">
+            <i class="fa-solid fa-triangle-exclamation text-lg {% if total_failures > 0 %}text-rose-400{% else %}text-slate-400{% endif %}"></i>
         </div>
     </div>
 
     <!-- Stat 4: Daily Limit -->
-    <div class="glass-card p-6 rounded-2xl flex items-center justify-between">
-        <div class="space-y-2">
-            <p class="text-sm font-medium text-slate-400">الحد اليومي للأخبار</p>
-            <h3 class="text-3xl font-bold text-teal-400">{{ settings.articles_per_day }} <span class="text-xs text-slate-500">أخبار/يوم</span></h3>
+    <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
+        <div class="space-y-1">
+            <p class="text-xs font-medium text-slate-400">الحد اليومي للأخبار</p>
+            <h3 class="text-2xl font-bold text-teal-400">{{ settings.articles_per_day }} <span class="text-xs text-slate-500">أخبار/يوم</span></h3>
         </div>
-        <div class="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center border border-teal-500/20">
-            <i class="fa-solid fa-clock text-xl text-teal-400"></i>
+        <div class="w-10 h-10 bg-teal-500/10 rounded-xl flex items-center justify-center border border-teal-500/20">
+            <i class="fa-solid fa-clock text-lg text-teal-400"></i>
+        </div>
+    </div>
+
+    <!-- Stat 5: Total API Cost -->
+    <div class="glass-card p-4 rounded-2xl flex items-center justify-between">
+        <div class="space-y-1">
+            <p class="text-xs font-medium text-slate-400">إجمالي تكلفة الـ API</p>
+            <h3 class="text-2xl font-bold text-amber-400">${{ total_cost|floatformat:4 }}</h3>
+        </div>
+        <div class="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center border border-amber-500/20">
+            <i class="fa-solid fa-coins text-lg text-amber-400"></i>
         </div>
     </div>
 

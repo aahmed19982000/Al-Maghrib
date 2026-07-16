@@ -30,6 +30,10 @@ class DashboardIndexView(StaffRequiredMixin, TemplateView):
         context['total_articles_generated'] = AIImportLog.objects.filter(status='success').count()
         context['total_failures'] = AIImportLog.objects.filter(status='failed').count()
         
+        # Calculate total estimated cost
+        logs_qs = AIImportLog.objects.select_related('article').all()
+        context['total_cost'] = sum(log.estimated_cost for log in logs_qs)
+        
         # Lists
         context['recent_articles'] = Article.objects.filter(ai_logs__isnull=False).distinct().order_by('-published_at')[:8]
         context['recent_logs'] = AIImportLog.objects.all().order_by('-created_at')[:10]
