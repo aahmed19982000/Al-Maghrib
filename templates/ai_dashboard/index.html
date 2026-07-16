@@ -147,12 +147,15 @@
                             <p class="text-[10px] text-rose-400 mt-1 bg-rose-950/30 p-1.5 rounded border border-rose-950/50 break-words">{{ log.error_message }}</p>
                         {% endif %}
                     </div>
-                    <div class="mr-4">
+                    <div class="mr-4 flex flex-col items-end space-y-1">
                         {% if log.status == 'success' %}
                             <span class="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-lg border border-emerald-500/20 flex items-center"><i class="fa-solid fa-check ml-1"></i>نجح</span>
                         {% else %}
                             <span class="px-2 py-1 bg-rose-500/10 text-rose-400 text-[10px] font-bold rounded-lg border border-rose-500/20 flex items-center"><i class="fa-solid fa-xmark ml-1"></i>فشل</span>
                         {% endif %}
+                        <span class="font-mono text-[9px] text-slate-400 bg-slate-800/40 px-1.5 py-0.5 rounded border border-slate-700/30">
+                            ${{ log.estimated_cost|floatformat:5 }}
+                        </span>
                     </div>
                 </div>
                 {% endfor %}

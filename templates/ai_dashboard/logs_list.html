@@ -20,6 +20,7 @@
                     <th scope="col" class="px-6 py-4 font-bold">الموقع المصدر</th>
                     <th scope="col" class="px-6 py-4 font-bold">الخبر المستهدف / الأصلي</th>
                     <th scope="col" class="px-6 py-4 font-bold text-center">الحالة</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-center">التكلفة</th>
                     <th scope="col" class="px-6 py-4 font-bold">الخبر المنشور / رسالة الخطأ</th>
                 </tr>
             </thead>
@@ -38,6 +39,11 @@
                         {% else %}
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20"><i class="fa-solid fa-xmark ml-1"></i>فشل</span>
                         {% endif %}
+                    </td>
+                    <td class="px-6 py-4 text-center whitespace-nowrap">
+                        <span class="font-mono text-xs text-slate-300 bg-slate-800/60 px-2 py-1 rounded border border-slate-700/50">
+                            ${{ log.estimated_cost|floatformat:5 }}
+                        </span>
                     </td>
                     <td class="px-6 py-4 max-w-md">
                         {% if log.status == 'success' %}

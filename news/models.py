@@ -344,8 +344,37 @@ class AIImportLog(models.Model):
         verbose_name_plural = "AI Import Logs"
         ordering = ['-created_at']
 
+    @property
+    def estimated_cost(self):
+        """
+        Estimates the API cost of the Gemini request in USD.
+        """
+        if self.status == 'failed' and self.error_message and "لم يستجب الـ API" in self.error_message:
+            return 0.0
+            
+        # Estimating input tokens (Prompt has instructions, categories, and original title/desc)
+        # Average input token count is about 1500 tokens
+        input_tokens = 1500
+        
+        # Output token estimation based on generated word count (if successful)
+        output_tokens = 0
+        if self.article:
+            text = f"{self.article.title or ''} {self.article.excerpt or ''} {self.article.body or ''}"
+            word_count = len(text.split())
+            output_tokens = int(word_count * 2.2)  # Arabic words are ~2.2 tokens on Gemini
+        elif self.status == 'success':
+            output_tokens = 800
+        else:
+            # If failed but API was called
+            output_tokens = 400
+            
+        input_cost = (input_tokens / 1000000.0) * 0.30
+        output_cost = (output_tokens / 1000000.0) * 2.50
+        return input_cost + output_cost
+
     def __str__(self):
         return f"{self.title or self.source_url} - {self.status}"
+
 
 
 class WordPressSite(models.Model):
