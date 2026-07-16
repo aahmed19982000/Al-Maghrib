@@ -3,6 +3,7 @@ import json
 import logging
 import bleach
 import requests
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from django.utils import timezone
 from django.core.files.base import ContentFile
@@ -16,13 +17,34 @@ logger = logging.getLogger(__name__)
 # Article body is rendered with the `|safe` template filter, so AI output must be
 # restricted to a small safe subset before it's ever saved.
 ALLOWED_BODY_TAGS = ['p', 'br', 'strong', 'em', 'b', 'i']
-ALLOWED_BODY_TAGS_WITH_HEADINGS = ALLOWED_BODY_TAGS + ['h2', 'h3']
 
 
-def sanitize_ai_body(html, allow_headings=False):
-    """Strips any tag/attribute outside a safe allowlist from AI-generated article HTML."""
-    tags = ALLOWED_BODY_TAGS_WITH_HEADINGS if allow_headings else ALLOWED_BODY_TAGS
-    return bleach.clean(html or '', tags=tags, attributes={}, strip=True)
+def sanitize_ai_body(html, allow_headings=False, allow_links=False, link_base_url=None):
+    """
+    Strips any tag/attribute outside a safe allowlist from AI-generated article HTML.
+    When allow_links is set, <a href> is kept only if its host matches link_base_url -
+    the AI is never trusted to place a link to an arbitrary/external domain.
+    """
+    tags = list(ALLOWED_BODY_TAGS)
+    attributes = {}
+    if allow_headings:
+        tags += ['h2', 'h3']
+    if allow_links:
+        tags += ['a']
+        attributes['a'] = ['href']
+
+    cleaned = bleach.clean(html or '', tags=tags, attributes=attributes, protocols=['http', 'https'], strip=True)
+
+    if allow_links and link_base_url:
+        allowed_host = urlparse(link_base_url).netloc
+        soup = BeautifulSoup(cleaned, 'html.parser')
+        for a_tag in soup.find_all('a'):
+            href = a_tag.get('href', '')
+            if urlparse(href).netloc != allowed_host:
+                a_tag.unwrap()
+        cleaned = str(soup)
+
+    return cleaned
 
 
 def sanitize_ai_text(text):
@@ -284,6 +306,32 @@ def get_or_create_ai_author():
         user.set_unusable_password()
         user.save()
     return user
+
+
+def fetch_recent_wp_posts(wp_site, limit=5):
+    """
+    Fetches a small list of recently published posts from the target WordPress
+    site's own public REST API, to offer as internal-link candidates. Read-only
+    and unauthenticated - these are just the site's normal public posts.
+    """
+    base_url = wp_site.url.rstrip('/')
+    try:
+        resp = requests.get(
+            f"{base_url}/wp-json/wp/v2/posts",
+            params={'per_page': limit, '_fields': 'title,link'},
+            timeout=10
+        )
+        resp.raise_for_status()
+        posts = []
+        for p in resp.json():
+            link = p.get('link', '')
+            title = p.get('title', {}).get('rendered', '')
+            if link and title:
+                posts.append({'title': title, 'link': link})
+        return posts
+    except Exception as e:
+        logger.warning(f"Failed to fetch recent posts from {wp_site.name} for internal linking: {e}")
+        return []
 
 
 def get_or_create_wp_tag_ids(wp_site, tag_names, auth):
@@ -619,6 +667,17 @@ def run_ai_generation_cycle():
                     else:
                         body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
 
+                    internal_link_instruction = ""
+                    if wp_site.use_internal_links:
+                        candidate_posts = fetch_recent_wp_posts(wp_site)
+                        if candidate_posts:
+                            links_list_str = "\n".join([f"- {p['title']}: {p['link']}" for p in candidate_posts])
+                            internal_link_instruction = (
+                                f"\n7. إن أمكن بشكل طبيعي، ضمّن رابطاً داخلياً واحداً أو رابطين على الأكثر باستخدام وسم "
+                                f"<a href=\"...\">نص الرابط</a> داخل فقرات الخبر، يشيران فقط إلى أحد الروابط التالية "
+                                f"لمقالات أخرى على نفس الموقع (لا تخترع أي رابط جديد، استخدم الروابط أدناه حرفياً):\n{links_list_str}"
+                            )
+
                     prompt = (
                         f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
                         f"استناداً إلى المعلومات والخبر التالي:\n"
@@ -639,7 +698,8 @@ def run_ai_generation_cycle():
                         f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر الأساسي، لاستخدامها في تحليل السيو (SEO).\n"
                         f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً، يتضمن العبارة المفتاحية أعلاه.\n"
                         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم قصيرة ومحددة خاصة بموضوع هذا الخبر تحديداً (مثال لخبر عن سعر اليورو: \"سعر اليورو اليوم\"، \"اليورو مقابل الجنيه\")، بدون ذكر اسم أي موقع إخباري.\n\n"
-                        f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n\n"
+                        f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+                        f"{internal_link_instruction}\n\n"
                         f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
                     )
 
@@ -658,7 +718,12 @@ def run_ai_generation_cycle():
                         data = json.loads(cleaned_response)
                         new_title = sanitize_ai_text(data.get("title", "").strip())
                         new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
-                        new_body = sanitize_ai_body(data.get("body", "").strip(), allow_headings=wp_site.use_rich_formatting)
+                        new_body = sanitize_ai_body(
+                            data.get("body", "").strip(),
+                            allow_headings=wp_site.use_rich_formatting,
+                            allow_links=wp_site.use_internal_links,
+                            link_base_url=wp_site.url,
+                        )
                         if wp_site.use_rich_formatting:
                             new_body = apply_heading_color(new_body, wp_site.heading_color)
                         focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())

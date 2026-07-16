@@ -131,6 +131,15 @@
                 </div>
             </div>
 
+            <!-- Internal Linking (SEO) -->
+            <div class="flex items-center space-x-3 space-x-reverse bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
+                <input type="checkbox" name="use_internal_links" id="id_use_internal_links" {% if form.use_internal_links.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                <div class="flex-1">
+                    <label for="id_use_internal_links" class="block text-sm font-bold text-slate-200">إضافة روابط داخلية تلقائية (SEO)</label>
+                    <p class="text-xs text-slate-500">عند التفعيل، يحاول النظام تضمين رابط داخلي أو رابطين ضمن نص الخبر يشيران إلى مقالات حديثة أخرى منشورة على هذا الموقع نفسه.</p>
+                </div>
+            </div>
+
             <!-- Form Actions -->
             <div class="flex items-center justify-end space-x-3 space-x-reverse pt-4 border-t border-slate-800">
                 <a href="{% url 'news_ai:wp_sites' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold rounded-xl transition duration-150">إلغاء</a>

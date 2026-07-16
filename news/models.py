@@ -399,6 +399,7 @@ class WordPressSite(models.Model):
     category_mapping = models.TextField(default="{}", help_text="خريطة الأقسام بتنسيق JSON، مثال: {\"اسم القسم المحلي\": معرف_القسم_في_ووردبريس}", verbose_name="خريطة الأقسام")
     use_rich_formatting = models.BooleanField(default=False, verbose_name="تنسيق غني بعناوين فرعية ملوّنة (SEO)", help_text="عند التفعيل، يُقسَّم الخبر إلى عناوين فرعية H2/H3 ملوّنة بدلاً من فقرات فقط، مع إضافة وسوم (Tags) تلقائية لتحسين توافق السيو (Yoast).")
     heading_color = models.CharField(max_length=7, default='#0066cc', verbose_name="لون العناوين الفرعية", help_text="كود اللون السداسي عشري (Hex)، مثال: #0066cc")
+    use_internal_links = models.BooleanField(default=False, verbose_name="إضافة روابط داخلية تلقائية (SEO)", help_text="عند التفعيل، يحاول النظام تضمين رابط داخلي أو رابطين ضمن نص الخبر يشيران إلى مقالات حديثة أخرى منشورة على هذا الموقع نفسه.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
