@@ -379,6 +379,8 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None):
         'excerpt': article.excerpt or '',
         'status': 'publish',
     }
+    if wp_site.wp_author_id:
+        payload['author'] = wp_site.wp_author_id
     if featured_media_id:
         payload['featured_media'] = featured_media_id
     if wp_categories:

@@ -392,6 +392,7 @@ class WordPressSite(models.Model):
     url = models.URLField(max_length=1000, verbose_name="رابط الموقع (WordPress URL)")
     username = models.CharField(max_length=150, verbose_name="اسم المستخدم في ووردبريس")
     application_password = EncryptedCharField(max_length=500, verbose_name="كلمة مرور التطبيق (Application Password)")
+    wp_author_id = models.PositiveIntegerField(blank=True, null=True, verbose_name="معرف الكاتب في ووردبريس (Author ID)", help_text="معرّف (ID) المستخدم في ووردبريس الذي سيُنسب إليه المقال المنشور. اتركه فارغاً لينشر باسم المستخدم المستخدم في المصادقة (username أعلاه).")
     daily_limit = models.PositiveIntegerField(default=3, verbose_name="الحد الأقصى للنشر اليومي")
     is_active = models.BooleanField(default=True, verbose_name="نشط")
     sources = models.ManyToManyField(AISource, related_name='wp_sites', verbose_name="مصادر الأخبار المرتبطة", blank=True)

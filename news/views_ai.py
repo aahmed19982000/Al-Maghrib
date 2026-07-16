@@ -159,7 +159,7 @@ class WordPressSiteListView(StaffRequiredMixin, ListView):
 
 class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color']
+    fields = ['name', 'url', 'username', 'application_password', 'wp_author_id', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
@@ -170,7 +170,7 @@ class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
 
 class WordPressSiteUpdateView(StaffRequiredMixin, UpdateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color']
+    fields = ['name', 'url', 'username', 'application_password', 'wp_author_id', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
