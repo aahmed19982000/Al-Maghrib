@@ -286,6 +286,7 @@ class AISettings(models.Model):
     articles_per_day = models.PositiveIntegerField(default=3, help_text="Number of articles to publish daily.")
     max_words = models.PositiveIntegerField(default=500, help_text="Max word count per article.")
     is_active = models.BooleanField(default=True, help_text="Toggle AI news fetching on or off.")
+    publish_to_main_site = models.BooleanField(default=True, verbose_name="النشر على الموقع الأساسي", help_text="تفعيل أو تعطيل نشر الأخبار المولدة على الموقع الرئيسي.")
     default_author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_settings', verbose_name="الكاتب الافتراضي للأخبار")
     categories = models.ManyToManyField(Category, blank=True, related_name='ai_settings', verbose_name="الأقسام المتاحة للنشر")
     local_sources = models.ManyToManyField('AISource', blank=True, related_name='local_ai_settings', verbose_name="مصادر الأخبار المغذية لموقع المغرب العربي", help_text="إذا تركت هذا الحقل فارغاً سيستخدم النظام جميع المصادر النشطة للنشر المحلي.")
