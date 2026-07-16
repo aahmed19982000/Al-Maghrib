@@ -14,6 +14,9 @@ class ArticleDetailView(DetailView):
     template_name = 'news/article_detail.html'
     context_object_name = 'article'
 
+    def get_queryset(self):
+        return Article.objects.filter(status='published')
+
     def get_object(self, queryset=None):
         obj = super().get_object(queryset)
         # Increment views count

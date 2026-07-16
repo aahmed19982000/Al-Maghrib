@@ -144,7 +144,7 @@ class TriggerScraperView(StaffRequiredMixin, View):
                 messages.info(request, "تم تشغيل النظام ولكن لم يتم توليد أي أخبار جديدة (ربما لم يتبقَ أخبار جديدة اليوم أو تم الوصول للحد اليومي).")
         except Exception as e:
             messages.error(request, f"فشل تشغيل عملية التوليد الآلية: {str(e)}")
-            
+
         return redirect('news_ai:index')
     
     def get(self, request, *args, **kwargs):

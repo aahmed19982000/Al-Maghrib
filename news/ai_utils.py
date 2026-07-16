@@ -428,9 +428,13 @@ def run_ai_generation_cycle():
         logger.error("Gemini API key is not configured. Aborting run.")
         return 0
 
-    # Get active news sources (filtered by local_sources if configured)
+    # Iterate every active source. local_sources (if configured) only restricts which
+    # sources are eligible to publish to the main local site (checked per-source below) -
+    # it must not hide sources that are only linked to a WordPress site.
     local_sources_qs = ai_settings.local_sources.filter(is_active=True)
-    sources = local_sources_qs if local_sources_qs.exists() else AISource.objects.filter(is_active=True)
+    local_sources_restricted = local_sources_qs.exists()
+    local_source_ids = set(local_sources_qs.values_list('id', flat=True)) if local_sources_restricted else None
+    sources = AISource.objects.filter(is_active=True)
     if not sources.exists():
         logger.warning("No active AI sources configured.")
         return 0
@@ -477,7 +481,8 @@ def run_ai_generation_cycle():
             if Article.all_objects.filter(slug=generate_slug_for_title(item['title'])).exists():
                 continue
                 
-            if ai_settings.publish_to_main_site:
+            source_allowed_for_local = not local_sources_restricted or source.id in local_source_ids
+            if ai_settings.publish_to_main_site and source_allowed_for_local:
                 # Always generate and publish locally first (Case 1)
                 prompt = (
                     f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
