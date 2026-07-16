@@ -317,7 +317,7 @@ def get_or_create_wp_tag_ids(wp_site, tag_names, auth):
     return tag_ids
 
 
-def push_article_to_wordpress(wp_site, article, extra_tag_names=None):
+def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyword=None, meta_description=None):
     """
     Publishes an article to an external WordPress site via REST API.
     Handles uploading the cover image first and mapping categories.
@@ -389,6 +389,12 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None):
         tag_ids = get_or_create_wp_tag_ids(wp_site, extra_tag_names, auth)
         if tag_ids:
             payload['tags'] = tag_ids
+    if focus_keyword or meta_description:
+        payload['meta'] = {}
+        if focus_keyword:
+            payload['meta']['_yoast_wpseo_focuskw'] = focus_keyword
+        if meta_description:
+            payload['meta']['_yoast_wpseo_metadesc'] = meta_description
 
     # 4. Push post
     try:
@@ -629,7 +635,9 @@ def run_ai_generation_cycle():
                         f"- \"title\": عنوان الخبر الجديد\n"
                         f"- \"excerpt\": ملخص الخبر\n"
                         f"- \"body\": {body_format_instruction}\n"
-                        f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n\n"
+                        f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
+                        f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر الأساسي، لاستخدامها في تحليل السيو (SEO).\n"
+                        f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً، يتضمن العبارة المفتاحية أعلاه.\n\n"
                         f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n\n"
                         f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
                     )
@@ -652,6 +660,8 @@ def run_ai_generation_cycle():
                         new_body = sanitize_ai_body(data.get("body", "").strip(), allow_headings=wp_site.use_rich_formatting)
                         if wp_site.use_rich_formatting:
                             new_body = apply_heading_color(new_body, wp_site.heading_color)
+                        focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
+                        meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
                         try:
                             chosen_cat_id = int(data.get("category_id"))
                         except (ValueError, TypeError):
@@ -701,8 +711,11 @@ def run_ai_generation_cycle():
                         # Push this unique version to this specific WP site
                         published_url = None
                         try:
-                            tag_names = [source.name, category.name if category else None]
-                            published_url = push_article_to_wordpress(wp_site, article, extra_tag_names=tag_names)
+                            tag_names = [category.name] if category else []
+                            published_url = push_article_to_wordpress(
+                                wp_site, article, extra_tag_names=tag_names,
+                                focus_keyword=focus_keyword, meta_description=meta_description
+                            )
                         except Exception as wpe:
                             logger.error(f"Error syndicating to WP site {wp_site.name}: {wpe}")
                             
