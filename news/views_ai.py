@@ -30,9 +30,9 @@ class DashboardIndexView(StaffRequiredMixin, TemplateView):
         context['total_articles_generated'] = AIImportLog.objects.filter(status='success').count()
         context['total_failures'] = AIImportLog.objects.filter(status='failed').count()
         
-        # Calculate total estimated cost
-        logs_qs = AIImportLog.objects.select_related('article').all()
-        context['total_cost'] = sum(log.estimated_cost for log in logs_qs)
+        # Calculate total estimated cost (cached per-row at creation time, summed in the DB)
+        from django.db.models import Sum
+        context['total_cost'] = AIImportLog.objects.aggregate(total=Sum('estimated_cost'))['total'] or 0
         
         # Lists
         context['recent_articles'] = Article.objects.filter(ai_logs__isnull=False).distinct().order_by('-published_at')[:8]
@@ -43,7 +43,7 @@ class DashboardIndexView(StaffRequiredMixin, TemplateView):
 
 class SettingsUpdateView(StaffRequiredMixin, UpdateView):
     model = AISettings
-    fields = ['gemini_api_key', 'telegram_bot_token', 'telegram_allowed_chats', 'articles_per_day', 'max_words', 'is_active', 'publish_to_main_site']
+    fields = ['gemini_api_key', 'telegram_bot_token', 'telegram_allowed_chats', 'articles_per_day', 'max_words', 'is_active', 'publish_to_main_site', 'default_author']
     template_name = 'ai_dashboard/settings.html'
     success_url = reverse_lazy('news_ai:index')
 
@@ -52,10 +52,12 @@ class SettingsUpdateView(StaffRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        from django.contrib.auth.models import User
         from .models import WordPressSite
         context['wp_sites'] = WordPressSite.objects.filter(is_active=True)
         context['all_sources'] = AISource.objects.filter(is_active=True)
         context['local_source_ids'] = list(self.get_object().local_sources.values_list('id', flat=True))
+        context['staff_authors'] = User.objects.filter(is_staff=True)
         return context
 
     def form_valid(self, form):
@@ -157,7 +159,7 @@ class WordPressSiteListView(StaffRequiredMixin, ListView):
 
 class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'daily_limit', 'is_active', 'sources', 'category_mapping']
+    fields = ['name', 'url', 'username', 'application_password', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
@@ -168,7 +170,7 @@ class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
 
 class WordPressSiteUpdateView(StaffRequiredMixin, UpdateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'daily_limit', 'is_active', 'sources', 'category_mapping']
+    fields = ['name', 'url', 'username', 'application_password', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 

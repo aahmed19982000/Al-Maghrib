@@ -1,5 +1,7 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth.models import User
+from core.fields import EncryptedCharField
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from mptt.models import MPTTModel, TreeForeignKey
@@ -279,9 +281,9 @@ def generate_api_token():
 
 
 class AISettings(models.Model):
-    gemini_api_key = models.CharField(max_length=255, blank=True, null=True, help_text="Gemini API Key. If empty, uses environment variable.")
+    gemini_api_key = EncryptedCharField(max_length=500, blank=True, null=True, help_text="Gemini API Key. If empty, uses environment variable.")
     api_token = models.CharField(max_length=255, default=generate_api_token, unique=True, help_text="مفتاح الأمان للربط الآمن بالووردبريس (Django API Token).")
-    telegram_bot_token = models.CharField(max_length=255, blank=True, null=True, help_text="رمز توكن بوت تليجرام (Telegram Bot Token) للتحكم بالنظام.")
+    telegram_bot_token = EncryptedCharField(max_length=500, blank=True, null=True, help_text="رمز توكن بوت تليجرام (Telegram Bot Token) للتحكم بالنظام.")
     telegram_allowed_chats = models.TextField(blank=True, null=True, help_text="معرفات محادثات تليجرام المسموحة، مفصولة بفاصلة (مثال: 1234567, 9876543).")
     articles_per_day = models.PositiveIntegerField(default=3, help_text="Number of articles to publish daily.")
     max_words = models.PositiveIntegerField(default=500, help_text="Max word count per article.")
@@ -312,7 +314,7 @@ class AISource(models.Model):
         ('both', 'مختلط (Mixed)'),
     )
     name = models.CharField(max_length=255, verbose_name="اسم الموقع المصدر")
-    url = models.URLField(max_length=500, unique=True, verbose_name="رابط التغذية RSS أو الموقع")
+    url = models.URLField(max_length=1000, unique=True, verbose_name="رابط التغذية RSS أو الموقع")
     is_active = models.BooleanField(default=True, verbose_name="نشط")
     language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, default='ar', verbose_name="لغة المصدر")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -333,11 +335,12 @@ class AIImportLog(models.Model):
     source = models.ForeignKey(AISource, on_delete=models.SET_NULL, null=True, related_name='logs', verbose_name="المصدر")
     article = models.ForeignKey(Article, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_logs', verbose_name="الخبر المنشور")
     wp_site = models.ForeignKey('WordPressSite', on_delete=models.SET_NULL, null=True, blank=True, related_name='import_logs', verbose_name="الموقع المستهدف")
-    source_url = models.URLField(max_length=500, verbose_name="رابط الخبر الأصلي")
-    published_url = models.URLField(max_length=500, blank=True, null=True, verbose_name="رابط الخبر المنشور")
+    source_url = models.URLField(max_length=1000, verbose_name="رابط الخبر الأصلي")
+    published_url = models.URLField(max_length=1000, blank=True, null=True, verbose_name="رابط الخبر المنشور")
     title = models.CharField(max_length=255, blank=True, null=True, verbose_name="عنوان الخبر")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='success')
     error_message = models.TextField(blank=True, null=True, verbose_name="رسالة الخطأ")
+    estimated_cost = models.DecimalField(max_digits=10, decimal_places=6, default=0, editable=False, verbose_name="التكلفة التقديرية (USD)")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -345,21 +348,22 @@ class AIImportLog(models.Model):
         verbose_name_plural = "AI Import Logs"
         ordering = ['-created_at']
 
-    @property
-    def estimated_cost(self):
+    def _calculate_estimated_cost(self):
         """
         Estimates the API cost of the Gemini request in USD.
+        Computed once at creation time and cached in estimated_cost, since the
+        inputs (article word count, status) never change afterward.
         """
         if self.status == 'failed' and self.error_message and "لم يستجب الـ API" in self.error_message:
-            return 0.0
-            
+            return Decimal('0')
+
         # Estimating input tokens (Prompt has instructions, categories, and original title/desc)
         # Average input token count is about 1500 tokens
         input_tokens = 1500
-        
+
         # Output token estimation based on generated word count (if successful)
         output_tokens = 0
-        if self.article:
+        if self.article_id:
             text = f"{self.article.title or ''} {self.article.excerpt or ''} {self.article.body or ''}"
             word_count = len(text.split())
             output_tokens = int(word_count * 2.2)  # Arabic words are ~2.2 tokens on Gemini
@@ -368,10 +372,15 @@ class AIImportLog(models.Model):
         else:
             # If failed but API was called
             output_tokens = 400
-            
+
         input_cost = (input_tokens / 1000000.0) * 0.30
         output_cost = (output_tokens / 1000000.0) * 2.50
-        return input_cost + output_cost
+        return Decimal(str(input_cost + output_cost))
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.estimated_cost = self._calculate_estimated_cost()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.title or self.source_url} - {self.status}"
@@ -380,13 +389,15 @@ class AIImportLog(models.Model):
 
 class WordPressSite(models.Model):
     name = models.CharField(max_length=255, verbose_name="اسم الموقع")
-    url = models.URLField(max_length=500, verbose_name="رابط الموقع (WordPress URL)")
+    url = models.URLField(max_length=1000, verbose_name="رابط الموقع (WordPress URL)")
     username = models.CharField(max_length=150, verbose_name="اسم المستخدم في ووردبريس")
-    application_password = models.CharField(max_length=255, verbose_name="كلمة مرور التطبيق (Application Password)")
+    application_password = EncryptedCharField(max_length=500, verbose_name="كلمة مرور التطبيق (Application Password)")
     daily_limit = models.PositiveIntegerField(default=3, verbose_name="الحد الأقصى للنشر اليومي")
     is_active = models.BooleanField(default=True, verbose_name="نشط")
     sources = models.ManyToManyField(AISource, related_name='wp_sites', verbose_name="مصادر الأخبار المرتبطة", blank=True)
     category_mapping = models.TextField(default="{}", help_text="خريطة الأقسام بتنسيق JSON، مثال: {\"اسم القسم المحلي\": معرف_القسم_في_ووردبريس}", verbose_name="خريطة الأقسام")
+    use_rich_formatting = models.BooleanField(default=False, verbose_name="تنسيق غني بعناوين فرعية ملوّنة (SEO)", help_text="عند التفعيل، يُقسَّم الخبر إلى عناوين فرعية H2/H3 ملوّنة بدلاً من فقرات فقط، مع إضافة وسوم (Tags) تلقائية لتحسين توافق السيو (Yoast).")
+    heading_color = models.CharField(max_length=7, default='#0066cc', verbose_name="لون العناوين الفرعية", help_text="كود اللون السداسي عشري (Hex)، مثال: #0066cc")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

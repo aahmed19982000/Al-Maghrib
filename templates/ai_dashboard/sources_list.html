@@ -24,7 +24,6 @@
                 <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase bg-slate-900/80">
                     <th scope="col" class="px-6 py-4 font-bold">اسم المصدر</th>
                     <th scope="col" class="px-6 py-4 font-bold">رابط التغذية / الموقع</th>
-                    <th scope="col" class="px-6 py-4 font-bold">القسم المستهدف</th>
                     <th scope="col" class="px-6 py-4 font-bold">اللغة</th>
                     <th scope="col" class="px-6 py-4 font-bold text-center">الحالة</th>
                     <th scope="col" class="px-6 py-4 font-bold text-center">الإجراءات</th>
@@ -35,9 +34,6 @@
                 <tr class="hover:bg-slate-800/30 transition duration-150">
                     <td class="px-6 py-4 font-semibold text-slate-100">{{ source.name }}</td>
                     <td class="px-6 py-4 font-mono text-xs text-slate-400 max-w-xs truncate" title="{{ source.url }}">{{ source.url }}</td>
-                    <td class="px-6 py-4">
-                        <span class="px-2 py-1 bg-slate-800 text-slate-300 text-xs rounded-lg border border-slate-700">{{ source.category.name }}</span>
-                    </td>
                     <td class="px-6 py-4">
                         {% if source.language == 'ar' %}
                             <span class="text-xs text-slate-400"><i class="fa-solid fa-language ml-1 text-teal-500"></i>عربي</span>

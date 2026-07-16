@@ -14,6 +14,12 @@ environ.Env.read_env(BASE_DIR / '.env')
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-default-key-for-dev')
 
+# Key used to encrypt sensitive fields at rest (Gemini API key, Telegram bot
+# token, WordPress application passwords). Insecure fixed fallback for local
+# dev only — production MUST set FIELD_ENCRYPTION_KEY in .env (see prod.py).
+# Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+FIELD_ENCRYPTION_KEY = env('FIELD_ENCRYPTION_KEY', default='5q3zduDPj233xFGBU_U5zY41OsqhA-kGOEgnb3PAwTg=')
+
 ALLOWED_HOSTS = ['*']
 
 # Application definition

@@ -1,6 +1,7 @@
 import re
 import json
 import logging
+import bleach
 import requests
 from bs4 import BeautifulSoup
 from django.utils import timezone
@@ -11,6 +12,35 @@ from django.conf import settings
 from .models import Article, Category, AISettings, AISource, AIImportLog, WordPressSite
 
 logger = logging.getLogger(__name__)
+
+# Article body is rendered with the `|safe` template filter, so AI output must be
+# restricted to a small safe subset before it's ever saved.
+ALLOWED_BODY_TAGS = ['p', 'br', 'strong', 'em', 'b', 'i']
+ALLOWED_BODY_TAGS_WITH_HEADINGS = ALLOWED_BODY_TAGS + ['h2', 'h3']
+
+
+def sanitize_ai_body(html, allow_headings=False):
+    """Strips any tag/attribute outside a safe allowlist from AI-generated article HTML."""
+    tags = ALLOWED_BODY_TAGS_WITH_HEADINGS if allow_headings else ALLOWED_BODY_TAGS
+    return bleach.clean(html or '', tags=tags, attributes={}, strip=True)
+
+
+def sanitize_ai_text(text):
+    """Strips all HTML from AI-generated plain-text fields (title, excerpt)."""
+    return bleach.clean(text or '', tags=[], attributes={}, strip=True)
+
+
+def apply_heading_color(html, color):
+    """
+    Applies the WordPress site's configured heading_color to every h2/h3 tag.
+    Done server-side (never trusts a color/style coming from the AI response).
+    """
+    if not html or not color or not re.match(r'^#[0-9A-Fa-f]{6}$', color):
+        return html
+    soup = BeautifulSoup(html, 'html.parser')
+    for tag in soup.find_all(['h2', 'h3']):
+        tag['style'] = f'color: {color};'
+    return str(soup)
 
 def call_gemini_api(prompt, api_key=None):
     """
@@ -256,13 +286,44 @@ def get_or_create_ai_author():
     return user
 
 
-def push_article_to_wordpress(wp_site, article):
+def get_or_create_wp_tag_ids(wp_site, tag_names, auth):
+    """
+    Looks up each tag name via the WordPress REST API and creates it if missing.
+    Returns the list of resolved WordPress tag IDs.
+    """
+    base_url = wp_site.url.rstrip('/')
+    tags_url = f"{base_url}/wp-json/wp/v2/tags"
+    tag_ids = []
+    seen = set()
+    for name in tag_names:
+        name = (name or '').strip()
+        if not name or name.lower() in seen:
+            continue
+        seen.add(name.lower())
+        try:
+            resp = requests.get(tags_url, auth=auth, params={'search': name}, timeout=10)
+            resp.raise_for_status()
+            match = next((t for t in resp.json() if t.get('name', '').strip().lower() == name.lower()), None)
+            if match:
+                tag_ids.append(match['id'])
+                continue
+            create_resp = requests.post(tags_url, auth=auth, json={'name': name}, timeout=10)
+            if create_resp.status_code in (200, 201):
+                tag_ids.append(create_resp.json()['id'])
+            else:
+                logger.warning(f"Failed to create WP tag '{name}' on {wp_site.name}: {create_resp.text}")
+        except Exception as e:
+            logger.warning(f"Failed to get/create WP tag '{name}' on {wp_site.name}: {e}")
+    return tag_ids
+
+
+def push_article_to_wordpress(wp_site, article, extra_tag_names=None):
     """
     Publishes an article to an external WordPress site via REST API.
     Handles uploading the cover image first and mapping categories.
     """
     from requests.auth import HTTPBasicAuth
-    
+
     base_url = wp_site.url.rstrip('/')
     media_url = f"{base_url}/wp-json/wp/v2/media"
     posts_url = f"{base_url}/wp-json/wp/v2/posts"
@@ -322,7 +383,11 @@ def push_article_to_wordpress(wp_site, article):
         payload['featured_media'] = featured_media_id
     if wp_categories:
         payload['categories'] = wp_categories
-        
+    if extra_tag_names:
+        tag_ids = get_or_create_wp_tag_ids(wp_site, extra_tag_names, auth)
+        if tag_ids:
+            payload['tags'] = tag_ids
+
     # 4. Push post
     try:
         headers = {'Content-Type': 'application/json'}
@@ -377,7 +442,17 @@ def run_ai_generation_cycle():
     
     limit = ai_settings.articles_per_day
     generated_count = 0
-    
+
+    # Track how many articles each WordPress site has already received today,
+    # so its per-site daily_limit is honored on top of the global limit.
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    wp_site_counts = {
+        row['wp_site']: row['count']
+        for row in AIImportLog.objects.filter(
+            status='success', wp_site__isnull=False, created_at__gte=today_start
+        ).values('wp_site').annotate(count=Count('id'))
+    }
+
     # Loop over all active sources
     for source in sources:
         if generated_count >= limit:
@@ -442,9 +517,9 @@ def run_ai_generation_cycle():
                     cleaned_response = cleaned_response.strip()
                     
                     data = json.loads(cleaned_response)
-                    new_title = data.get("title", "").strip()
-                    new_excerpt = data.get("excerpt", "").strip()
-                    new_body = data.get("body", "").strip()
+                    new_title = sanitize_ai_text(data.get("title", "").strip())
+                    new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
+                    new_body = sanitize_ai_body(data.get("body", "").strip())
                     try:
                         chosen_cat_id = int(data.get("category_id"))
                     except (ValueError, TypeError):
@@ -518,7 +593,19 @@ def run_ai_generation_cycle():
                 for wp_site in wp_sites:
                     if generated_count >= limit:
                         break
-                        
+                    if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                        continue
+
+                    if wp_site.use_rich_formatting:
+                        body_format_instruction = (
+                            "محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): فقرة تمهيدية واحدة بوسم <p>، "
+                            "ثم 2-4 أقسام رئيسية لكل منها عنوان فرعي قصير وجذاب بوسم <h2>، ويمكن استخدام <h3> لعنوان "
+                            "فرعي أصغر داخل القسم عند الحاجة لتفصيل إضافي. كل فقرة نصية توضع داخل وسم <p> تحت "
+                            "عنوانها الفرعي المناسب. لا تستخدم أي وسوم أو خصائص (attributes) أخرى غير <p> و<h2> و<h3>."
+                        )
+                    else:
+                        body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
+
                     prompt = (
                         f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
                         f"استناداً إلى المعلومات والخبر التالي:\n"
@@ -534,16 +621,16 @@ def run_ai_generation_cycle():
                         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
                         f"- \"title\": عنوان الخبر الجديد\n"
                         f"- \"excerpt\": ملخص الخبر\n"
-                        f"- \"body\": محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً.\n"
+                        f"- \"body\": {body_format_instruction}\n"
                         f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n\n"
                         f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n\n"
                         f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
                     )
-                    
+
                     ai_response = call_gemini_api(prompt, api_key=api_key)
                     if not ai_response:
                         continue
-                        
+
                     try:
                         cleaned_response = ai_response.strip()
                         if cleaned_response.startswith("```json"):
@@ -551,11 +638,13 @@ def run_ai_generation_cycle():
                         if cleaned_response.endswith("```"):
                             cleaned_response = cleaned_response[:-3]
                         cleaned_response = cleaned_response.strip()
-                        
+
                         data = json.loads(cleaned_response)
-                        new_title = data.get("title", "").strip()
-                        new_excerpt = data.get("excerpt", "").strip()
-                        new_body = data.get("body", "").strip()
+                        new_title = sanitize_ai_text(data.get("title", "").strip())
+                        new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
+                        new_body = sanitize_ai_body(data.get("body", "").strip(), allow_headings=wp_site.use_rich_formatting)
+                        if wp_site.use_rich_formatting:
+                            new_body = apply_heading_color(new_body, wp_site.heading_color)
                         try:
                             chosen_cat_id = int(data.get("category_id"))
                         except (ValueError, TypeError):
@@ -605,7 +694,8 @@ def run_ai_generation_cycle():
                         # Push this unique version to this specific WP site
                         published_url = None
                         try:
-                            published_url = push_article_to_wordpress(wp_site, article)
+                            tag_names = [source.name, category.name if category else None]
+                            published_url = push_article_to_wordpress(wp_site, article, extra_tag_names=tag_names)
                         except Exception as wpe:
                             logger.error(f"Error syndicating to WP site {wp_site.name}: {wpe}")
                             
@@ -619,7 +709,9 @@ def run_ai_generation_cycle():
                             status='success' if published_url else 'failed',
                             error_message='' if published_url else 'فشل النشر على ووردبريس'
                         )
-                        
+                        if published_url:
+                            wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+
                         generated_count += 1
                     except Exception as ex:
                         logger.error(f"Failed to generate unique WP article: {ex}")

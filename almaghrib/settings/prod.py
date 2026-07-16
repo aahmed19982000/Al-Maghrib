@@ -2,6 +2,11 @@ from .base import *
 
 DEBUG = False
 
+# Required in production: encrypts AI/WordPress credentials at rest.
+# Must be set in the server's .env before deploying, or the app will fail to start.
+# Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+FIELD_ENCRYPTION_KEY = env('FIELD_ENCRYPTION_KEY')
+
 ALLOWED_HOSTS = ['maghrebnews.online', 'www.maghrebnews.online', '161.97.90.45']
 CSRF_TRUSTED_ORIGINS = ['https://maghrebnews.online', 'https://www.maghrebnews.online', 'http://maghrebnews.online', 'http://www.maghrebnews.online']
 

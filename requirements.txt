@@ -25,3 +25,5 @@ django-celery-beat
 lxml
 beautifulsoup4
 requests
+bleach
+cryptography

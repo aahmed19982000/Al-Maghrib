@@ -62,7 +62,7 @@
                     {% for source in form.fields.sources.queryset %}
                     <label class="flex items-center space-x-2 space-x-reverse text-slate-300 text-xs cursor-pointer hover:text-white transition">
                         <input type="checkbox" name="sources" value="{{ source.id }}" {% if source in form.initial.sources or source.id|slugify in form.sources.value %}checked{% endif %} class="w-4 h-4 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2">
-                        <span>{{ source.name }} ({{ source.category.name }})</span>
+                        <span>{{ source.name }}</span>
                     </label>
                     {% endfor %}
                 </div>
@@ -95,6 +95,27 @@
                 <div class="flex-1">
                     <label for="id_is_active" class="block text-sm font-bold text-slate-200">تفعيل إرسال المحتوى تلقائياً</label>
                     <p class="text-xs text-slate-500">عند تفعيله، سيقوم النظام تلقائياً بنشر أي خبر يتم صياغته من المصادر المحددة إلى هذا الموقع.</p>
+                </div>
+            </div>
+
+            <!-- Rich Formatting (SEO headings + tags) -->
+            <div class="space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <input type="checkbox" name="use_rich_formatting" id="id_use_rich_formatting" {% if form.use_rich_formatting.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                    <div class="flex-1">
+                        <label for="id_use_rich_formatting" class="block text-sm font-bold text-slate-200">تنسيق غني بعناوين فرعية ملوّنة (SEO)</label>
+                        <p class="text-xs text-slate-500">عند التفعيل، يُقسَّم الخبر إلى عناوين فرعية H2/H3 ملوّنة بدلاً من فقرات فقط، مع إضافة وسوم (Tags) تلقائية لتحسين توافق السيو (Yoast).</p>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label for="id_heading_color" class="block text-sm font-semibold text-slate-300">لون العناوين الفرعية</label>
+                    <div class="flex items-center gap-3">
+                        <input type="color" id="id_heading_color_picker" value="{{ form.heading_color.value|default:'#0066cc' }}" oninput="document.getElementById('id_heading_color').value = this.value" class="w-12 h-10 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer">
+                        <input type="text" name="heading_color" id="id_heading_color" value="{{ form.heading_color.value|default:'#0066cc' }}" oninput="document.getElementById('id_heading_color_picker').value = this.value" pattern="^#[0-9A-Fa-f]{6}$" class="block w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 font-mono text-xs transition duration-150" placeholder="#0066cc">
+                    </div>
+                    {% if form.heading_color.errors %}
+                        <p class="text-xs text-rose-400">{{ form.heading_color.errors.as_text }}</p>
+                    {% endif %}
                 </div>
             </div>
 
