@@ -164,7 +164,7 @@ class WordPressSiteListView(StaffRequiredMixin, ListView):
 
 class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'site_tags', 'use_explainer_style']
+    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'articles_per_run', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'generate_arab_currencies_articles', 'site_tags', 'use_explainer_style']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
@@ -175,7 +175,7 @@ class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
 
 class WordPressSiteUpdateView(StaffRequiredMixin, UpdateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'site_tags', 'use_explainer_style']
+    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'articles_per_run', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'generate_arab_currencies_articles', 'site_tags', 'use_explainer_style']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 

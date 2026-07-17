@@ -304,6 +304,7 @@ class AISettings(models.Model):
     last_poultry_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لسعر الدواجن", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
     last_fish_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لسعر السمك", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
     last_vegetable_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لأسعار الخضار", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
+    last_arab_currencies_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لأسعار العملات العربية", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
 
     class Meta:
         verbose_name = "AI Global Settings"
@@ -405,9 +406,10 @@ class WordPressSite(models.Model):
     application_password = EncryptedCharField(max_length=500, verbose_name="كلمة مرور التطبيق (Application Password)")
     wp_author_ids = models.TextField(blank=True, default='', verbose_name="معرّفات الكتّاب في ووردبريس (Author IDs)", help_text="معرّفات (IDs) مستخدمي ووردبريس الذين سيُنسب إليهم المقال، مفصولة بفاصلة. عند وجود أكثر من واحد يُختار أحدهم عشوائياً لكل مقال. اتركه فارغاً لينشر باسم مستخدم المصادقة (username أعلاه).")
     daily_limit = models.PositiveIntegerField(default=3, verbose_name="الحد الأقصى للنشر اليومي")
+    articles_per_run = models.PositiveIntegerField(default=1, verbose_name="عدد المقالات لكل تشغيل", help_text="أقصى عدد أخبار تُنشر لهذا الموقع في كل مرة تعمل فيها الدورة (يدوياً أو تلقائياً كل 4 ساعات)، بالإضافة إلى الحد الأقصى اليومي الإجمالي أعلاه.")
     is_active = models.BooleanField(default=True, verbose_name="نشط")
     sources = models.ManyToManyField(AISource, related_name='wp_sites', verbose_name="مصادر الأخبار المرتبطة", blank=True)
-    category_mapping = models.TextField(default="{}", help_text="خريطة الأقسام بتنسيق JSON، مثال: {\"اسم القسم المحلي\": معرف_القسم_في_ووردبريس}", verbose_name="خريطة الأقسام")
+    category_mapping = models.TextField(default="{}", help_text="خريطة الأقسام بتنسيق JSON. رقم واحد يُستخدم كقسم أساسي: {\"اقتصاد\": 5}. أو قسم أساسي وأقسام فرعية معاً: {\"اقتصاد\": {\"primary\": 5, \"secondary\": [12, 20]}}", verbose_name="خريطة الأقسام")
     use_rich_formatting = models.BooleanField(default=False, verbose_name="تنسيق غني بعناوين فرعية ملوّنة (SEO)", help_text="عند التفعيل، يُقسَّم الخبر إلى عناوين فرعية H2/H3 ملوّنة بدلاً من فقرات فقط، مع إضافة وسوم (Tags) تلقائية لتحسين توافق السيو (Yoast).")
     heading_color = models.CharField(max_length=7, default='#0066cc', verbose_name="لون العناوين الفرعية", help_text="كود اللون السداسي عشري (Hex)، مثال: #0066cc")
     use_internal_links = models.BooleanField(default=False, verbose_name="إضافة روابط داخلية تلقائية (SEO)", help_text="عند التفعيل، يحاول النظام تضمين رابط داخلي أو رابطين ضمن نص الخبر يشيران إلى مقالات حديثة أخرى منشورة على هذا الموقع نفسه.")
@@ -419,6 +421,7 @@ class WordPressSite(models.Model):
     generate_poultry_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الدواجن اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بسعر الدواجن الطازجة الرسمي لهذا الموقع فقط.")
     generate_fish_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر السمك اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بسعر السمك الرسمي لهذا الموقع فقط.")
     generate_vegetable_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات أسعار الخضار اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بأسعار سلة خضار أساسية (طماطم، بطاطس، بصل) الرسمية لهذا الموقع فقط.")
+    generate_arab_currencies_articles = models.BooleanField(default=False, verbose_name="توليد مقالات أسعار العملات العربية اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بأسعار صرف الريال السعودي والدينار الكويتي والدرهم الإماراتي الرسمية مقابل الجنيه المصري لهذا الموقع فقط.")
     site_tags = models.TextField(blank=True, default='', verbose_name="وسوم ثابتة لهذا الموقع", help_text="وسوم ثابتة (افصل بينها بفاصلة) تُضاف تلقائياً لكل خبر يُنشر على هذا الموقع، مثال: بانكرز توداي, موقع بانكرز توداي الاخباري")
     use_explainer_style = models.BooleanField(default=False, verbose_name="أسلوب تفسيري (Explainer) عند الحاجة", help_text="عند التفعيل، يقرر الذكاء الاصطناعي تلقائياً استخدام أسلوب شرح بعناوين على شكل أسئلة (لماذا؟ هل؟ كيف؟) للأخبار الاقتصادية/التنظيمية (رسوم، ضرائب، قرارات) التي تحتاج تفصيلاً، بدلاً من الخبر القصير المعتاد.")
     created_at = models.DateTimeField(auto_now_add=True)

@@ -90,11 +90,23 @@
                     <input type="number" name="daily_limit" id="id_daily_limit" required value="{{ form.daily_limit.value|default:3 }}" min="1" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150">
                 </div>
 
+                <!-- Articles Per Run -->
+                <div class="space-y-2">
+                    <label for="id_articles_per_run" class="block text-sm font-semibold text-slate-300">عدد المقالات لكل تشغيل</label>
+                    <input type="number" name="articles_per_run" id="id_articles_per_run" required value="{{ form.articles_per_run.value|default:1 }}" min="1" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150">
+                    <p class="text-[10px] text-slate-500">أقصى عدد أخبار تُنشر لهذا الموقع في كل مرة تعمل فيها الدورة (يدوياً أو تلقائياً كل 4 ساعات).</p>
+                </div>
+
                 <!-- Category Mapping -->
                 <div class="space-y-2">
                     <label for="id_category_mapping" class="block text-sm font-semibold text-slate-300">خريطة الأقسام (Category Mapping JSON)</label>
-                    <textarea name="category_mapping" id="id_category_mapping" rows="3" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150 font-mono text-xs">{{ form.category_mapping.value|default:'{}' }}</textarea>
-                    <p class="text-[10px] text-slate-500">تنسيق JSON يربط أسماء الأقسام هنا بأرقام الأقسام في ووردبريس. مثال: <br><code class="text-teal-400">{"سياسة": 3, "رياضة": 5}</code></p>
+                    <textarea name="category_mapping" id="id_category_mapping" rows="4" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150 font-mono text-xs">{{ form.category_mapping.value|default:'{}' }}</textarea>
+                    <p class="text-[10px] text-slate-500">
+                        تنسيق JSON يربط أسماء الأقسام هنا بأرقام الأقسام في ووردبريس. قسم واحد فقط:
+                        <br><code class="text-teal-400">{"سياسة": 3, "رياضة": 5}</code>
+                        <br>أو قسم أساسي وأقسام فرعية إضافية معاً (يُحدَّد الأساسي في يوست SEO تلقائياً):
+                        <br><code class="text-teal-400">{"اقتصاد": {"primary": 5, "secondary": [12, 20]}}</code>
+                    </p>
                     {% if form.category_mapping.errors %}
                         <p class="text-xs text-rose-400">{{ form.category_mapping.errors.as_text }}</p>
                     {% endif %}
@@ -190,6 +202,10 @@
                 <div class="flex items-center space-x-3 space-x-reverse">
                     <input type="checkbox" name="generate_vegetable_price_articles" id="id_generate_vegetable_price_articles" {% if form.generate_vegetable_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
                     <label for="id_generate_vegetable_price_articles" class="text-sm font-semibold text-slate-200">أسعار الخضار (طماطم/بطاطس/بصل)</label>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <input type="checkbox" name="generate_arab_currencies_articles" id="id_generate_arab_currencies_articles" {% if form.generate_arab_currencies_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                    <label for="id_generate_arab_currencies_articles" class="text-sm font-semibold text-slate-200">أسعار العملات العربية (ريال سعودي/دينار كويتي/درهم إماراتي)</label>
                 </div>
             </div>
 

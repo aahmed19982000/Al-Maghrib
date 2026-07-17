@@ -149,11 +149,64 @@ def call_gemini_api(prompt, api_key=None):
     return None
 
 
+def fetch_google_trends_items(source_url):
+    """
+    Parses Google's daily trending-searches RSS feed. Unlike a normal news
+    feed, each <item> is just a trending keyword with an empty description
+    and a link back to the trends page itself - the actual real article
+    explaining the trend is nested inside <ht:news_item>. This pulls that
+    nested article out (the top one per trend) and returns it in the same
+    shape as fetch_news_items_from_source.
+    """
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+    items = []
+    try:
+        response = requests.get(source_url, headers=headers, timeout=15)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'lxml-xml')
+
+        for trend in soup.find_all('item'):
+            trend_title_tag = trend.find('title')
+            trend_title = trend_title_tag.text.strip() if trend_title_tag else ""
+
+            news_item = trend.find('ht:news_item')
+            if not news_item:
+                continue
+
+            title_tag = news_item.find('ht:news_item_title')
+            url_tag = news_item.find('ht:news_item_url')
+            snippet_tag = news_item.find('ht:news_item_snippet')
+            picture_tag = news_item.find('ht:news_item_picture')
+
+            title_text = title_tag.text.strip() if title_tag else trend_title
+            link_text = url_tag.text.strip() if url_tag else ""
+            snippet_text = snippet_tag.text.strip() if snippet_tag else ""
+            image_url = picture_tag.text.strip() if picture_tag else ""
+
+            if not title_text or not link_text:
+                continue
+
+            description = f"{snippet_text} (الموضوع الرائج على جوجل: {trend_title})" if snippet_text else f"موضوع رائج على جوجل: {trend_title}"
+            items.append({
+                'title': title_text,
+                'link': link_text,
+                'description': description,
+                'image_url': image_url,
+                'guid': link_text,
+            })
+    except Exception as e:
+        logger.error(f"Error fetching Google Trends items from {source_url}: {e}")
+    return items
+
+
 def fetch_news_items_from_source(source_url):
     """
     Fetches news items from an RSS feed or webpage.
     Returns a list of dictionaries with keys: 'title', 'link', 'description', 'image_url', 'guid'.
     """
+    if 'trends.google.com' in source_url:
+        return fetch_google_trends_items(source_url)
+
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
@@ -513,11 +566,47 @@ def fetch_idsc_indicator(indicator_key):
         return None
 
 
+ARAB_CURRENCY_NAMES = ['ريال سعودي', 'دينار كويتي', 'درهم إماراتي']
+
+
+def fetch_arab_currency_rates():
+    """
+    Fetches official real buy/sell exchange rates (with built-in comparison to
+    yesterday) for Arab currencies against the Egyptian pound, from the same
+    IDSC price API used for gold/commodities. Returns None if the request
+    fails or none of the expected currencies are present in the response.
+    """
+    try:
+        resp = requests.get(
+            f"{IDSC_API_BASE}/PricesData/GetCurrencyExchange",
+            headers={'User-Agent': 'Mozilla/5.0'},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        all_rates = resp.json()
+    except Exception as e:
+        logger.error(f"Failed to fetch Arab currency exchange rates: {e}")
+        return None
+
+    result = []
+    for currency in all_rates:
+        if currency.get('name') in ARAB_CURRENCY_NAMES:
+            result.append({
+                'name': currency['name'],
+                'buy_rate': currency.get('buyRate'),
+                'sell_rate': currency.get('sellRate'),
+                'change_yesterday': currency.get('sellRateDially'),
+            })
+    return result if result else None
+
+
 def _is_due(last_run_at, min_hours):
     """True if last_run_at is empty or old enough that min_hours have elapsed since."""
     if not last_run_at:
         return True
     return (timezone.now() - last_run_at) >= timedelta(hours=min_hours)
+
+
 
 
 def generate_official_commodity_article_for_site(wp_site, topic_title, items, source_url, ai_settings, api_key, allowed_cats, categories_list_str):
@@ -692,6 +781,177 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
         return False
 
 
+def generate_arab_currencies_article_for_site(wp_site, currency_items, source_url, ai_settings, api_key, allowed_cats, categories_list_str):
+    """
+    Writes and publishes a fresh article covering Arab currencies' exchange
+    rates (buy/sell) against the Egyptian pound to a single WordPress site,
+    using the exact official numbers in currency_items. Mirrors the gold/
+    dollar article style. Returns True on a successful publish, False otherwise.
+    """
+    if wp_site.use_rich_formatting:
+        body_format_instruction = f"محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): {HEADING_STRUCTURE_INSTRUCTION}"
+    else:
+        body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
+
+    internal_link_instruction = ""
+    if wp_site.use_internal_links:
+        candidate_posts = fetch_recent_wp_posts(wp_site)
+        if candidate_posts:
+            links_list_str = "\n".join([f"- {p['title']}: {p['link']}" for p in candidate_posts])
+            internal_link_instruction = (
+                f"\nإن أمكن بشكل طبيعي، ضمّن رابطاً داخلياً واحداً أو رابطين على الأكثر باستخدام وسم "
+                f"<a href=\"...\">نص الرابط</a> داخل فقرات الخبر، يشيران فقط إلى أحد الروابط التالية "
+                f"لمقالات أخرى على نفس الموقع (لا تخترع أي رابط جديد، استخدم الروابط أدناه حرفياً):\n{links_list_str}"
+            )
+
+    numbers_lines = []
+    for currency in currency_items:
+        line = f"- {currency['name']}: شراء {currency['buy_rate']} جنيه، بيع {currency['sell_rate']} جنيه"
+        if currency.get('change_yesterday'):
+            direction = "ارتفاع" if currency['change_yesterday'] > 0 else "انخفاض"
+            line += f" (بـ{direction} {abs(round(currency['change_yesterday'], 3))} جنيه مقارنة بالأمس)"
+        numbers_lines.append(line)
+    numbers_block = "\n".join(numbers_lines)
+
+    prompt = (
+        f"بصفتك محررًا اقتصاديًا محترفًا باللغة العربية، اكتب خبرًا صحفيًا محدَّثًا عن أسعار صرف العملات العربية "
+        f"مقابل الجنيه المصري اليوم، معتمداً حصرياً على الأرقام الرسمية التالية الصادرة عن مركز معلومات مجلس "
+        f"الوزراء المصري لحظة كتابة الخبر - اذكرها كما هي تماماً دون تقريب أو اختراع أي رقم بديل:\n"
+        f"{numbers_block}\n\n"
+        f"الرجاء الالتزام التام بالتعليمات التالية:\n"
+        f"1. اكتب بأسلوب صحفي اقتصادي مباشر وواضح، بين 200 و350 كلمة. {READABILITY_INSTRUCTION}\n"
+        f"2. قم بصياغة عنوان جذاب يذكر تحديث أسعار العملات العربية اليوم.\n"
+        f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
+        f"4. اذكر سعري الشراء والبيع لكل عملة كما وردا أعلاه بدقة، واذكر المقارنة بالأمس فقط إن وردت في الأرقام، "
+        f"ولا تخترع أي مقارنة أو نسبة غير مذكورة.\n"
+        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
+        f"- \"title\": عنوان الخبر\n"
+        f"- \"excerpt\": ملخص الخبر\n"
+        f"- \"body\": {body_format_instruction}\n"
+        f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
+        f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر، لاستخدامها في تحليل السيو (SEO).\n"
+        f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً.\n"
+        f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
+        f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
+        f"(مثال: \"سعر الريال السعودي اليوم\"، \"سعر الدرهم الإماراتي مقابل الجنيه المصري\").\n\n"
+        f"6. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"{internal_link_instruction}"
+    )
+
+    ai_response = call_gemini_api(prompt, api_key=api_key)
+    if not ai_response:
+        AIImportLog.objects.create(
+            source=None,
+            source_url=source_url,
+            wp_site=wp_site,
+            title="تحديث أسعار العملات العربية",
+            status='failed',
+            error_message="لم يستجب الـ API الخاص بـ Gemini أو فشل استخراج النص."
+        )
+        return False
+
+    try:
+        cleaned_response = ai_response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]
+        cleaned_response = cleaned_response.strip()
+
+        data = json.loads(cleaned_response)
+        new_title = sanitize_ai_text(data.get("title", "").strip())
+        new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
+        new_body = sanitize_ai_body(
+            data.get("body", "").strip(),
+            allow_headings=wp_site.use_rich_formatting,
+            allow_links=wp_site.use_internal_links,
+            link_base_url=wp_site.url,
+        )
+        if wp_site.use_rich_formatting:
+            new_body = apply_heading_color(new_body, wp_site.heading_color)
+        focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
+        meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        raw_tags = data.get("tags") or []
+        if not isinstance(raw_tags, list):
+            raw_tags = []
+        ai_tags = [sanitize_ai_text(str(t).strip()) for t in raw_tags[:5] if str(t).strip()]
+
+        try:
+            chosen_cat_id = int(data.get("category_id"))
+        except (ValueError, TypeError):
+            chosen_cat_id = None
+
+        if not new_title or not new_body:
+            raise ValueError("بيانات العنوان أو المحتوى فارغة.")
+
+        category = None
+        if chosen_cat_id:
+            category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
+        if not category and allowed_cats:
+            category = allowed_cats[0]
+
+        from core.utils import translate_text
+        title_en = translate_text(new_title)
+        body_en = translate_text(new_body)
+        excerpt_en = translate_text(new_excerpt)
+
+        author = pick_default_author(ai_settings)
+        article = Article(
+            title=new_title,
+            title_ar=new_title,
+            title_en=title_en,
+            slug=generate_slug_for_title(new_title),
+            body=new_body,
+            body_ar=new_body,
+            body_en=body_en,
+            excerpt=new_excerpt,
+            excerpt_ar=new_excerpt,
+            excerpt_en=excerpt_en,
+            author=author,
+            category=category,
+            status='draft',
+            published_at=timezone.now(),
+            is_featured=False,
+            is_breaking=False,
+            auto_translate=False
+        )
+        article.save()
+
+        tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
+        published_url = None
+        try:
+            published_url = push_article_to_wordpress(
+                wp_site, article, extra_tag_names=tag_names,
+                focus_keyword=focus_keyword, meta_description=meta_description
+            )
+        except Exception as wpe:
+            logger.error(f"Error syndicating Arab currencies article to WP site {wp_site.name}: {wpe}")
+
+        AIImportLog.objects.create(
+            source=None,
+            article=article,
+            wp_site=wp_site,
+            source_url=source_url,
+            published_url=published_url or '',
+            title=new_title,
+            status='success' if published_url else 'failed',
+            error_message='' if published_url else 'فشل النشر على ووردبريس'
+        )
+        return bool(published_url)
+    except Exception as ex:
+        logger.error(f"Failed to generate Arab currencies article for {wp_site.name}: {ex}")
+        AIImportLog.objects.create(
+            source=None,
+            source_url=source_url,
+            wp_site=wp_site,
+            title="تحديث أسعار العملات العربية",
+            status='failed',
+            error_message=f"فشل صياغة خبر أسعار العملات العربية لـ {wp_site.name}: {str(ex)}"
+        )
+        return False
+
+
 def get_or_create_wp_tag_ids(wp_site, tag_names, auth):
     """
     Looks up each tag name via the WordPress REST API and creates it if missing.
@@ -767,17 +1027,35 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
         except Exception as e:
             logger.error(f"Error uploading media to WP: {e}")
 
-    # 2. Map categories
+    # 2. Map categories - a local category can map to a single WP category ID
+    # (legacy format, e.g. {"اقتصاد": 5}) or to a primary category plus extra
+    # secondary ones (e.g. {"اقتصاد": {"primary": 5, "secondary": [12, 20]}}).
     wp_categories = []
+    primary_category_id = None
     cat_mappings = wp_site.get_category_mappings()
     local_cat_name = article.category.name if article.category else ""
-    
-    if local_cat_name in cat_mappings:
+
+    mapping = cat_mappings.get(local_cat_name)
+    if isinstance(mapping, dict):
         try:
-            wp_categories.append(int(cat_mappings[local_cat_name]))
-        except ValueError:
+            if mapping.get('primary') is not None:
+                primary_category_id = int(mapping['primary'])
+                wp_categories.append(primary_category_id)
+        except (ValueError, TypeError):
             pass
-            
+        for secondary_id in mapping.get('secondary') or []:
+            try:
+                wp_categories.append(int(secondary_id))
+            except (ValueError, TypeError):
+                pass
+    elif mapping is not None:
+        try:
+            primary_category_id = int(mapping)
+            wp_categories.append(primary_category_id)
+        except (ValueError, TypeError):
+            pass
+
+
     # 3. Prepare post body
     payload = {
         'title': article.title,
@@ -796,12 +1074,14 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
         tag_ids = get_or_create_wp_tag_ids(wp_site, extra_tag_names, auth)
         if tag_ids:
             payload['tags'] = tag_ids
-    if focus_keyword or meta_description:
+    if focus_keyword or meta_description or primary_category_id:
         payload['meta'] = {}
         if focus_keyword:
             payload['meta']['_yoast_wpseo_focuskw'] = focus_keyword
         if meta_description:
             payload['meta']['_yoast_wpseo_metadesc'] = meta_description
+        if primary_category_id:
+            payload['meta']['_yoast_wpseo_primary_category'] = primary_category_id
 
     # 4. Push post
     try:
@@ -1378,6 +1658,9 @@ def run_ai_generation_cycle():
             status='success', wp_site__isnull=False, created_at__gte=today_start
         ).values('wp_site').annotate(count=Count('id'))
     }
+    # Separate from wp_site_counts (today's total): tracks how many articles this
+    # specific cycle invocation has generated per site, capped by articles_per_run.
+    wp_site_run_counts = {}
 
     # Loop over all active sources
     for source in sources:
@@ -1524,7 +1807,7 @@ def run_ai_generation_cycle():
                 for wp_site in wp_sites:
                     if generated_count >= limit:
                         break
-                    if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                         continue
 
                     if wp_site.use_rich_formatting:
@@ -1683,6 +1966,7 @@ def run_ai_generation_cycle():
                         )
                         if published_url:
                             wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                            wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
 
                         generated_count += 1
                     except Exception as ex:
@@ -1717,13 +2001,14 @@ def run_ai_generation_cycle():
             for wp_site in gold_price_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_gold_price_article_for_site(
                     wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
         else:
             logger.error("Failed to fetch live gold price data; skipping gold price article generation this cycle.")
@@ -1748,13 +2033,14 @@ def run_ai_generation_cycle():
             for wp_site in silver_price_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_silver_price_article_for_site(
                     wp_site, silver_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
         else:
             logger.error("Failed to fetch live silver price data; skipping silver price article generation this cycle.")
@@ -1779,13 +2065,14 @@ def run_ai_generation_cycle():
             for wp_site in dollar_price_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_dollar_price_article_for_site(
                     wp_site, dollar_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
         else:
             logger.error("Failed to fetch live dollar price data; skipping dollar price article generation this cycle.")
@@ -1800,7 +2087,7 @@ def run_ai_generation_cycle():
             for wp_site in iron_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الحديد (حديد عز)", [("حديد عز", iron_data)], source_url,
@@ -1808,6 +2095,7 @@ def run_ai_generation_cycle():
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
         else:
             logger.error("Failed to fetch official iron price data; skipping this cycle.")
@@ -1822,7 +2110,7 @@ def run_ai_generation_cycle():
             for wp_site in cement_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الإسمنت (الرمادي)", [("الأسمنت الرمادي", cement_data)], source_url,
@@ -1830,6 +2118,7 @@ def run_ai_generation_cycle():
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
         else:
             logger.error("Failed to fetch official cement price data; skipping this cycle.")
@@ -1844,7 +2133,7 @@ def run_ai_generation_cycle():
             for wp_site in poultry_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الدواجن (الفراخ)", [("الدواجن الطازجة", poultry_data)], source_url,
@@ -1852,6 +2141,7 @@ def run_ai_generation_cycle():
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
         else:
             logger.error("Failed to fetch official poultry price data; skipping this cycle.")
@@ -1866,7 +2156,7 @@ def run_ai_generation_cycle():
             for wp_site in fish_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر السمك", [("السمك", fish_data)], source_url,
@@ -1874,6 +2164,7 @@ def run_ai_generation_cycle():
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
         else:
             logger.error("Failed to fetch official fish price data; skipping this cycle.")
@@ -1895,7 +2186,7 @@ def run_ai_generation_cycle():
             for wp_site in vegetable_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "أسعار الخضار (طماطم، بطاطس، بصل)", vegetable_items, source_url,
@@ -1903,9 +2194,32 @@ def run_ai_generation_cycle():
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
         else:
             logger.error("Failed to fetch official vegetable price data; skipping this cycle.")
+
+    arab_currency_sites = WordPressSite.objects.filter(is_active=True, generate_arab_currencies_articles=True)
+    if arab_currency_sites.exists() and _is_due(ai_settings.last_arab_currencies_at, min_hours=20):
+        currency_data = fetch_arab_currency_rates()
+        if currency_data:
+            ai_settings.last_arab_currencies_at = timezone.now()
+            ai_settings.save(update_fields=['last_arab_currencies_at'])
+            source_url = f"{IDSC_API_BASE}/PricesData/GetCurrencyExchange"
+            for wp_site in arab_currency_sites:
+                if generated_count >= limit:
+                    break
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                    continue
+                success = generate_arab_currencies_article_for_site(
+                    wp_site, currency_data, source_url, ai_settings, api_key, allowed_cats, categories_list_str
+                )
+                if success:
+                    wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
+                    generated_count += 1
+        else:
+            logger.error("Failed to fetch official Arab currency exchange rates; skipping this cycle.")
 
     # Update last run timestamp
     ai_settings.last_run = timezone.now()
