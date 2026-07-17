@@ -295,6 +295,10 @@ class AISettings(models.Model):
     last_run = models.DateTimeField(blank=True, null=True)
     last_gold_price_24k_egp = models.FloatField(blank=True, null=True, verbose_name="آخر سعر مسجَّل لجرام الذهب عيار 24 (جنيه)", help_text="يُستخدم داخلياً لمقارنة سعر الذهب بالتحديث السابق.")
     last_gold_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر تسجيل لسعر الذهب")
+    last_silver_price_egp = models.FloatField(blank=True, null=True, verbose_name="آخر سعر مسجَّل لجرام الفضة (جنيه)", help_text="يُستخدم داخلياً لمقارنة سعر الفضة بالتحديث السابق.")
+    last_silver_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر تسجيل لسعر الفضة")
+    last_dollar_price_egp = models.FloatField(blank=True, null=True, verbose_name="آخر سعر صرف مسجَّل للدولار (جنيه)", help_text="يُستخدم داخلياً لمقارنة سعر الدولار بالتحديث السابق.")
+    last_dollar_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر تسجيل لسعر الدولار")
 
     class Meta:
         verbose_name = "AI Global Settings"
@@ -403,6 +407,8 @@ class WordPressSite(models.Model):
     heading_color = models.CharField(max_length=7, default='#0066cc', verbose_name="لون العناوين الفرعية", help_text="كود اللون السداسي عشري (Hex)، مثال: #0066cc")
     use_internal_links = models.BooleanField(default=False, verbose_name="إضافة روابط داخلية تلقائية (SEO)", help_text="عند التفعيل، يحاول النظام تضمين رابط داخلي أو رابطين ضمن نص الخبر يشيران إلى مقالات حديثة أخرى منشورة على هذا الموقع نفسه.")
     generate_gold_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الذهب الحية", help_text="عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر الذهب اللحظي (عيار 24، 21، 18) بالجنيه المصري لهذا الموقع فقط.")
+    generate_silver_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الفضة الحية", help_text="عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر الفضة اللحظي بالجنيه المصري لهذا الموقع فقط.")
+    generate_dollar_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الدولار الحية", help_text="عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر صرف الدولار اللحظي مقابل الجنيه المصري لهذا الموقع فقط.")
     site_tags = models.TextField(blank=True, default='', verbose_name="وسوم ثابتة لهذا الموقع", help_text="وسوم ثابتة (افصل بينها بفاصلة) تُضاف تلقائياً لكل خبر يُنشر على هذا الموقع، مثال: بانكرز توداي, موقع بانكرز توداي الاخباري")
     use_explainer_style = models.BooleanField(default=False, verbose_name="أسلوب تفسيري (Explainer) عند الحاجة", help_text="عند التفعيل، يقرر الذكاء الاصطناعي تلقائياً استخدام أسلوب شرح بعناوين على شكل أسئلة (لماذا؟ هل؟ كيف؟) للأخبار الاقتصادية/التنظيمية (رسوم، ضرائب، قرارات) التي تحتاج تفصيلاً، بدلاً من الخبر القصير المعتاد.")
     created_at = models.DateTimeField(auto_now_add=True)

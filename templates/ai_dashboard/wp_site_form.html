@@ -149,6 +149,24 @@
                 </div>
             </div>
 
+            <!-- Live Silver Price Articles -->
+            <div class="flex items-center space-x-3 space-x-reverse bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
+                <input type="checkbox" name="generate_silver_price_articles" id="id_generate_silver_price_articles" {% if form.generate_silver_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                <div class="flex-1">
+                    <label for="id_generate_silver_price_articles" class="block text-sm font-bold text-slate-200">توليد مقالات سعر الفضة الحية</label>
+                    <p class="text-xs text-slate-500">عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر الفضة اللحظي بالجنيه المصري، ويُنشر على هذا الموقع فقط.</p>
+                </div>
+            </div>
+
+            <!-- Live Dollar Price Articles -->
+            <div class="flex items-center space-x-3 space-x-reverse bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
+                <input type="checkbox" name="generate_dollar_price_articles" id="id_generate_dollar_price_articles" {% if form.generate_dollar_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                <div class="flex-1">
+                    <label for="id_generate_dollar_price_articles" class="block text-sm font-bold text-slate-200">توليد مقالات سعر الدولار الحية</label>
+                    <p class="text-xs text-slate-500">عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر صرف الدولار اللحظي مقابل الجنيه المصري، ويُنشر على هذا الموقع فقط.</p>
+                </div>
+            </div>
+
             <!-- Explainer Style -->
             <div class="flex items-center space-x-3 space-x-reverse bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
                 <input type="checkbox" name="use_explainer_style" id="id_use_explainer_style" {% if form.use_explainer_style.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">

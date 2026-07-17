@@ -14,6 +14,18 @@ from .models import Article, Category, AISettings, AISource, AIImportLog, WordPr
 
 logger = logging.getLogger(__name__)
 
+# Gold/silver/dollar price news is excluded from the regular RSS-rewrite pipeline -
+# the dedicated live gold-price generator (generate_gold_price_article_for_site) is
+# the only source of truth for that topic, to avoid duplicate/conflicting articles.
+EXCLUDED_PRICE_TOPIC_KEYWORDS = ['ذهب', 'فضة', 'دولار']
+
+
+def is_excluded_price_topic(title, description=""):
+    """Returns True if the RSS item is about gold/silver/dollar prices."""
+    text = f"{title or ''} {description or ''}"
+    return any(keyword in text for keyword in EXCLUDED_PRICE_TOPIC_KEYWORDS)
+
+
 # Article body is rendered with the `|safe` template filter, so AI output must be
 # restricted to a small safe subset before it's ever saved.
 ALLOWED_BODY_TAGS = ['p', 'br', 'strong', 'em', 'b', 'i']
@@ -396,6 +408,56 @@ def fetch_live_gold_prices():
     }
 
 
+SILVER_SPOT_API_URL = 'https://api.gold-api.com/price/XAG'
+
+
+def fetch_live_silver_prices():
+    """
+    Fetches the live silver spot price (USD/troy ounce, gold-api.com) and the
+    USD->EGP exchange rate, and computes the per-gram Egyptian price for pure
+    (999) silver. Returns None if either request fails.
+    """
+    try:
+        silver_resp = requests.get(SILVER_SPOT_API_URL, timeout=10)
+        silver_resp.raise_for_status()
+        spot_usd_per_oz = float(silver_resp.json()['price'])
+
+        fx_resp = requests.get(GOLD_FX_API_URL, timeout=10)
+        fx_resp.raise_for_status()
+        usd_to_egp = float(fx_resp.json()['rates']['EGP'])
+    except Exception as e:
+        logger.error(f"Failed to fetch live silver price data: {e}")
+        return None
+
+    price_999_egp = (spot_usd_per_oz / GRAMS_PER_TROY_OUNCE) * usd_to_egp
+    return {
+        'spot_usd_per_oz': round(spot_usd_per_oz, 2),
+        'usd_to_egp': round(usd_to_egp, 2),
+        'price_999_egp': round(price_999_egp, 2),
+        'price_925_egp': round(price_999_egp * 0.925, 2),
+        'timestamp': timezone.now(),
+    }
+
+
+def fetch_live_dollar_price():
+    """
+    Fetches the live USD->EGP exchange rate (open.er-api.com, free/keyless).
+    Returns None if the request fails.
+    """
+    try:
+        fx_resp = requests.get(GOLD_FX_API_URL, timeout=10)
+        fx_resp.raise_for_status()
+        usd_to_egp = float(fx_resp.json()['rates']['EGP'])
+    except Exception as e:
+        logger.error(f"Failed to fetch live dollar price data: {e}")
+        return None
+
+    return {
+        'usd_to_egp': round(usd_to_egp, 2),
+        'timestamp': timezone.now(),
+    }
+
+
 def get_or_create_wp_tag_ids(wp_site, tag_names, auth):
     """
     Looks up each tag name via the WordPress REST API and creates it if missing.
@@ -696,6 +758,340 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
         return False
 
 
+def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str):
+    """
+    Writes and publishes a fresh silver-price article to a single WordPress site,
+    using the exact real numbers in silver_data rather than any AI-invented figures.
+    Returns True on a successful publish, False otherwise.
+    """
+    if wp_site.use_rich_formatting:
+        body_format_instruction = f"محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): {HEADING_STRUCTURE_INSTRUCTION}"
+    else:
+        body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
+
+    internal_link_instruction = ""
+    if wp_site.use_internal_links:
+        candidate_posts = fetch_recent_wp_posts(wp_site)
+        if candidate_posts:
+            links_list_str = "\n".join([f"- {p['title']}: {p['link']}" for p in candidate_posts])
+            internal_link_instruction = (
+                f"\nإن أمكن بشكل طبيعي، ضمّن رابطاً داخلياً واحداً أو رابطين على الأكثر باستخدام وسم "
+                f"<a href=\"...\">نص الرابط</a> داخل فقرات الخبر، يشيران فقط إلى أحد الروابط التالية "
+                f"لمقالات أخرى على نفس الموقع (لا تخترع أي رابط جديد، استخدم الروابط أدناه حرفياً):\n{links_list_str}"
+            )
+
+    comparison_line = f"\n{comparison_text}" if comparison_text else "\nلا تتوفر بيانات مقارنة بتحديث سابق - لا تذكر أي مقارنة أو نسبة تغيير في هذه الحالة."
+
+    prompt = (
+        f"بصفتك محررًا اقتصاديًا محترفًا باللغة العربية، اكتب خبرًا صحفيًا محدَّثًا عن سعر الفضة اليوم في مصر، "
+        f"معتمداً حصرياً على الأرقام الحقيقية التالية المأخوذة من السوق العالمية لحظة كتابة الخبر - "
+        f"اذكرها كما هي تماماً دون تقريب أو اختراع أي رقم بديل:\n"
+        f"- سعر أوقية الفضة عالمياً: {silver_data['spot_usd_per_oz']} دولار أمريكي\n"
+        f"- سعر صرف الدولار: {silver_data['usd_to_egp']} جنيه مصري\n"
+        f"- سعر جرام الفضة الخالصة (عيار 999): {silver_data['price_999_egp']} جنيه مصري\n"
+        f"- سعر جرام الفضة (عيار 925 -- إسترليني): {silver_data['price_925_egp']} جنيه مصري"
+        f"{comparison_line}\n\n"
+        f"الرجاء الالتزام التام بالتعليمات التالية:\n"
+        f"1. اكتب بأسلوب صحفي اقتصادي مباشر وواضح، بين 250 و400 كلمة. {READABILITY_INSTRUCTION}\n"
+        f"2. قم بصياغة عنوان جذاب يذكر تحديث سعر الفضة اليوم.\n"
+        f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
+        f"4. أضف في نهاية الخبر فقرة قصيرة بعنوان \"نظرة عامة على السوق\" تصف الاتجاه العام لحركة الفضة عالمياً "
+        f"بصياغة عامة ومتحفظة (مثل تأثير سعر الصرف أو حركة السوق العالمي)، على أن تنتهي الفقرة حرفياً بجملة توضيحية "
+        f"مشابهة لـ: \"هذه قراءة عامة لحركة السوق ولا تُعد توصية استثمارية.\" لا تذكر أي أرقام أو مستويات أو نسب "
+        f"مستقبلية مختلَقة، فقط وصف عام للاتجاه.\n"
+        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
+        f"- \"title\": عنوان الخبر\n"
+        f"- \"excerpt\": ملخص الخبر\n"
+        f"- \"body\": {body_format_instruction}\n"
+        f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
+        f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر، لاستخدامها في تحليل السيو (SEO).\n"
+        f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً.\n"
+        f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
+        f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
+        f"(مثال: \"سعر الفضة اليوم\"، \"سعر جرام الفضة في مصر\").\n\n"
+        f"6. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"{internal_link_instruction}"
+    )
+
+    ai_response = call_gemini_api(prompt, api_key=api_key)
+    if not ai_response:
+        AIImportLog.objects.create(
+            source=None,
+            source_url=SILVER_SPOT_API_URL,
+            wp_site=wp_site,
+            title="تحديث سعر الفضة",
+            status='failed',
+            error_message="لم يستجب الـ API الخاص بـ Gemini أو فشل استخراج النص."
+        )
+        return False
+
+    try:
+        cleaned_response = ai_response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]
+        cleaned_response = cleaned_response.strip()
+
+        data = json.loads(cleaned_response)
+        new_title = sanitize_ai_text(data.get("title", "").strip())
+        new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
+        new_body = sanitize_ai_body(
+            data.get("body", "").strip(),
+            allow_headings=wp_site.use_rich_formatting,
+            allow_links=wp_site.use_internal_links,
+            link_base_url=wp_site.url,
+        )
+        if wp_site.use_rich_formatting:
+            new_body = apply_heading_color(new_body, wp_site.heading_color)
+        focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
+        meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        raw_tags = data.get("tags") or []
+        if not isinstance(raw_tags, list):
+            raw_tags = []
+        ai_tags = [sanitize_ai_text(str(t).strip()) for t in raw_tags[:5] if str(t).strip()]
+
+        try:
+            chosen_cat_id = int(data.get("category_id"))
+        except (ValueError, TypeError):
+            chosen_cat_id = None
+
+        if not new_title or not new_body:
+            raise ValueError("بيانات العنوان أو المحتوى فارغة.")
+
+        category = None
+        if chosen_cat_id:
+            category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
+        if not category and allowed_cats:
+            category = allowed_cats[0]
+
+        from core.utils import translate_text
+        title_en = translate_text(new_title)
+        body_en = translate_text(new_body)
+        excerpt_en = translate_text(new_excerpt)
+
+        author = ai_settings.default_author or get_or_create_ai_author()
+        article = Article(
+            title=new_title,
+            title_ar=new_title,
+            title_en=title_en,
+            slug=generate_slug_for_title(new_title),
+            body=new_body,
+            body_ar=new_body,
+            body_en=body_en,
+            excerpt=new_excerpt,
+            excerpt_ar=new_excerpt,
+            excerpt_en=excerpt_en,
+            author=author,
+            category=category,
+            status='draft',
+            published_at=timezone.now(),
+            is_featured=False,
+            is_breaking=False,
+            auto_translate=False
+        )
+        article.save()
+
+        tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
+        published_url = None
+        try:
+            published_url = push_article_to_wordpress(
+                wp_site, article, extra_tag_names=tag_names,
+                focus_keyword=focus_keyword, meta_description=meta_description
+            )
+        except Exception as wpe:
+            logger.error(f"Error syndicating silver price article to WP site {wp_site.name}: {wpe}")
+
+        AIImportLog.objects.create(
+            source=None,
+            article=article,
+            wp_site=wp_site,
+            source_url=SILVER_SPOT_API_URL,
+            published_url=published_url or '',
+            title=new_title,
+            status='success' if published_url else 'failed',
+            error_message='' if published_url else 'فشل النشر على ووردبريس'
+        )
+        return bool(published_url)
+    except Exception as ex:
+        logger.error(f"Failed to generate silver price article for {wp_site.name}: {ex}")
+        AIImportLog.objects.create(
+            source=None,
+            source_url=SILVER_SPOT_API_URL,
+            wp_site=wp_site,
+            title="تحديث سعر الفضة",
+            status='failed',
+            error_message=f"فشل صياغة خبر سعر الفضة لـ {wp_site.name}: {str(ex)}"
+        )
+        return False
+
+
+def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str):
+    """
+    Writes and publishes a fresh dollar-exchange-rate article to a single WordPress
+    site, using the exact real number in dollar_data rather than any AI-invented figure.
+    Returns True on a successful publish, False otherwise.
+    """
+    if wp_site.use_rich_formatting:
+        body_format_instruction = f"محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): {HEADING_STRUCTURE_INSTRUCTION}"
+    else:
+        body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
+
+    internal_link_instruction = ""
+    if wp_site.use_internal_links:
+        candidate_posts = fetch_recent_wp_posts(wp_site)
+        if candidate_posts:
+            links_list_str = "\n".join([f"- {p['title']}: {p['link']}" for p in candidate_posts])
+            internal_link_instruction = (
+                f"\nإن أمكن بشكل طبيعي، ضمّن رابطاً داخلياً واحداً أو رابطين على الأكثر باستخدام وسم "
+                f"<a href=\"...\">نص الرابط</a> داخل فقرات الخبر، يشيران فقط إلى أحد الروابط التالية "
+                f"لمقالات أخرى على نفس الموقع (لا تخترع أي رابط جديد، استخدم الروابط أدناه حرفياً):\n{links_list_str}"
+            )
+
+    comparison_line = f"\n{comparison_text}" if comparison_text else "\nلا تتوفر بيانات مقارنة بتحديث سابق - لا تذكر أي مقارنة أو نسبة تغيير في هذه الحالة."
+
+    prompt = (
+        f"بصفتك محررًا اقتصاديًا محترفًا باللغة العربية، اكتب خبرًا صحفيًا محدَّثًا عن سعر صرف الدولار اليوم في مصر، "
+        f"معتمداً حصرياً على الرقم الحقيقي التالي المأخوذ من السوق لحظة كتابة الخبر - "
+        f"اذكره كما هو تماماً دون تقريب أو اختراع رقم بديل:\n"
+        f"- سعر صرف الدولار الأمريكي: {dollar_data['usd_to_egp']} جنيه مصري"
+        f"{comparison_line}\n\n"
+        f"الرجاء الالتزام التام بالتعليمات التالية:\n"
+        f"1. اكتب بأسلوب صحفي اقتصادي مباشر وواضح، بين 200 و350 كلمة. {READABILITY_INSTRUCTION}\n"
+        f"2. قم بصياغة عنوان جذاب يذكر تحديث سعر الدولار اليوم.\n"
+        f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
+        f"4. أضف في نهاية الخبر فقرة قصيرة بعنوان \"نظرة عامة على السوق\" تصف الاتجاه العام لحركة سعر الصرف "
+        f"بصياغة عامة ومتحفظة، على أن تنتهي الفقرة حرفياً بجملة توضيحية مشابهة لـ: \"هذه قراءة عامة لحركة السوق "
+        f"ولا تُعد توصية استثمارية.\" لا تذكر أي أرقام أو مستويات أو نسب مستقبلية مختلَقة، فقط وصف عام للاتجاه.\n"
+        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
+        f"- \"title\": عنوان الخبر\n"
+        f"- \"excerpt\": ملخص الخبر\n"
+        f"- \"body\": {body_format_instruction}\n"
+        f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
+        f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر، لاستخدامها في تحليل السيو (SEO).\n"
+        f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً.\n"
+        f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
+        f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
+        f"(مثال: \"سعر الدولار اليوم\"، \"سعر الدولار مقابل الجنيه المصري\").\n\n"
+        f"6. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"{internal_link_instruction}"
+    )
+
+    ai_response = call_gemini_api(prompt, api_key=api_key)
+    if not ai_response:
+        AIImportLog.objects.create(
+            source=None,
+            source_url=GOLD_FX_API_URL,
+            wp_site=wp_site,
+            title="تحديث سعر الدولار",
+            status='failed',
+            error_message="لم يستجب الـ API الخاص بـ Gemini أو فشل استخراج النص."
+        )
+        return False
+
+    try:
+        cleaned_response = ai_response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]
+        cleaned_response = cleaned_response.strip()
+
+        data = json.loads(cleaned_response)
+        new_title = sanitize_ai_text(data.get("title", "").strip())
+        new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
+        new_body = sanitize_ai_body(
+            data.get("body", "").strip(),
+            allow_headings=wp_site.use_rich_formatting,
+            allow_links=wp_site.use_internal_links,
+            link_base_url=wp_site.url,
+        )
+        if wp_site.use_rich_formatting:
+            new_body = apply_heading_color(new_body, wp_site.heading_color)
+        focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
+        meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        raw_tags = data.get("tags") or []
+        if not isinstance(raw_tags, list):
+            raw_tags = []
+        ai_tags = [sanitize_ai_text(str(t).strip()) for t in raw_tags[:5] if str(t).strip()]
+
+        try:
+            chosen_cat_id = int(data.get("category_id"))
+        except (ValueError, TypeError):
+            chosen_cat_id = None
+
+        if not new_title or not new_body:
+            raise ValueError("بيانات العنوان أو المحتوى فارغة.")
+
+        category = None
+        if chosen_cat_id:
+            category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
+        if not category and allowed_cats:
+            category = allowed_cats[0]
+
+        from core.utils import translate_text
+        title_en = translate_text(new_title)
+        body_en = translate_text(new_body)
+        excerpt_en = translate_text(new_excerpt)
+
+        author = ai_settings.default_author or get_or_create_ai_author()
+        article = Article(
+            title=new_title,
+            title_ar=new_title,
+            title_en=title_en,
+            slug=generate_slug_for_title(new_title),
+            body=new_body,
+            body_ar=new_body,
+            body_en=body_en,
+            excerpt=new_excerpt,
+            excerpt_ar=new_excerpt,
+            excerpt_en=excerpt_en,
+            author=author,
+            category=category,
+            status='draft',
+            published_at=timezone.now(),
+            is_featured=False,
+            is_breaking=False,
+            auto_translate=False
+        )
+        article.save()
+
+        tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
+        published_url = None
+        try:
+            published_url = push_article_to_wordpress(
+                wp_site, article, extra_tag_names=tag_names,
+                focus_keyword=focus_keyword, meta_description=meta_description
+            )
+        except Exception as wpe:
+            logger.error(f"Error syndicating dollar price article to WP site {wp_site.name}: {wpe}")
+
+        AIImportLog.objects.create(
+            source=None,
+            article=article,
+            wp_site=wp_site,
+            source_url=GOLD_FX_API_URL,
+            published_url=published_url or '',
+            title=new_title,
+            status='success' if published_url else 'failed',
+            error_message='' if published_url else 'فشل النشر على ووردبريس'
+        )
+        return bool(published_url)
+    except Exception as ex:
+        logger.error(f"Failed to generate dollar price article for {wp_site.name}: {ex}")
+        AIImportLog.objects.create(
+            source=None,
+            source_url=GOLD_FX_API_URL,
+            wp_site=wp_site,
+            title="تحديث سعر الدولار",
+            status='failed',
+            error_message=f"فشل صياغة خبر سعر الدولار لـ {wp_site.name}: {str(ex)}"
+        )
+        return False
+
+
 def run_ai_generation_cycle():
     """
     Executes a complete AI generation cycle:
@@ -769,7 +1165,11 @@ def run_ai_generation_cycle():
                 continue
             if Article.all_objects.filter(slug=generate_slug_for_title(item['title'])).exists():
                 continue
-                
+            # Gold/silver/dollar price news comes exclusively from the dedicated
+            # live gold-price generator, never from the RSS rewrite pipeline.
+            if is_excluded_price_topic(item['title'], item.get('description')):
+                continue
+
             source_allowed_for_local = not local_sources_restricted or source.id in local_source_ids
             if ai_settings.publish_to_main_site and source_allowed_for_local:
                 # Always generate and publish locally first (Case 1)
@@ -1092,6 +1492,68 @@ def run_ai_generation_cycle():
                     generated_count += 1
         else:
             logger.error("Failed to fetch live gold price data; skipping gold price article generation this cycle.")
+
+    silver_price_sites = WordPressSite.objects.filter(is_active=True, generate_silver_price_articles=True)
+    if silver_price_sites.exists():
+        silver_data = fetch_live_silver_prices()
+        if silver_data:
+            comparison_text = ""
+            if ai_settings.last_silver_price_egp:
+                diff = silver_data['price_999_egp'] - ai_settings.last_silver_price_egp
+                if abs(diff) >= 0.5:
+                    direction = "ارتفع" if diff > 0 else "تراجع"
+                    comparison_text = (
+                        f"- مقارنة حقيقية بآخر تحديث مسجَّل: {direction} سعر جرام الفضة الخالصة بمقدار "
+                        f"{abs(round(diff, 2))} جنيه مصري (اذكر هذه المقارنة بدقة كما هي)."
+                    )
+            ai_settings.last_silver_price_egp = silver_data['price_999_egp']
+            ai_settings.last_silver_price_at = silver_data['timestamp']
+            ai_settings.save(update_fields=['last_silver_price_egp', 'last_silver_price_at'])
+
+            for wp_site in silver_price_sites:
+                if generated_count >= limit:
+                    break
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                success = generate_silver_price_article_for_site(
+                    wp_site, silver_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
+                )
+                if success:
+                    wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    generated_count += 1
+        else:
+            logger.error("Failed to fetch live silver price data; skipping silver price article generation this cycle.")
+
+    dollar_price_sites = WordPressSite.objects.filter(is_active=True, generate_dollar_price_articles=True)
+    if dollar_price_sites.exists():
+        dollar_data = fetch_live_dollar_price()
+        if dollar_data:
+            comparison_text = ""
+            if ai_settings.last_dollar_price_egp:
+                diff = dollar_data['usd_to_egp'] - ai_settings.last_dollar_price_egp
+                if abs(diff) >= 0.01:
+                    direction = "ارتفع" if diff > 0 else "تراجع"
+                    comparison_text = (
+                        f"- مقارنة حقيقية بآخر تحديث مسجَّل: {direction} سعر صرف الدولار بمقدار "
+                        f"{abs(round(diff, 2))} جنيه مصري (اذكر هذه المقارنة بدقة كما هي)."
+                    )
+            ai_settings.last_dollar_price_egp = dollar_data['usd_to_egp']
+            ai_settings.last_dollar_price_at = dollar_data['timestamp']
+            ai_settings.save(update_fields=['last_dollar_price_egp', 'last_dollar_price_at'])
+
+            for wp_site in dollar_price_sites:
+                if generated_count >= limit:
+                    break
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                success = generate_dollar_price_article_for_site(
+                    wp_site, dollar_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
+                )
+                if success:
+                    wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    generated_count += 1
+        else:
+            logger.error("Failed to fetch live dollar price data; skipping dollar price article generation this cycle.")
 
     # Update last run timestamp
     ai_settings.last_run = timezone.now()
