@@ -1141,11 +1141,24 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
                 img_data = img_file.read()
                 
             response = requests.post(media_url, auth=auth, headers=headers, data=img_data, timeout=20)
-            
+
             if response.status_code == 201:
                 media_data = response.json()
                 featured_media_id = media_data.get('id')
                 logger.info(f"Successfully uploaded media to WP site {wp_site.name}, ID: {featured_media_id}")
+
+                # Set alt text (accessibility + SEO) - the upload above sends raw
+                # binary data so alt_text can't ride along in the same request;
+                # WordPress accepts it via a follow-up PATCH to the same media item.
+                try:
+                    requests.post(
+                        f"{media_url}/{featured_media_id}",
+                        auth=auth,
+                        json={'alt_text': article.title},
+                        timeout=10,
+                    )
+                except Exception as alt_e:
+                    logger.warning(f"Failed to set alt text for media {featured_media_id} on {wp_site.name}: {alt_e}")
             else:
                 logger.error(f"Failed to upload media to WP site {wp_site.name}: {response.text}")
         except Exception as e:
