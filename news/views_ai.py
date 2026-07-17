@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from .models import AISettings, AISource, AIImportLog, Category, Article, WordPressSite
-from .ai_utils import run_ai_generation_cycle
+from .tasks import scrape_and_generate_news_task
 
 class StaffRequiredMixin(UserPassesTestMixin):
     """
@@ -145,13 +145,10 @@ class ImportLogListView(StaffRequiredMixin, ListView):
 class TriggerScraperView(StaffRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         try:
-            count = run_ai_generation_cycle()
-            if count > 0:
-                messages.success(request, f"تم تشغيل النظام بنجاح وتوليد {count} أخبار جديدة ونشرها.")
-            else:
-                messages.info(request, "تم تشغيل النظام ولكن لم يتم توليد أي أخبار جديدة (ربما لم يتبقَ أخبار جديدة اليوم أو تم الوصول للحد اليومي).")
+            scrape_and_generate_news_task.delay()
+            messages.success(request, "تم إرسال طلب التوليد إلى الخلفية، وسيتم تنفيذه خلال دقائق قليلة. تحقّق من سجلات الاستيراد بعد قليل لمتابعة النتيجة.")
         except Exception as e:
-            messages.error(request, f"فشل تشغيل عملية التوليد الآلية: {str(e)}")
+            messages.error(request, f"فشل إرسال طلب التوليد الآلي: {str(e)}")
 
         return redirect('news_ai:index')
     
