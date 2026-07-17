@@ -293,6 +293,8 @@ class AISettings(models.Model):
     categories = models.ManyToManyField(Category, blank=True, related_name='ai_settings', verbose_name="الأقسام المتاحة للنشر")
     local_sources = models.ManyToManyField('AISource', blank=True, related_name='local_ai_settings', verbose_name="مصادر الأخبار المغذية لموقع المغرب العربي", help_text="إذا تركت هذا الحقل فارغاً سيستخدم النظام جميع المصادر النشطة للنشر المحلي.")
     last_run = models.DateTimeField(blank=True, null=True)
+    last_gold_price_24k_egp = models.FloatField(blank=True, null=True, verbose_name="آخر سعر مسجَّل لجرام الذهب عيار 24 (جنيه)", help_text="يُستخدم داخلياً لمقارنة سعر الذهب بالتحديث السابق.")
+    last_gold_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر تسجيل لسعر الذهب")
 
     class Meta:
         verbose_name = "AI Global Settings"
@@ -400,6 +402,9 @@ class WordPressSite(models.Model):
     use_rich_formatting = models.BooleanField(default=False, verbose_name="تنسيق غني بعناوين فرعية ملوّنة (SEO)", help_text="عند التفعيل، يُقسَّم الخبر إلى عناوين فرعية H2/H3 ملوّنة بدلاً من فقرات فقط، مع إضافة وسوم (Tags) تلقائية لتحسين توافق السيو (Yoast).")
     heading_color = models.CharField(max_length=7, default='#0066cc', verbose_name="لون العناوين الفرعية", help_text="كود اللون السداسي عشري (Hex)، مثال: #0066cc")
     use_internal_links = models.BooleanField(default=False, verbose_name="إضافة روابط داخلية تلقائية (SEO)", help_text="عند التفعيل، يحاول النظام تضمين رابط داخلي أو رابطين ضمن نص الخبر يشيران إلى مقالات حديثة أخرى منشورة على هذا الموقع نفسه.")
+    generate_gold_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الذهب الحية", help_text="عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر الذهب اللحظي (عيار 24، 21، 18) بالجنيه المصري لهذا الموقع فقط.")
+    site_tags = models.TextField(blank=True, default='', verbose_name="وسوم ثابتة لهذا الموقع", help_text="وسوم ثابتة (افصل بينها بفاصلة) تُضاف تلقائياً لكل خبر يُنشر على هذا الموقع، مثال: بانكرز توداي, موقع بانكرز توداي الاخباري")
+    use_explainer_style = models.BooleanField(default=False, verbose_name="أسلوب تفسيري (Explainer) عند الحاجة", help_text="عند التفعيل، يقرر الذكاء الاصطناعي تلقائياً استخدام أسلوب شرح بعناوين على شكل أسئلة (لماذا؟ هل؟ كيف؟) للأخبار الاقتصادية/التنظيمية (رسوم، ضرائب، قرارات) التي تحتاج تفصيلاً، بدلاً من الخبر القصير المعتاد.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -415,5 +420,8 @@ class WordPressSite(models.Model):
             return json.loads(self.category_mapping)
         except Exception:
             return {}
+
+    def get_site_tags_list(self):
+        return [t.strip() for t in self.site_tags.split(',') if t.strip()]
 
 

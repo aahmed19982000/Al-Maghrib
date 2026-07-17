@@ -17,6 +17,28 @@ logger = logging.getLogger(__name__)
 # Article body is rendered with the `|safe` template filter, so AI output must be
 # restricted to a small safe subset before it's ever saved.
 ALLOWED_BODY_TAGS = ['p', 'br', 'strong', 'em', 'b', 'i']
+# First subheading is h2, then each subsequent one steps down a level (h3, h4, ...).
+HEADING_TAGS = ['h2', 'h3', 'h4', 'h5', 'h6']
+
+HEADING_STRUCTURE_INSTRUCTION = (
+    "فقرة تمهيدية واحدة بوسم <p>، ثم عناوين فرعية متتالية بحيث يكون أول عنوان فرعي بوسم <h2>، "
+    "والعنوان الفرعي الذي يليه بوسم <h3>، والذي يليه بوسم <h4>، وهكذا بحيث ينزل مستوى العنوان درجة "
+    "واحدة مع كل عنوان فرعي جديد (لا تستخدم نفس مستوى العنوان مرتين). كل فقرة نصية توضع داخل وسم "
+    "<p> تحت عنوانها الفرعي المناسب. لا تستخدم أي وسوم أو خصائص (attributes) أخرى غير <p> والعناوين "
+    "الفرعية المذكورة."
+)
+
+# Shared writing-style instruction added to every generation prompt, aimed at
+# Yoast's readability checks (short sentences/paragraphs, varied sentence
+# openings, transition words, active voice) - all structural checks that
+# apply regardless of Yoast's language support level for Arabic.
+READABILITY_INSTRUCTION = (
+    "اكتب بأسلوب سهل القراءة ومتوافق مع تحليل يوست (Yoast Readability): استخدم جملاً قصيرة "
+    "(لا تتجاوز 20 كلمة للجملة الواحدة)، وفقرات قصيرة (2-3 جمل كحد أقصى لكل فقرة)، ونوّع بداية "
+    "الجمل المتتالية ولا تبدأ جملتين متتاليتين بنفس الكلمة، واستخدم كلمات ربط انتقالية بين الجمل "
+    "(مثل: بالإضافة إلى ذلك، ومع ذلك، على سبيل المثال، في المقابل، وبالتالي) حيثما كان ذلك طبيعياً، "
+    "وفضّل صيغة المبني للمعلوم على المبني للمجهول."
+)
 
 
 def sanitize_ai_body(html, allow_headings=False, allow_links=False, link_base_url=None):
@@ -28,7 +50,7 @@ def sanitize_ai_body(html, allow_headings=False, allow_links=False, link_base_ur
     tags = list(ALLOWED_BODY_TAGS)
     attributes = {}
     if allow_headings:
-        tags += ['h2', 'h3']
+        tags += HEADING_TAGS
     if allow_links:
         tags += ['a']
         attributes['a'] = ['href']
@@ -54,13 +76,13 @@ def sanitize_ai_text(text):
 
 def apply_heading_color(html, color):
     """
-    Applies the WordPress site's configured heading_color to every h2/h3 tag.
+    Applies the WordPress site's configured heading_color to every subheading tag.
     Done server-side (never trusts a color/style coming from the AI response).
     """
     if not html or not color or not re.match(r'^#[0-9A-Fa-f]{6}$', color):
         return html
     soup = BeautifulSoup(html, 'html.parser')
-    for tag in soup.find_all(['h2', 'h3']):
+    for tag in soup.find_all(HEADING_TAGS):
         tag['style'] = f'color: {color};'
     return str(soup)
 
@@ -334,6 +356,46 @@ def fetch_recent_wp_posts(wp_site, limit=5):
         return []
 
 
+GOLD_SPOT_API_URL = 'https://api.gold-api.com/price/XAU'
+GOLD_FX_API_URL = 'https://open.er-api.com/v6/latest/USD'
+GRAMS_PER_TROY_OUNCE = 31.1034768
+
+
+def fetch_live_gold_prices():
+    """
+    Fetches the live gold spot price (USD/troy ounce, gold-api.com) and the
+    USD->EGP exchange rate (open.er-api.com) - both free, keyless, public
+    APIs - and computes per-gram Egyptian prices for common karats.
+    Returns None if either request fails.
+    """
+    try:
+        gold_resp = requests.get(GOLD_SPOT_API_URL, timeout=10)
+        gold_resp.raise_for_status()
+        spot_usd_per_oz = float(gold_resp.json()['price'])
+
+        fx_resp = requests.get(GOLD_FX_API_URL, timeout=10)
+        fx_resp.raise_for_status()
+        usd_to_egp = float(fx_resp.json()['rates']['EGP'])
+    except Exception as e:
+        logger.error(f"Failed to fetch live gold price data: {e}")
+        return None
+
+    price_24k_egp = (spot_usd_per_oz / GRAMS_PER_TROY_OUNCE) * usd_to_egp
+    price_21k_egp = price_24k_egp * 0.875
+    return {
+        'spot_usd_per_oz': round(spot_usd_per_oz, 2),
+        'usd_to_egp': round(usd_to_egp, 2),
+        'price_24k_egp': round(price_24k_egp, 2),
+        'price_22k_egp': round(price_24k_egp * 0.916, 2),
+        'price_21k_egp': round(price_21k_egp, 2),
+        'price_18k_egp': round(price_24k_egp * 0.75, 2),
+        'price_14k_egp': round(price_24k_egp * 0.585, 2),
+        # The Egyptian gold pound (جنيه الذهب) is traditionally minted at 21k, ~8 grams.
+        'gold_pound_egp': round(price_21k_egp * 8, 2),
+        'timestamp': timezone.now(),
+    }
+
+
 def get_or_create_wp_tag_ids(wp_site, tag_names, auth):
     """
     Looks up each tag name via the WordPress REST API and creates it if missing.
@@ -461,6 +523,179 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
     return None
 
 
+def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str):
+    """
+    Writes and publishes a fresh gold-price article to a single WordPress site,
+    using the exact real numbers in gold_data rather than any AI-invented figures.
+    Returns True on a successful publish, False otherwise.
+    """
+    if wp_site.use_rich_formatting:
+        body_format_instruction = f"محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): {HEADING_STRUCTURE_INSTRUCTION}"
+    else:
+        body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
+
+    internal_link_instruction = ""
+    if wp_site.use_internal_links:
+        candidate_posts = fetch_recent_wp_posts(wp_site)
+        if candidate_posts:
+            links_list_str = "\n".join([f"- {p['title']}: {p['link']}" for p in candidate_posts])
+            internal_link_instruction = (
+                f"\nإن أمكن بشكل طبيعي، ضمّن رابطاً داخلياً واحداً أو رابطين على الأكثر باستخدام وسم "
+                f"<a href=\"...\">نص الرابط</a> داخل فقرات الخبر، يشيران فقط إلى أحد الروابط التالية "
+                f"لمقالات أخرى على نفس الموقع (لا تخترع أي رابط جديد، استخدم الروابط أدناه حرفياً):\n{links_list_str}"
+            )
+
+    comparison_line = f"\n{comparison_text}" if comparison_text else "\nلا تتوفر بيانات مقارنة بتحديث سابق - لا تذكر أي مقارنة أو نسبة تغيير في هذه الحالة."
+
+    prompt = (
+        f"بصفتك محررًا اقتصاديًا محترفًا باللغة العربية، اكتب خبرًا صحفيًا محدَّثًا عن سعر الذهب اليوم في مصر، "
+        f"معتمداً حصرياً على الأرقام الحقيقية التالية المأخوذة من السوق العالمية لحظة كتابة الخبر - "
+        f"اذكرها كما هي تماماً دون تقريب أو اختراع أي رقم بديل:\n"
+        f"- سعر أوقية الذهب عالمياً: {gold_data['spot_usd_per_oz']} دولار أمريكي\n"
+        f"- سعر صرف الدولار: {gold_data['usd_to_egp']} جنيه مصري\n"
+        f"- سعر جرام الذهب عيار 24: {gold_data['price_24k_egp']} جنيه مصري\n"
+        f"- سعر جرام الذهب عيار 22: {gold_data['price_22k_egp']} جنيه مصري\n"
+        f"- سعر جرام الذهب عيار 21: {gold_data['price_21k_egp']} جنيه مصري\n"
+        f"- سعر جرام الذهب عيار 18: {gold_data['price_18k_egp']} جنيه مصري\n"
+        f"- سعر جرام الذهب عيار 14: {gold_data['price_14k_egp']} جنيه مصري\n"
+        f"- سعر جنيه الذهب (8 جرام عيار 21): {gold_data['gold_pound_egp']} جنيه مصري"
+        f"{comparison_line}\n\n"
+        f"الرجاء الالتزام التام بالتعليمات التالية:\n"
+        f"1. اكتب بأسلوب صحفي اقتصادي مباشر وواضح، بين 250 و400 كلمة. {READABILITY_INSTRUCTION}\n"
+        f"2. قم بصياغة عنوان جذاب يذكر تحديث سعر الذهب اليوم.\n"
+        f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
+        f"4. أضف في نهاية الخبر فقرة قصيرة بعنوان \"نظرة عامة على السوق\" تصف الاتجاه العام لحركة الذهب عالمياً "
+        f"بصياغة عامة ومتحفظة (مثل تأثير سعر الصرف أو حركة السوق العالمي)، على أن تنتهي الفقرة حرفياً بجملة توضيحية "
+        f"مشابهة لـ: \"هذه قراءة عامة لحركة السوق ولا تُعد توصية استثمارية.\" لا تذكر أي أرقام أو مستويات أو نسب "
+        f"مستقبلية مختلَقة، فقط وصف عام للاتجاه.\n"
+        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
+        f"- \"title\": عنوان الخبر\n"
+        f"- \"excerpt\": ملخص الخبر\n"
+        f"- \"body\": {body_format_instruction}\n"
+        f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
+        f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر، لاستخدامها في تحليل السيو (SEO).\n"
+        f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً.\n"
+        f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
+        f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
+        f"(مثال: \"سعر الذهب اليوم\"، \"سعر جرام الذهب عيار 21\"، \"سعر جنيه الذهب في مصر\").\n\n"
+        f"6. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"{internal_link_instruction}"
+    )
+
+    ai_response = call_gemini_api(prompt, api_key=api_key)
+    if not ai_response:
+        AIImportLog.objects.create(
+            source=None,
+            source_url=GOLD_SPOT_API_URL,
+            wp_site=wp_site,
+            title="تحديث سعر الذهب",
+            status='failed',
+            error_message="لم يستجب الـ API الخاص بـ Gemini أو فشل استخراج النص."
+        )
+        return False
+
+    try:
+        cleaned_response = ai_response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]
+        cleaned_response = cleaned_response.strip()
+
+        data = json.loads(cleaned_response)
+        new_title = sanitize_ai_text(data.get("title", "").strip())
+        new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
+        new_body = sanitize_ai_body(
+            data.get("body", "").strip(),
+            allow_headings=wp_site.use_rich_formatting,
+            allow_links=wp_site.use_internal_links,
+            link_base_url=wp_site.url,
+        )
+        if wp_site.use_rich_formatting:
+            new_body = apply_heading_color(new_body, wp_site.heading_color)
+        focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
+        meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        raw_tags = data.get("tags") or []
+        if not isinstance(raw_tags, list):
+            raw_tags = []
+        ai_tags = [sanitize_ai_text(str(t).strip()) for t in raw_tags[:5] if str(t).strip()]
+
+        try:
+            chosen_cat_id = int(data.get("category_id"))
+        except (ValueError, TypeError):
+            chosen_cat_id = None
+
+        if not new_title or not new_body:
+            raise ValueError("بيانات العنوان أو المحتوى فارغة.")
+
+        category = None
+        if chosen_cat_id:
+            category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
+        if not category and allowed_cats:
+            category = allowed_cats[0]
+
+        from core.utils import translate_text
+        title_en = translate_text(new_title)
+        body_en = translate_text(new_body)
+        excerpt_en = translate_text(new_excerpt)
+
+        author = ai_settings.default_author or get_or_create_ai_author()
+        article = Article(
+            title=new_title,
+            title_ar=new_title,
+            title_en=title_en,
+            slug=generate_slug_for_title(new_title),
+            body=new_body,
+            body_ar=new_body,
+            body_en=body_en,
+            excerpt=new_excerpt,
+            excerpt_ar=new_excerpt,
+            excerpt_en=excerpt_en,
+            author=author,
+            category=category,
+            status='draft',
+            published_at=timezone.now(),
+            is_featured=False,
+            is_breaking=False,
+            auto_translate=False
+        )
+        article.save()
+
+        tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
+        published_url = None
+        try:
+            published_url = push_article_to_wordpress(
+                wp_site, article, extra_tag_names=tag_names,
+                focus_keyword=focus_keyword, meta_description=meta_description
+            )
+        except Exception as wpe:
+            logger.error(f"Error syndicating gold price article to WP site {wp_site.name}: {wpe}")
+
+        AIImportLog.objects.create(
+            source=None,
+            article=article,
+            wp_site=wp_site,
+            source_url=GOLD_SPOT_API_URL,
+            published_url=published_url or '',
+            title=new_title,
+            status='success' if published_url else 'failed',
+            error_message='' if published_url else 'فشل النشر على ووردبريس'
+        )
+        return bool(published_url)
+    except Exception as ex:
+        logger.error(f"Failed to generate gold price article for {wp_site.name}: {ex}")
+        AIImportLog.objects.create(
+            source=None,
+            source_url=GOLD_SPOT_API_URL,
+            wp_site=wp_site,
+            title="تحديث سعر الذهب",
+            status='failed',
+            error_message=f"فشل صياغة خبر سعر الذهب لـ {wp_site.name}: {str(ex)}"
+        )
+        return False
+
+
 def run_ai_generation_cycle():
     """
     Executes a complete AI generation cycle:
@@ -545,7 +780,7 @@ def run_ai_generation_cycle():
                     f"عنوان الخبر الأصلي: {item['title']}\n"
                     f"تفاصيل الخبر: {item['description']}\n\n"
                     f"الرجاء الالتزام التام بالتعليمات التالية:\n"
-                    f"1. اكتب الخبر باللغة العربية الفصحى وبأسلوب صحفي متميز وجذاب ومحايد.\n"
+                    f"1. اكتب الخبر باللغة العربية الفصحى وبأسلوب صحفي متميز وجذاب ومحايد. {READABILITY_INSTRUCTION}\n"
                     f"2. يجب أن لا يزيد حجم الخبر الإجمالي عن {ai_settings.max_words} كلمة إطلاقاً (تأكد أن يتراوح طول الخبر بين 300 إلى 450 كلمة كحد أقصى لتفادي الإطالة).\n"
                     f"3. قم بصياغة عنوان مميز وجذاب ومختلف عن العنوان الأصلي.\n"
                     f"4. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
@@ -658,12 +893,7 @@ def run_ai_generation_cycle():
                         continue
 
                     if wp_site.use_rich_formatting:
-                        body_format_instruction = (
-                            "محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): فقرة تمهيدية واحدة بوسم <p>، "
-                            "ثم 2-4 أقسام رئيسية لكل منها عنوان فرعي قصير وجذاب بوسم <h2>، ويمكن استخدام <h3> لعنوان "
-                            "فرعي أصغر داخل القسم عند الحاجة لتفصيل إضافي. كل فقرة نصية توضع داخل وسم <p> تحت "
-                            "عنوانها الفرعي المناسب. لا تستخدم أي وسوم أو خصائص (attributes) أخرى غير <p> و<h2> و<h3>."
-                        )
+                        body_format_instruction = f"محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): {HEADING_STRUCTURE_INSTRUCTION}"
                     else:
                         body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
 
@@ -678,6 +908,19 @@ def run_ai_generation_cycle():
                                 f"لمقالات أخرى على نفس الموقع (لا تخترع أي رابط جديد، استخدم الروابط أدناه حرفياً):\n{links_list_str}"
                             )
 
+                    explainer_instruction = ""
+                    if wp_site.use_explainer_style:
+                        explainer_instruction = (
+                            "\n8. إذا كان هذا الخبر يتعلق بقرار تنظيمي أو رسوم أو ضرائب أو تغييرات أسعار تستحق شرحاً "
+                            "تفصيلياً (وليس مجرد خبر عاجل سريع)، فاختر أسلوباً تفسيرياً بدلاً من الأسلوب المعتاد: صغ "
+                            "العنوان كسؤال يعكس جوهر الموضوع، وقسّم محتوى الخبر إلى عناوين فرعية على شكل أسئلة فرعية "
+                            "(مثل: لماذا...؟ هل...؟ ما حجم/تأثير...؟ كيف...؟) باتباع نفس ترتيب مستويات العناوين "
+                            "الموضح أعلاه (أول عنوان فرعي <h2>، والذي يليه <h3>، وهكذا)، بحيث يجيب كل قسم عن سؤاله "
+                            "مباشرة، ويمكن أن يصل طول الخبر في هذه الحالة حتى 800 كلمة متجاوزاً الحد المذكور في "
+                            "التعليمة الثانية. أما إذا كان الخبر عاجلاً أو حدثياً عادياً لا يحتاج شرحاً، فاتبع التنسيق "
+                            "المعتاد القصير."
+                        )
+
                     prompt = (
                         f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
                         f"استناداً إلى المعلومات والخبر التالي:\n"
@@ -685,7 +928,7 @@ def run_ai_generation_cycle():
                         f"عنوان الخبر الأصلي: {item['title']}\n"
                         f"تفاصيل الخبر: {item['description']}\n\n"
                         f"الرجاء الالتزام التام بالتعليمات التالية:\n"
-                        f"1. اكتب الخبر باللغة العربية الفصحى وبأسلوب صحفي متميز وجذاب ومحايد.\n"
+                        f"1. اكتب الخبر باللغة العربية الفصحى وبأسلوب صحفي متميز وجذاب ومحايد. {READABILITY_INSTRUCTION}\n"
                         f"2. يجب أن لا يزيد حجم الخبر الإجمالي عن {ai_settings.max_words} كلمة إطلاقاً (تأكد أن يتراوح طول الخبر بين 300 إلى 450 كلمة كحد أقصى لتفادي الإطالة).\n"
                         f"3. قم بصياغة عنوان مميز وجذاب ومختلف عن العنوان الأصلي.\n"
                         f"4. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
@@ -697,9 +940,13 @@ def run_ai_generation_cycle():
                         f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
                         f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر الأساسي، لاستخدامها في تحليل السيو (SEO).\n"
                         f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً، يتضمن العبارة المفتاحية أعلاه.\n"
-                        f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم قصيرة ومحددة خاصة بموضوع هذا الخبر تحديداً (مثال لخبر عن سعر اليورو: \"سعر اليورو اليوم\"، \"اليورو مقابل الجنيه\")، بدون ذكر اسم أي موقع إخباري.\n\n"
+                        f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا "
+                        f"الخبر تحديداً (وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في "
+                        f"جوجل عن هذا الموضوع بالذات (مثال لخبر عن سعر اليورو: \"سعر اليورو اليوم\"، \"اليورو مقابل "
+                        f"الجنيه\")، بدون ذكر اسم أي موقع إخباري.\n\n"
                         f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
-                        f"{internal_link_instruction}\n\n"
+                        f"{internal_link_instruction}"
+                        f"{explainer_instruction}\n\n"
                         f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
                     )
 
@@ -720,7 +967,7 @@ def run_ai_generation_cycle():
                         new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
                         new_body = sanitize_ai_body(
                             data.get("body", "").strip(),
-                            allow_headings=wp_site.use_rich_formatting,
+                            allow_headings=wp_site.use_rich_formatting or wp_site.use_explainer_style,
                             allow_links=wp_site.use_internal_links,
                             link_base_url=wp_site.url,
                         )
@@ -781,7 +1028,7 @@ def run_ai_generation_cycle():
                         # Push this unique version to this specific WP site
                         published_url = None
                         try:
-                            tag_names = ai_tags if ai_tags else ([category.name] if category else [])
+                            tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
                             published_url = push_article_to_wordpress(
                                 wp_site, article, extra_tag_names=tag_names,
                                 focus_keyword=focus_keyword, meta_description=meta_description
@@ -812,6 +1059,39 @@ def run_ai_generation_cycle():
                             status='failed',
                             error_message=f"فشل صياغة فريدة للووردبريس {wp_site.name}: {str(ex)}"
                         )
+
+    # Live gold price articles: independent of RSS sources, generated fresh every
+    # cycle run for whichever site(s) opted in, capped by the same daily limits.
+    gold_price_sites = WordPressSite.objects.filter(is_active=True, generate_gold_price_articles=True)
+    if gold_price_sites.exists():
+        gold_data = fetch_live_gold_prices()
+        if gold_data:
+            comparison_text = ""
+            if ai_settings.last_gold_price_24k_egp:
+                diff = gold_data['price_24k_egp'] - ai_settings.last_gold_price_24k_egp
+                if abs(diff) >= 0.5:
+                    direction = "ارتفع" if diff > 0 else "تراجع"
+                    comparison_text = (
+                        f"- مقارنة حقيقية بآخر تحديث مسجَّل: {direction} سعر جرام الذهب عيار 24 بمقدار "
+                        f"{abs(round(diff, 2))} جنيه مصري (اذكر هذه المقارنة بدقة كما هي)."
+                    )
+            ai_settings.last_gold_price_24k_egp = gold_data['price_24k_egp']
+            ai_settings.last_gold_price_at = gold_data['timestamp']
+            ai_settings.save(update_fields=['last_gold_price_24k_egp', 'last_gold_price_at'])
+
+            for wp_site in gold_price_sites:
+                if generated_count >= limit:
+                    break
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                success = generate_gold_price_article_for_site(
+                    wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
+                )
+                if success:
+                    wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                    generated_count += 1
+        else:
+            logger.error("Failed to fetch live gold price data; skipping gold price article generation this cycle.")
 
     # Update last run timestamp
     ai_settings.last_run = timezone.now()
