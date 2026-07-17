@@ -620,15 +620,19 @@ def get_due_slot(wp_site, content_type, tolerance_minutes=SLOT_TOLERANCE_MINUTES
     """
     Returns the active WordPressScheduleSlot on this site that lists
     `content_type` among its content types, whose configured time is within
-    `tolerance_minutes` of the current Cairo-local time, and that hasn't
-    already run today (Cairo date). Returns None if nothing matches right now.
+    `tolerance_minutes` of the current Cairo-local time, and where THIS
+    content type specifically hasn't already run today (Cairo date). Tracked
+    per-type (not per-slot) so a slot listing several types (e.g. iron +
+    cement together) runs each of them independently - one type running
+    doesn't block the others in the same slot for the rest of the day.
+    Returns None if nothing matches right now.
     """
     now_cairo = timezone.now().astimezone(CAIRO_TZ)
-    today_cairo = now_cairo.date()
+    today_cairo = now_cairo.date().isoformat()
     for slot in wp_site.schedule_slots.filter(is_active=True):
         if content_type not in slot.get_content_types_list():
             continue
-        if slot.last_run_date == today_cairo:
+        if slot.get_last_run_date_for_type(content_type) == today_cairo:
             continue
         slot_dt = now_cairo.replace(hour=slot.time_of_day.hour, minute=slot.time_of_day.minute, second=0, microsecond=0)
         if abs((now_cairo - slot_dt).total_seconds()) <= tolerance_minutes * 60:
@@ -636,10 +640,9 @@ def get_due_slot(wp_site, content_type, tolerance_minutes=SLOT_TOLERANCE_MINUTES
     return None
 
 
-def mark_slot_run(slot):
-    """Marks a schedule slot as having run today (Cairo date), so it won't fire again until tomorrow."""
-    slot.last_run_date = timezone.now().astimezone(CAIRO_TZ).date()
-    slot.save(update_fields=['last_run_date'])
+def mark_slot_run(slot, content_type):
+    """Marks a specific content type on this slot as having run today (Cairo date)."""
+    slot.set_last_run_date_for_type(content_type, timezone.now().astimezone(CAIRO_TZ).date())
 
 
 def get_regular_news_run_cap(wp_site):
@@ -2070,7 +2073,7 @@ def run_ai_generation_cycle():
                             wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                             wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                             if wp_site.id in regular_due_slots:
-                                mark_slot_run(regular_due_slots[wp_site.id])
+                                mark_slot_run(regular_due_slots[wp_site.id], 'regular')
 
                         generated_count += 1
                     except Exception as ex:
@@ -2118,7 +2121,7 @@ def run_ai_generation_cycle():
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
                     if wp_site.id in gold_due_slots:
-                        mark_slot_run(gold_due_slots[wp_site.id])
+                        mark_slot_run(gold_due_slots[wp_site.id], 'gold')
         else:
             logger.error("Failed to fetch live gold price data; skipping gold price article generation this cycle.")
 
@@ -2159,7 +2162,7 @@ def run_ai_generation_cycle():
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
                     if wp_site.id in silver_due_slots:
-                        mark_slot_run(silver_due_slots[wp_site.id])
+                        mark_slot_run(silver_due_slots[wp_site.id], 'silver')
         else:
             logger.error("Failed to fetch live silver price data; skipping silver price article generation this cycle.")
 
@@ -2195,7 +2198,7 @@ def run_ai_generation_cycle():
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
                     if wp_site.id in dollar_due_slots:
-                        mark_slot_run(dollar_due_slots[wp_site.id])
+                        mark_slot_run(dollar_due_slots[wp_site.id], 'dollar')
         else:
             logger.error("Failed to fetch live dollar price data; skipping dollar price article generation this cycle.")
 
@@ -2225,7 +2228,7 @@ def run_ai_generation_cycle():
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
                     if wp_site.id in iron_due_slots:
-                        mark_slot_run(iron_due_slots[wp_site.id])
+                        mark_slot_run(iron_due_slots[wp_site.id], 'iron')
         else:
             logger.error("Failed to fetch official iron price data; skipping this cycle.")
 
@@ -2255,7 +2258,7 @@ def run_ai_generation_cycle():
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
                     if wp_site.id in cement_due_slots:
-                        mark_slot_run(cement_due_slots[wp_site.id])
+                        mark_slot_run(cement_due_slots[wp_site.id], 'cement')
         else:
             logger.error("Failed to fetch official cement price data; skipping this cycle.")
 
@@ -2285,7 +2288,7 @@ def run_ai_generation_cycle():
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
                     if wp_site.id in poultry_due_slots:
-                        mark_slot_run(poultry_due_slots[wp_site.id])
+                        mark_slot_run(poultry_due_slots[wp_site.id], 'poultry')
         else:
             logger.error("Failed to fetch official poultry price data; skipping this cycle.")
 
@@ -2315,7 +2318,7 @@ def run_ai_generation_cycle():
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
                     if wp_site.id in fish_due_slots:
-                        mark_slot_run(fish_due_slots[wp_site.id])
+                        mark_slot_run(fish_due_slots[wp_site.id], 'fish')
         else:
             logger.error("Failed to fetch official fish price data; skipping this cycle.")
 
@@ -2352,7 +2355,7 @@ def run_ai_generation_cycle():
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
                     if wp_site.id in vegetable_due_slots:
-                        mark_slot_run(vegetable_due_slots[wp_site.id])
+                        mark_slot_run(vegetable_due_slots[wp_site.id], 'vegetable')
         else:
             logger.error("Failed to fetch official vegetable price data; skipping this cycle.")
 
@@ -2381,7 +2384,7 @@ def run_ai_generation_cycle():
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
                     if wp_site.id in arab_currency_due_slots:
-                        mark_slot_run(arab_currency_due_slots[wp_site.id])
+                        mark_slot_run(arab_currency_due_slots[wp_site.id], 'arab_currencies')
         else:
             logger.error("Failed to fetch official Arab currency exchange rates; skipping this cycle.")
 

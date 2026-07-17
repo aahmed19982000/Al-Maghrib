@@ -180,6 +180,11 @@ class WordPressSiteUpdateView(StaffRequiredMixin, UpdateView):
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['has_schedule_slots'] = self.object.schedule_slots.filter(is_active=True).exists()
+        return context
+
     def form_valid(self, form):
         messages.success(self.request, f"تم تحديث الموقع '{form.instance.name}' بنجاح.")
         return super().form_valid(form)
@@ -194,6 +199,24 @@ class WordPressSiteDeleteView(StaffRequiredMixin, DeleteView):
         obj = self.get_object()
         messages.success(self.request, f"تم حذف الموقع '{obj.name}' بنجاح.")
         return super().delete(request, *args, **kwargs)
+
+
+class WordPressSitePublishedArticlesView(StaffRequiredMixin, ListView):
+    model = AIImportLog
+    template_name = 'ai_dashboard/wp_site_articles_list.html'
+    context_object_name = 'logs'
+    paginate_by = 30
+
+    def get_queryset(self):
+        self.wp_site = get_object_or_404(WordPressSite, pk=self.kwargs['wp_site_id'])
+        return AIImportLog.objects.filter(
+            wp_site=self.wp_site, status='success'
+        ).exclude(published_url='').order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['wp_site'] = self.wp_site
+        return context
 
 
 def _parse_slot_form(request):
@@ -267,9 +290,9 @@ class ScheduleSlotUpdateView(StaffRequiredMixin, View):
         else:
             for field, value in cleaned.items():
                 setattr(slot, field, value)
-            # Changing the schedule means the old last_run_date no longer
-            # reflects this (possibly new) configuration - let it fire again.
-            slot.last_run_date = None
+            # Changing the schedule means the old run log no longer reflects
+            # this (possibly new) configuration - let every type fire again.
+            slot.last_run_log = '{}'
             slot.save()
             messages.success(request, "تم تحديث الفترة الزمنية بنجاح.")
         return redirect('news_ai:schedule_slots', wp_site_id=wp_site_id)

@@ -57,9 +57,14 @@
                 {% endfor %}
             </div>
 
-            {% if slot.last_run_date %}
-            <p class="text-[10px] text-slate-500">آخر تنفيذ فعلي: {{ slot.last_run_date }}</p>
+            {% with last_runs=slot.get_last_run_summary %}
+            {% if last_runs %}
+            <p class="text-[10px] text-slate-500">
+                آخر تنفيذ فعلي:
+                {% for type_label, date in last_runs %}{{ type_label }} ({{ date }}){% if not forloop.last %}، {% endif %}{% endfor %}
+            </p>
             {% endif %}
+            {% endwith %}
         </form>
         <form method="post" action="{% url 'news_ai:schedule_slot_delete' wp_site.pk slot.pk %}" onsubmit="return confirm('هل أنت متأكد من حذف هذه الفترة الزمنية؟');" class="-mt-3 mb-1 text-left">
             {% csrf_token %}

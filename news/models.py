@@ -471,7 +471,7 @@ class WordPressScheduleSlot(models.Model):
     content_types = models.TextField(verbose_name="أنواع المحتوى", help_text="مفصولة بفاصلة، مثال: iron,vegetable")
     regular_news_count = models.PositiveIntegerField(default=1, verbose_name="عدد الأخبار العامة في هذه الفترة", help_text="يُستخدم فقط إذا كانت \"أخبار عامة\" ضمن أنواع المحتوى المختارة أعلاه.")
     is_active = models.BooleanField(default=True, verbose_name="مفعّلة")
-    last_run_date = models.DateField(blank=True, null=True, verbose_name="تاريخ آخر تنفيذ", help_text="يُستخدم داخلياً لضمان تنفيذ هذه الفترة مرة واحدة فقط في يومها.")
+    last_run_log = models.TextField(blank=True, default='{}', verbose_name="سجل آخر تنفيذ لكل نوع", help_text="يُستخدم داخلياً لضمان تنفيذ كل نوع محتوى في هذه الفترة مرة واحدة فقط في يومه، بشكل مستقل عن باقي الأنواع في نفس الفترة.")
 
     class Meta:
         ordering = ['time_of_day']
@@ -483,5 +483,37 @@ class WordPressScheduleSlot(models.Model):
 
     def get_content_types_list(self):
         return [c.strip() for c in self.content_types.split(',') if c.strip()]
+
+    def get_last_run_date_for_type(self, content_type):
+        """Returns the ISO date string this specific content type last ran under
+        this slot, or None. Tracked per-type so a multi-type slot (e.g. iron +
+        cement together) runs each type independently instead of one type's
+        run silently blocking the others for the rest of the day."""
+        import json
+        try:
+            log = json.loads(self.last_run_log)
+        except (ValueError, TypeError):
+            log = {}
+        return log.get(content_type)
+
+    def set_last_run_date_for_type(self, content_type, date_obj):
+        import json
+        try:
+            log = json.loads(self.last_run_log)
+        except (ValueError, TypeError):
+            log = {}
+        log[content_type] = date_obj.isoformat()
+        self.last_run_log = json.dumps(log)
+        self.save(update_fields=['last_run_log'])
+
+    def get_last_run_summary(self):
+        """Human-readable 'type: date' pairs for display in the admin UI."""
+        import json
+        try:
+            log = json.loads(self.last_run_log)
+        except (ValueError, TypeError):
+            log = {}
+        choice_labels = dict(self.CONTENT_TYPE_CHOICES)
+        return [(choice_labels.get(k, k), v) for k, v in log.items()]
 
 

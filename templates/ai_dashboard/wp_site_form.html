@@ -18,7 +18,22 @@
             </a>
             {% endif %}
         </div>
-        
+
+        {% if has_schedule_slots %}
+        <div class="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
+            <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-0.5"></i>
+            <div class="flex-1">
+                <p class="text-sm font-bold text-amber-300">لهذا الموقع جدول زمني نشط</p>
+                <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                    حقل "عدد المقالات لكل تشغيل" وكل خانات أنواع المحتوى أدناه (الذهب، الفضة، الدولار، والأسعار الرسمية اليومية)
+                    أصبحت بلا تأثير لهذا الموقع تحديداً — الجدول الزمني هو ما يتحكم الآن في الأنواع وعددها.
+                    "الحد الأقصى للنشر اليومي" يبقى الحقل الوحيد الفعّال هنا كسقف أمان إضافي.
+                </p>
+                <a href="{% url 'news_ai:schedule_slots' object.pk %}" class="inline-block text-xs text-teal-400 hover:text-teal-300 mt-2">إدارة الجدول الزمني ←</a>
+            </div>
+        </div>
+        {% endif %}
+
         <form method="post" class="space-y-6">
             {% csrf_token %}
             
@@ -102,7 +117,11 @@
                 <div class="space-y-2">
                     <label for="id_articles_per_run" class="block text-sm font-semibold text-slate-300">عدد المقالات لكل تشغيل</label>
                     <input type="number" name="articles_per_run" id="id_articles_per_run" required value="{{ form.articles_per_run.value|default:1 }}" min="1" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150">
+                    {% if has_schedule_slots %}
+                    <p class="text-[10px] text-amber-400">معطّل الأثر — يتحكم الجدول الزمني بدلاً منه لهذا الموقع.</p>
+                    {% else %}
                     <p class="text-[10px] text-slate-500">أقصى عدد أخبار تُنشر لهذا الموقع في كل مرة تعمل فيها الدورة (يدوياً أو تلقائياً كل 4 ساعات).</p>
+                    {% endif %}
                 </div>
 
                 <!-- Category Mapping -->
@@ -164,7 +183,7 @@
             <div class="flex items-center space-x-3 space-x-reverse bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
                 <input type="checkbox" name="generate_gold_price_articles" id="id_generate_gold_price_articles" {% if form.generate_gold_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
                 <div class="flex-1">
-                    <label for="id_generate_gold_price_articles" class="block text-sm font-bold text-slate-200">توليد مقالات سعر الذهب الحية</label>
+                    <label for="id_generate_gold_price_articles" class="block text-sm font-bold text-slate-200">توليد مقالات سعر الذهب الحية {% if has_schedule_slots %}<span class="text-[10px] font-normal text-amber-400">(معطّل الأثر — يتحكم الجدول الزمني)</span>{% endif %}</label>
                     <p class="text-xs text-slate-500">عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر الذهب اللحظي (عيار 24، 21، 18) بالجنيه المصري، ويُنشر على هذا الموقع فقط.</p>
                 </div>
             </div>
@@ -173,7 +192,7 @@
             <div class="flex items-center space-x-3 space-x-reverse bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
                 <input type="checkbox" name="generate_silver_price_articles" id="id_generate_silver_price_articles" {% if form.generate_silver_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
                 <div class="flex-1">
-                    <label for="id_generate_silver_price_articles" class="block text-sm font-bold text-slate-200">توليد مقالات سعر الفضة الحية</label>
+                    <label for="id_generate_silver_price_articles" class="block text-sm font-bold text-slate-200">توليد مقالات سعر الفضة الحية {% if has_schedule_slots %}<span class="text-[10px] font-normal text-amber-400">(معطّل الأثر — يتحكم الجدول الزمني)</span>{% endif %}</label>
                     <p class="text-xs text-slate-500">عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر الفضة اللحظي بالجنيه المصري، ويُنشر على هذا الموقع فقط.</p>
                 </div>
             </div>
@@ -182,14 +201,14 @@
             <div class="flex items-center space-x-3 space-x-reverse bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
                 <input type="checkbox" name="generate_dollar_price_articles" id="id_generate_dollar_price_articles" {% if form.generate_dollar_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
                 <div class="flex-1">
-                    <label for="id_generate_dollar_price_articles" class="block text-sm font-bold text-slate-200">توليد مقالات سعر الدولار الحية</label>
+                    <label for="id_generate_dollar_price_articles" class="block text-sm font-bold text-slate-200">توليد مقالات سعر الدولار الحية {% if has_schedule_slots %}<span class="text-[10px] font-normal text-amber-400">(معطّل الأثر — يتحكم الجدول الزمني)</span>{% endif %}</label>
                     <p class="text-xs text-slate-500">عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر صرف الدولار اللحظي مقابل الجنيه المصري، ويُنشر على هذا الموقع فقط.</p>
                 </div>
             </div>
 
             <!-- Daily Official Commodity Price Articles -->
             <div class="space-y-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
-                <p class="text-xs font-bold text-slate-300">مقالات أسعار يومية (بيانات رسمية من مركز معلومات مجلس الوزراء - مرة واحدة يومياً)</p>
+                <p class="text-xs font-bold text-slate-300">مقالات أسعار يومية (بيانات رسمية من مركز معلومات مجلس الوزراء - مرة واحدة يومياً) {% if has_schedule_slots %}<span class="font-normal text-amber-400">— معطّلة الأثر هنا، يتحكم الجدول الزمني بدلاً منها</span>{% endif %}</p>
 
                 <div class="flex items-center space-x-3 space-x-reverse">
                     <input type="checkbox" name="generate_iron_price_articles" id="id_generate_iron_price_articles" {% if form.generate_iron_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
