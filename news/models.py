@@ -289,7 +289,7 @@ class AISettings(models.Model):
     max_words = models.PositiveIntegerField(default=500, help_text="Max word count per article.")
     is_active = models.BooleanField(default=True, help_text="Toggle AI news fetching on or off.")
     publish_to_main_site = models.BooleanField(default=True, verbose_name="النشر على الموقع الأساسي", help_text="تفعيل أو تعطيل نشر الأخبار المولدة على الموقع الرئيسي.")
-    default_author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='ai_settings', verbose_name="الكاتب الافتراضي للأخبار")
+    default_authors = models.ManyToManyField(User, blank=True, related_name='ai_settings_authors', verbose_name="الكتّاب الافتراضيون للأخبار", help_text="عند اختيار أكثر من كاتب، يُنوَّع تلقائياً بينهم عشوائياً لكل خبر جديد. اتركه فارغاً لاستخدام حساب النظام الآلي.")
     categories = models.ManyToManyField(Category, blank=True, related_name='ai_settings', verbose_name="الأقسام المتاحة للنشر")
     local_sources = models.ManyToManyField('AISource', blank=True, related_name='local_ai_settings', verbose_name="مصادر الأخبار المغذية لموقع المغرب العربي", help_text="إذا تركت هذا الحقل فارغاً سيستخدم النظام جميع المصادر النشطة للنشر المحلي.")
     last_run = models.DateTimeField(blank=True, null=True)
@@ -299,6 +299,11 @@ class AISettings(models.Model):
     last_silver_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر تسجيل لسعر الفضة")
     last_dollar_price_egp = models.FloatField(blank=True, null=True, verbose_name="آخر سعر صرف مسجَّل للدولار (جنيه)", help_text="يُستخدم داخلياً لمقارنة سعر الدولار بالتحديث السابق.")
     last_dollar_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر تسجيل لسعر الدولار")
+    last_iron_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لسعر الحديد", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
+    last_cement_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لسعر الإسمنت", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
+    last_poultry_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لسعر الدواجن", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
+    last_fish_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لسعر السمك", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
+    last_vegetable_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لأسعار الخضار", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
 
     class Meta:
         verbose_name = "AI Global Settings"
@@ -398,7 +403,7 @@ class WordPressSite(models.Model):
     url = models.URLField(max_length=1000, verbose_name="رابط الموقع (WordPress URL)")
     username = models.CharField(max_length=150, verbose_name="اسم المستخدم في ووردبريس")
     application_password = EncryptedCharField(max_length=500, verbose_name="كلمة مرور التطبيق (Application Password)")
-    wp_author_id = models.PositiveIntegerField(blank=True, null=True, verbose_name="معرف الكاتب في ووردبريس (Author ID)", help_text="معرّف (ID) المستخدم في ووردبريس الذي سيُنسب إليه المقال المنشور. اتركه فارغاً لينشر باسم المستخدم المستخدم في المصادقة (username أعلاه).")
+    wp_author_ids = models.TextField(blank=True, default='', verbose_name="معرّفات الكتّاب في ووردبريس (Author IDs)", help_text="معرّفات (IDs) مستخدمي ووردبريس الذين سيُنسب إليهم المقال، مفصولة بفاصلة. عند وجود أكثر من واحد يُختار أحدهم عشوائياً لكل مقال. اتركه فارغاً لينشر باسم مستخدم المصادقة (username أعلاه).")
     daily_limit = models.PositiveIntegerField(default=3, verbose_name="الحد الأقصى للنشر اليومي")
     is_active = models.BooleanField(default=True, verbose_name="نشط")
     sources = models.ManyToManyField(AISource, related_name='wp_sites', verbose_name="مصادر الأخبار المرتبطة", blank=True)
@@ -409,6 +414,11 @@ class WordPressSite(models.Model):
     generate_gold_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الذهب الحية", help_text="عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر الذهب اللحظي (عيار 24، 21، 18) بالجنيه المصري لهذا الموقع فقط.")
     generate_silver_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الفضة الحية", help_text="عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر الفضة اللحظي بالجنيه المصري لهذا الموقع فقط.")
     generate_dollar_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الدولار الحية", help_text="عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر صرف الدولار اللحظي مقابل الجنيه المصري لهذا الموقع فقط.")
+    generate_iron_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الحديد اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بسعر حديد عز الرسمي (بيانات مركز معلومات مجلس الوزراء) لهذا الموقع فقط.")
+    generate_cement_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الإسمنت اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بسعر الأسمنت الرمادي الرسمي لهذا الموقع فقط.")
+    generate_poultry_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الدواجن اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بسعر الدواجن الطازجة الرسمي لهذا الموقع فقط.")
+    generate_fish_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر السمك اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بسعر السمك الرسمي لهذا الموقع فقط.")
+    generate_vegetable_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات أسعار الخضار اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بأسعار سلة خضار أساسية (طماطم، بطاطس، بصل) الرسمية لهذا الموقع فقط.")
     site_tags = models.TextField(blank=True, default='', verbose_name="وسوم ثابتة لهذا الموقع", help_text="وسوم ثابتة (افصل بينها بفاصلة) تُضاف تلقائياً لكل خبر يُنشر على هذا الموقع، مثال: بانكرز توداي, موقع بانكرز توداي الاخباري")
     use_explainer_style = models.BooleanField(default=False, verbose_name="أسلوب تفسيري (Explainer) عند الحاجة", help_text="عند التفعيل، يقرر الذكاء الاصطناعي تلقائياً استخدام أسلوب شرح بعناوين على شكل أسئلة (لماذا؟ هل؟ كيف؟) للأخبار الاقتصادية/التنظيمية (رسوم، ضرائب، قرارات) التي تحتاج تفصيلاً، بدلاً من الخبر القصير المعتاد.")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -429,5 +439,13 @@ class WordPressSite(models.Model):
 
     def get_site_tags_list(self):
         return [t.strip() for t in self.site_tags.split(',') if t.strip()]
+
+    def get_wp_author_ids_list(self):
+        ids = []
+        for part in self.wp_author_ids.split(','):
+            part = part.strip()
+            if part.isdigit():
+                ids.append(int(part))
+        return ids
 
 

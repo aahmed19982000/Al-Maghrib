@@ -89,19 +89,22 @@
                 </div>
             </div>
 
-            <!-- Default Author -->
-            <div class="space-y-2 pt-4 border-t border-slate-800">
-                <label for="id_default_author" class="block text-sm font-semibold text-slate-300">الكاتب الافتراضي للأخبار المولّدة</label>
-                <select name="default_author" id="id_default_author" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150">
-                    <option value="">-- كاتب النظام الافتراضي (AI) --</option>
+            <!-- Default Authors (multi-select with rotation) -->
+            <div class="space-y-4 pt-6 border-t border-slate-800">
+                <h4 class="text-sm font-bold text-slate-300"><i class="fa-solid fa-users text-teal-400 ml-2"></i>الكتّاب الافتراضيون للأخبار المولّدة</h4>
+                <p class="text-xs text-slate-500">اختر كاتباً واحداً أو أكثر — عند اختيار أكثر من كاتب، يُنوَّع تلقائياً بينهم عشوائياً لكل خبر جديد. اتركه فارغاً لاستخدام حساب النظام الآلي.</p>
+                <div class="grid grid-cols-2 gap-3">
                     {% for user in staff_authors %}
-                    <option value="{{ user.id }}" {% if form.default_author.value|stringformat:"s" == user.id|stringformat:"s" %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+                    <label class="flex items-center gap-3 bg-slate-900/60 p-3 rounded-xl border border-slate-800 cursor-pointer hover:border-teal-500/50 transition-colors">
+                        <input type="checkbox" name="default_authors" value="{{ user.id }}"
+                            {% if user.id in default_author_ids %}checked{% endif %}
+                            class="w-4 h-4 text-teal-600 bg-slate-900 border-slate-700 rounded focus:ring-teal-500">
+                        <span class="text-sm text-slate-300">{{ user.get_full_name|default:user.username }}</span>
+                    </label>
+                    {% empty %}
+                    <p class="text-xs text-slate-500 italic col-span-2">لا يوجد مستخدمون بصلاحية Staff بعد.</p>
                     {% endfor %}
-                </select>
-                <p class="text-xs text-slate-500">الحساب الذي سيُنسب إليه تأليف الأخبار المولّدة تلقائياً. اتركه فارغاً لاستخدام حساب النظام الآلي.</p>
-                {% if form.default_author.errors %}
-                    <p class="text-xs text-rose-400">{{ form.default_author.errors.as_text }}</p>
-                {% endif %}
+                </div>
             </div>
 
             <!-- Local Site Sources Selection -->

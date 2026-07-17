@@ -279,16 +279,16 @@ class DashboardAISettingsForm(forms.ModelForm):
         widget=forms.SelectMultiple(attrs={'class': 'form-control select2', 'style': 'height: 180px;'}),
         label="أقسام النشر الآلي"
     )
-    default_author = forms.ModelChoiceField(
+    default_authors = forms.ModelMultipleChoiceField(
         queryset=User.objects.filter(is_active=True, is_staff=True),
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
-        label="الكاتب الافتراضي للأخبار"
+        widget=forms.SelectMultiple(attrs={'class': 'form-control select2'}),
+        label="الكتّاب الافتراضيون للأخبار"
     )
 
     class Meta:
         model = AISettings
-        fields = ['articles_per_day', 'categories', 'is_active', 'default_author']
+        fields = ['articles_per_day', 'categories', 'is_active', 'default_authors']
         widgets = {
             'articles_per_day': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),

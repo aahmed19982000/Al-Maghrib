@@ -59,11 +59,12 @@ class AISettingsAPIView(APIView):
         settings_obj = AISettings.get_settings()
         categories_data = [{"id": cat.id, "name": cat.name} for cat in Category.objects.filter(is_active=True)]
         authors_data = [{"id": u.id, "username": u.username, "name": u.get_full_name()} for u in User.objects.filter(is_active=True, is_staff=True)]
-        
+        first_author = settings_obj.default_authors.first()
+
         return Response({
             "is_active": settings_obj.is_active,
             "articles_per_day": settings_obj.articles_per_day,
-            "default_author_id": settings_obj.default_author.id if settings_obj.default_author else None,
+            "default_author_id": first_author.id if first_author else None,
             "categories": [cat.id for cat in settings_obj.categories.all()],
             "all_categories": categories_data,
             "all_authors": authors_data
@@ -87,24 +88,25 @@ class AISettingsAPIView(APIView):
                 return Response({"error": "articles_per_day must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
                 
         if default_author_id is not None:
-            if default_author_id == "" or default_author_id is None:
-                settings_obj.default_author = None
+            if default_author_id == "":
+                settings_obj.default_authors.clear()
             else:
                 try:
-                    settings_obj.default_author = User.objects.get(id=default_author_id)
+                    settings_obj.default_authors.set([User.objects.get(id=default_author_id)])
                 except User.DoesNotExist:
                     return Response({"error": "User does not exist"}, status=status.HTTP_400_BAD_REQUEST)
-                    
+
         settings_obj.save()
-        
+
         if categories_ids is not None:
             settings_obj.categories.set(categories_ids)
-            
+
+        first_author = settings_obj.default_authors.first()
         return Response({
             "message": "Settings updated successfully",
             "is_active": settings_obj.is_active,
             "articles_per_day": settings_obj.articles_per_day,
-            "default_author_id": settings_obj.default_author.id if settings_obj.default_author else None,
+            "default_author_id": first_author.id if first_author else None,
             "categories": [cat.id for cat in settings_obj.categories.all()]
         })
 

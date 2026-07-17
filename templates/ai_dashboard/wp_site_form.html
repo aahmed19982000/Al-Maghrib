@@ -56,13 +56,13 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- WordPress Author ID -->
+                <!-- WordPress Author IDs -->
                 <div class="space-y-2">
-                    <label for="id_wp_author_id" class="block text-sm font-semibold text-slate-300">معرّف الكاتب في ووردبريس (Author ID)</label>
-                    <input type="number" name="wp_author_id" id="id_wp_author_id" value="{{ form.wp_author_id.value|default:'' }}" min="1" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150" placeholder="مثال: 5">
-                    <p class="text-[10px] text-slate-500">اتركه فارغاً لينشر باسم مستخدم المصادقة أعلاه. لمعرفة رقم المعرّف: من ووردبريس ← المستخدمون ← مرّر فوق اسم الكاتب المطلوب وانظر الرقم في رابط "تعديل" (user_id).</p>
-                    {% if form.wp_author_id.errors %}
-                        <p class="text-xs text-rose-400">{{ form.wp_author_id.errors.as_text }}</p>
+                    <label for="id_wp_author_ids" class="block text-sm font-semibold text-slate-300">معرّفات الكتّاب في ووردبريس (Author IDs)</label>
+                    <input type="text" name="wp_author_ids" id="id_wp_author_ids" value="{{ form.wp_author_ids.value|default:'' }}" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150 font-mono text-xs" placeholder="مثال: 5, 8, 12">
+                    <p class="text-[10px] text-slate-500">افصل بين عدة معرّفات بفاصلة — سيُختار أحدهم عشوائياً لكل مقال جديد لتنويع الكاتب. اتركه فارغاً لينشر باسم مستخدم المصادقة أعلاه. لمعرفة رقم المعرّف: من ووردبريس ← المستخدمون ← مرّر فوق اسم الكاتب المطلوب وانظر الرقم في رابط "تعديل" (user_id).</p>
+                    {% if form.wp_author_ids.errors %}
+                        <p class="text-xs text-rose-400">{{ form.wp_author_ids.errors.as_text }}</p>
                     {% endif %}
                 </div>
             </div>
@@ -164,6 +164,32 @@
                 <div class="flex-1">
                     <label for="id_generate_dollar_price_articles" class="block text-sm font-bold text-slate-200">توليد مقالات سعر الدولار الحية</label>
                     <p class="text-xs text-slate-500">عند التفعيل، يُنشئ النظام في كل دورة توليد مقالاً جديداً بسعر صرف الدولار اللحظي مقابل الجنيه المصري، ويُنشر على هذا الموقع فقط.</p>
+                </div>
+            </div>
+
+            <!-- Daily Official Commodity Price Articles -->
+            <div class="space-y-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
+                <p class="text-xs font-bold text-slate-300">مقالات أسعار يومية (بيانات رسمية من مركز معلومات مجلس الوزراء - مرة واحدة يومياً)</p>
+
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <input type="checkbox" name="generate_iron_price_articles" id="id_generate_iron_price_articles" {% if form.generate_iron_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                    <label for="id_generate_iron_price_articles" class="text-sm font-semibold text-slate-200">سعر الحديد (حديد عز)</label>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <input type="checkbox" name="generate_cement_price_articles" id="id_generate_cement_price_articles" {% if form.generate_cement_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                    <label for="id_generate_cement_price_articles" class="text-sm font-semibold text-slate-200">سعر الإسمنت (الرمادي)</label>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <input type="checkbox" name="generate_poultry_price_articles" id="id_generate_poultry_price_articles" {% if form.generate_poultry_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                    <label for="id_generate_poultry_price_articles" class="text-sm font-semibold text-slate-200">سعر الدواجن (الفراخ)</label>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <input type="checkbox" name="generate_fish_price_articles" id="id_generate_fish_price_articles" {% if form.generate_fish_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                    <label for="id_generate_fish_price_articles" class="text-sm font-semibold text-slate-200">سعر السمك</label>
+                </div>
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <input type="checkbox" name="generate_vegetable_price_articles" id="id_generate_vegetable_price_articles" {% if form.generate_vegetable_price_articles.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                    <label for="id_generate_vegetable_price_articles" class="text-sm font-semibold text-slate-200">أسعار الخضار (طماطم/بطاطس/بصل)</label>
                 </div>
             </div>
 

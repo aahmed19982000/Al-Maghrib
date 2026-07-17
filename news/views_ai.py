@@ -43,7 +43,7 @@ class DashboardIndexView(StaffRequiredMixin, TemplateView):
 
 class SettingsUpdateView(StaffRequiredMixin, UpdateView):
     model = AISettings
-    fields = ['gemini_api_key', 'telegram_bot_token', 'telegram_allowed_chats', 'articles_per_day', 'max_words', 'is_active', 'publish_to_main_site', 'default_author']
+    fields = ['gemini_api_key', 'telegram_bot_token', 'telegram_allowed_chats', 'articles_per_day', 'max_words', 'is_active', 'publish_to_main_site']
     template_name = 'ai_dashboard/settings.html'
     success_url = reverse_lazy('news_ai:index')
 
@@ -58,6 +58,7 @@ class SettingsUpdateView(StaffRequiredMixin, UpdateView):
         context['all_sources'] = AISource.objects.filter(is_active=True)
         context['local_source_ids'] = list(self.get_object().local_sources.values_list('id', flat=True))
         context['staff_authors'] = User.objects.filter(is_staff=True)
+        context['default_author_ids'] = list(self.get_object().default_authors.values_list('id', flat=True))
         return context
 
     def form_valid(self, form):
@@ -69,6 +70,13 @@ class SettingsUpdateView(StaffRequiredMixin, UpdateView):
         selected_local_sources = self.request.POST.getlist('local_sources')
         settings_obj.local_sources.set(
             AISource.objects.filter(id__in=[int(x) for x in selected_local_sources if x.isdigit()])
+        )
+
+        # Save default_authors M2M selection
+        from django.contrib.auth.models import User
+        selected_authors = self.request.POST.getlist('default_authors')
+        settings_obj.default_authors.set(
+            User.objects.filter(id__in=[int(x) for x in selected_authors if x.isdigit()])
         )
 
         # Process and save WordPress site limits from POST
@@ -159,7 +167,7 @@ class WordPressSiteListView(StaffRequiredMixin, ListView):
 
 class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'wp_author_id', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'site_tags', 'use_explainer_style']
+    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'site_tags', 'use_explainer_style']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
@@ -170,7 +178,7 @@ class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
 
 class WordPressSiteUpdateView(StaffRequiredMixin, UpdateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'wp_author_id', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'site_tags', 'use_explainer_style']
+    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'site_tags', 'use_explainer_style']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 

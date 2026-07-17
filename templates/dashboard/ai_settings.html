@@ -36,12 +36,12 @@
                     {% if form.articles_per_day.errors %}<div class="text-danger">{{ form.articles_per_day.errors }}</div>{% endif %}
                 </div>
 
-                <!-- Default Author -->
+                <!-- Default Authors -->
                 <div class="form-group">
-                    <label class="form-label">{{ form.default_author.label }}</label>
-                    {{ form.default_author }}
-                    <p class="text-secondary" style="font-size: 0.8rem; margin-top: 0.4rem;">الكاتب الذي سيتم تسجيل الأخبار المولدة تلقائياً باسمه.</p>
-                    {% if form.default_author.errors %}<div class="text-danger">{{ form.default_author.errors }}</div>{% endif %}
+                    <label class="form-label">{{ form.default_authors.label }}</label>
+                    {{ form.default_authors }}
+                    <p class="text-secondary" style="font-size: 0.8rem; margin-top: 0.4rem;">عند اختيار أكثر من كاتب، يُنوَّع تلقائياً بينهم عشوائياً لكل خبر جديد.</p>
+                    {% if form.default_authors.errors %}<div class="text-danger">{{ form.default_authors.errors }}</div>{% endif %}
                 </div>
             </div>
         </div>
