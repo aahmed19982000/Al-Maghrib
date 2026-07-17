@@ -452,3 +452,36 @@ class WordPressSite(models.Model):
         return ids
 
 
+class WordPressScheduleSlot(models.Model):
+    CONTENT_TYPE_CHOICES = [
+        ('regular', 'أخبار عامة (RSS / ترند)'),
+        ('gold', 'سعر الذهب'),
+        ('silver', 'سعر الفضة'),
+        ('dollar', 'سعر الدولار'),
+        ('iron', 'سعر الحديد'),
+        ('cement', 'سعر الإسمنت'),
+        ('poultry', 'سعر الدواجن'),
+        ('fish', 'سعر السمك'),
+        ('vegetable', 'أسعار الخضار'),
+        ('arab_currencies', 'أسعار العملات العربية'),
+    ]
+
+    wp_site = models.ForeignKey(WordPressSite, on_delete=models.CASCADE, related_name='schedule_slots', verbose_name="الموقع")
+    time_of_day = models.TimeField(verbose_name="وقت الفترة (بتوقيت القاهرة)")
+    content_types = models.TextField(verbose_name="أنواع المحتوى", help_text="مفصولة بفاصلة، مثال: iron,vegetable")
+    regular_news_count = models.PositiveIntegerField(default=1, verbose_name="عدد الأخبار العامة في هذه الفترة", help_text="يُستخدم فقط إذا كانت \"أخبار عامة\" ضمن أنواع المحتوى المختارة أعلاه.")
+    is_active = models.BooleanField(default=True, verbose_name="مفعّلة")
+    last_run_date = models.DateField(blank=True, null=True, verbose_name="تاريخ آخر تنفيذ", help_text="يُستخدم داخلياً لضمان تنفيذ هذه الفترة مرة واحدة فقط في يومها.")
+
+    class Meta:
+        ordering = ['time_of_day']
+        verbose_name = "فترة نشر مجدولة"
+        verbose_name_plural = "فترات النشر المجدولة"
+
+    def __str__(self):
+        return f"{self.wp_site.name} - {self.time_of_day.strftime('%H:%M')}"
+
+    def get_content_types_list(self):
+        return [c.strip() for c in self.content_types.split(',') if c.strip()]
+
+

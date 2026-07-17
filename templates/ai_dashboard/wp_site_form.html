@@ -6,10 +6,18 @@
 {% block content %}
 <div class="max-w-3xl mx-auto">
     <div class="glass-panel p-8 rounded-2xl border border-slate-800">
-        <h3 class="text-lg font-bold text-white mb-6 border-b border-slate-800 pb-4">
-            <i class="fa-brands fa-wordpress text-teal-400 ml-2"></i>
-            {% if object %}تعديل خيارات ربط ووردبريس{% else %}بيانات الربط مع موقع ووردبريس خارجي{% endif %}
-        </h3>
+        <div class="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
+            <h3 class="text-lg font-bold text-white">
+                <i class="fa-brands fa-wordpress text-teal-400 ml-2"></i>
+                {% if object %}تعديل خيارات ربط ووردبريس{% else %}بيانات الربط مع موقع ووردبريس خارجي{% endif %}
+            </h3>
+            {% if object %}
+            <a href="{% url 'news_ai:schedule_slots' object.pk %}" class="text-xs text-slate-400 hover:text-teal-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-clock"></i>
+                <span>الجدول الزمني</span>
+            </a>
+            {% endif %}
+        </div>
         
         <form method="post" class="space-y-6">
             {% csrf_token %}

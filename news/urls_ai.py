@@ -17,4 +17,9 @@ urlpatterns = [
     path('wp-sites/add/', views_ai.WordPressSiteCreateView.as_view(), name='wp_site_add'),
     path('wp-sites/<int:pk>/edit/', views_ai.WordPressSiteUpdateView.as_view(), name='wp_site_edit'),
     path('wp-sites/<int:pk>/delete/', views_ai.WordPressSiteDeleteView.as_view(), name='wp_site_delete'),
+    # Per-site publishing schedule slots
+    path('wp-sites/<int:wp_site_id>/schedule/', views_ai.ScheduleSlotListView.as_view(), name='schedule_slots'),
+    path('wp-sites/<int:wp_site_id>/schedule/add/', views_ai.ScheduleSlotCreateView.as_view(), name='schedule_slot_add'),
+    path('wp-sites/<int:wp_site_id>/schedule/<int:pk>/edit/', views_ai.ScheduleSlotUpdateView.as_view(), name='schedule_slot_edit'),
+    path('wp-sites/<int:wp_site_id>/schedule/<int:pk>/delete/', views_ai.ScheduleSlotDeleteView.as_view(), name='schedule_slot_delete'),
 ]

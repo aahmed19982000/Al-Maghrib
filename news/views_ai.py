@@ -1,10 +1,11 @@
+from datetime import datetime
 from django.shortcuts import render, redirect
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View, TemplateView
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
-from .models import AISettings, AISource, AIImportLog, Category, Article, WordPressSite
+from .models import AISettings, AISource, AIImportLog, Category, Article, WordPressSite, WordPressScheduleSlot
 from .tasks import scrape_and_generate_news_task
 
 class StaffRequiredMixin(UserPassesTestMixin):
@@ -193,4 +194,97 @@ class WordPressSiteDeleteView(StaffRequiredMixin, DeleteView):
         obj = self.get_object()
         messages.success(self.request, f"تم حذف الموقع '{obj.name}' بنجاح.")
         return super().delete(request, *args, **kwargs)
+
+
+def _parse_slot_form(request):
+    """
+    Shared parsing/validation for the schedule-slot create/update forms: reads
+    time_of_day, content_types (checkbox group) and regular_news_count from
+    POST, validated against WordPressScheduleSlot.CONTENT_TYPE_CHOICES.
+    Returns (cleaned_dict, error_message_or_None).
+    """
+    time_str = request.POST.get('time_of_day', '').strip()
+    try:
+        time_of_day = datetime.strptime(time_str, '%H:%M').time()
+    except ValueError:
+        return None, "صيغة الوقت غير صحيحة."
+
+    valid_keys = {c[0] for c in WordPressScheduleSlot.CONTENT_TYPE_CHOICES}
+    content_types = [c for c in request.POST.getlist('content_types') if c in valid_keys]
+    if not content_types:
+        return None, "يجب اختيار نوع محتوى واحد على الأقل لهذه الفترة."
+
+    try:
+        regular_news_count = max(1, int(request.POST.get('regular_news_count', '1')))
+    except ValueError:
+        regular_news_count = 1
+
+    return {
+        'time_of_day': time_of_day,
+        'content_types': ','.join(content_types),
+        'regular_news_count': regular_news_count,
+        'is_active': 'is_active' in request.POST,
+    }, None
+
+
+class ScheduleSlotListView(StaffRequiredMixin, ListView):
+    model = WordPressScheduleSlot
+    template_name = 'ai_dashboard/schedule_slots_list.html'
+    context_object_name = 'slots'
+
+    def get_queryset(self):
+        self.wp_site = get_object_or_404(WordPressSite, pk=self.kwargs['wp_site_id'])
+        return WordPressScheduleSlot.objects.filter(wp_site=self.wp_site)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['wp_site'] = self.wp_site
+        context['content_type_choices'] = WordPressScheduleSlot.CONTENT_TYPE_CHOICES
+        return context
+
+
+class ScheduleSlotCreateView(StaffRequiredMixin, View):
+    def post(self, request, wp_site_id):
+        wp_site = get_object_or_404(WordPressSite, pk=wp_site_id)
+        cleaned, error = _parse_slot_form(request)
+        if error:
+            messages.error(request, error)
+        else:
+            WordPressScheduleSlot.objects.create(wp_site=wp_site, **cleaned)
+            messages.success(request, "تمت إضافة الفترة الزمنية بنجاح.")
+        return redirect('news_ai:schedule_slots', wp_site_id=wp_site_id)
+
+    def get(self, request, wp_site_id):
+        return redirect('news_ai:schedule_slots', wp_site_id=wp_site_id)
+
+
+class ScheduleSlotUpdateView(StaffRequiredMixin, View):
+    def post(self, request, wp_site_id, pk):
+        slot = get_object_or_404(WordPressScheduleSlot, pk=pk, wp_site_id=wp_site_id)
+        cleaned, error = _parse_slot_form(request)
+        if error:
+            messages.error(request, error)
+        else:
+            for field, value in cleaned.items():
+                setattr(slot, field, value)
+            # Changing the schedule means the old last_run_date no longer
+            # reflects this (possibly new) configuration - let it fire again.
+            slot.last_run_date = None
+            slot.save()
+            messages.success(request, "تم تحديث الفترة الزمنية بنجاح.")
+        return redirect('news_ai:schedule_slots', wp_site_id=wp_site_id)
+
+    def get(self, request, wp_site_id, pk):
+        return redirect('news_ai:schedule_slots', wp_site_id=wp_site_id)
+
+
+class ScheduleSlotDeleteView(StaffRequiredMixin, View):
+    def post(self, request, wp_site_id, pk):
+        slot = get_object_or_404(WordPressScheduleSlot, pk=pk, wp_site_id=wp_site_id)
+        slot.delete()
+        messages.success(request, "تم حذف الفترة الزمنية.")
+        return redirect('news_ai:schedule_slots', wp_site_id=wp_site_id)
+
+    def get(self, request, wp_site_id, pk):
+        return redirect('news_ai:schedule_slots', wp_site_id=wp_site_id)
 

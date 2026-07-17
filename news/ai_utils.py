@@ -5,6 +5,7 @@ import logging
 import bleach
 import requests
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from django.utils import timezone
@@ -12,9 +13,11 @@ from django.core.files.base import ContentFile
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from django.conf import settings
-from .models import Article, Category, AISettings, AISource, AIImportLog, WordPressSite
+from .models import Article, Category, AISettings, AISource, AIImportLog, WordPressSite, WordPressScheduleSlot
 
 logger = logging.getLogger(__name__)
+
+CAIRO_TZ = ZoneInfo("Africa/Cairo")
 
 # Gold/silver/dollar price news is excluded from the regular RSS-rewrite pipeline -
 # the dedicated live gold-price generator (generate_gold_price_article_for_site) is
@@ -607,6 +610,92 @@ def _is_due(last_run_at, min_hours):
     return (timezone.now() - last_run_at) >= timedelta(hours=min_hours)
 
 
+# Must stay in sync with the Celery Beat interval for scrape_and_generate_news_task
+# (every 10 minutes) - wide enough that a slot's window is always caught by at
+# least one cycle tick, even if a tick runs a little late.
+SLOT_TOLERANCE_MINUTES = 12
+
+
+def get_due_slot(wp_site, content_type, tolerance_minutes=SLOT_TOLERANCE_MINUTES):
+    """
+    Returns the active WordPressScheduleSlot on this site that lists
+    `content_type` among its content types, whose configured time is within
+    `tolerance_minutes` of the current Cairo-local time, and that hasn't
+    already run today (Cairo date). Returns None if nothing matches right now.
+    """
+    now_cairo = timezone.now().astimezone(CAIRO_TZ)
+    today_cairo = now_cairo.date()
+    for slot in wp_site.schedule_slots.filter(is_active=True):
+        if content_type not in slot.get_content_types_list():
+            continue
+        if slot.last_run_date == today_cairo:
+            continue
+        slot_dt = now_cairo.replace(hour=slot.time_of_day.hour, minute=slot.time_of_day.minute, second=0, microsecond=0)
+        if abs((now_cairo - slot_dt).total_seconds()) <= tolerance_minutes * 60:
+            return slot
+    return None
+
+
+def mark_slot_run(slot):
+    """Marks a schedule slot as having run today (Cairo date), so it won't fire again until tomorrow."""
+    slot.last_run_date = timezone.now().astimezone(CAIRO_TZ).date()
+    slot.save(update_fields=['last_run_date'])
+
+
+def get_regular_news_run_cap(wp_site):
+    """
+    Returns (cap, due_slot) for how many regular RSS/Trends articles this site
+    may receive this cycle:
+    - Sites with no schedule slots configured keep the legacy fixed
+      `articles_per_run` cap, applied every cycle (unchanged behavior).
+    - Sites with schedule slots only get "regular" articles when one of their
+      slots is due right now, capped by that slot's own `regular_news_count`.
+    """
+    if not wp_site.schedule_slots.filter(is_active=True).exists():
+        return wp_site.articles_per_run, None
+    due_slot = get_due_slot(wp_site, 'regular')
+    if due_slot:
+        return due_slot.regular_news_count, due_slot
+    return 0, None
+
+
+def sites_due_for_type(content_type, legacy_bool_field, ai_settings=None, last_at_field=None, min_hours=20):
+    """
+    Returns (list_of_wp_sites, due_slots_dict, legacy_used) of which active
+    WordPress sites should generate a `content_type` price article this cycle:
+    - Sites with schedule slots configured: only included if one of their
+      slots lists this content type and is due right now (Cairo time). The
+      slot's own per-site `last_run_date` is the sole gate; the legacy global
+      once-daily gate below does not apply to these sites.
+    - Sites without any schedule slots: fall back to the legacy behavior -
+      included if their `legacy_bool_field` toggle is on, gated by the shared
+      global `_is_due(ai_settings.<last_at_field>, min_hours)` check (same as
+      before this feature existed). Pass `last_at_field=None` for content
+      types (like gold) that have always fired every cycle with no gate.
+    `legacy_used` is True if at least one non-slot site was included via the
+    legacy gate - callers should only bump the shared `ai_settings.<last_at_field>`
+    timestamp in that case, so a slot-only fetch doesn't skew the legacy gate
+    for sites that aren't using slots.
+    """
+    result = []
+    due_slots = {}
+    legacy_used = False
+    legacy_gate_open = True
+    if last_at_field is not None and ai_settings is not None:
+        legacy_gate_open = _is_due(getattr(ai_settings, last_at_field), min_hours)
+
+    for wp_site in WordPressSite.objects.filter(is_active=True):
+        has_slots = wp_site.schedule_slots.filter(is_active=True).exists()
+        if has_slots:
+            slot = get_due_slot(wp_site, content_type)
+            if slot:
+                result.append(wp_site)
+                due_slots[wp_site.id] = slot
+        elif getattr(wp_site, legacy_bool_field) and legacy_gate_open:
+            result.append(wp_site)
+            legacy_used = True
+
+    return result, due_slots, legacy_used
 
 
 def generate_official_commodity_article_for_site(wp_site, topic_title, items, source_url, ai_settings, api_key, allowed_cats, categories_list_str):
@@ -1662,6 +1751,19 @@ def run_ai_generation_cycle():
     # specific cycle invocation has generated per site, capped by articles_per_run.
     wp_site_run_counts = {}
 
+    # Precompute this cycle's regular-news (RSS/Trends) cap per WP site once, so
+    # it stays consistent across every source/item processed in this cycle. Sites
+    # with schedule slots configured only get regular news when a "regular" slot
+    # is due right now (Cairo time), capped by that slot's own count; sites with
+    # no slots keep the legacy fixed articles_per_run cap on every cycle run.
+    regular_news_caps = {}
+    regular_due_slots = {}
+    for _site in WordPressSite.objects.filter(is_active=True):
+        _cap, _due_slot = get_regular_news_run_cap(_site)
+        regular_news_caps[_site.id] = _cap
+        if _due_slot:
+            regular_due_slots[_site.id] = _due_slot
+
     # Loop over all active sources
     for source in sources:
         if generated_count >= limit:
@@ -1807,7 +1909,7 @@ def run_ai_generation_cycle():
                 for wp_site in wp_sites:
                     if generated_count >= limit:
                         break
-                    if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                    if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= regular_news_caps.get(wp_site.id, 0):
                         continue
 
                     if wp_site.use_rich_formatting:
@@ -1967,6 +2069,8 @@ def run_ai_generation_cycle():
                         if published_url:
                             wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                             wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
+                            if wp_site.id in regular_due_slots:
+                                mark_slot_run(regular_due_slots[wp_site.id])
 
                         generated_count += 1
                     except Exception as ex:
@@ -1979,10 +2083,11 @@ def run_ai_generation_cycle():
                             error_message=f"فشل صياغة فريدة للووردبريس {wp_site.name}: {str(ex)}"
                         )
 
-    # Live gold price articles: independent of RSS sources, generated fresh every
-    # cycle run for whichever site(s) opted in, capped by the same daily limits.
-    gold_price_sites = WordPressSite.objects.filter(is_active=True, generate_gold_price_articles=True)
-    if gold_price_sites.exists():
+    # Live gold price articles: independent of RSS sources. Sites with no
+    # schedule slots keep firing every cycle (legacy behavior); sites with
+    # slots only fire when a "gold" slot is due right now (Cairo time).
+    gold_price_sites, gold_due_slots, _ = sites_due_for_type('gold', 'generate_gold_price_articles')
+    if gold_price_sites:
         gold_data = fetch_live_gold_prices()
         if gold_data:
             comparison_text = ""
@@ -2001,7 +2106,9 @@ def run_ai_generation_cycle():
             for wp_site in gold_price_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                if wp_site.id not in gold_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_gold_price_article_for_site(
                     wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
@@ -2010,11 +2117,15 @@ def run_ai_generation_cycle():
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
+                    if wp_site.id in gold_due_slots:
+                        mark_slot_run(gold_due_slots[wp_site.id])
         else:
             logger.error("Failed to fetch live gold price data; skipping gold price article generation this cycle.")
 
-    silver_price_sites = WordPressSite.objects.filter(is_active=True, generate_silver_price_articles=True)
-    if silver_price_sites.exists() and _is_due(ai_settings.last_silver_price_at, min_hours=20):
+    silver_price_sites, silver_due_slots, silver_legacy_used = sites_due_for_type(
+        'silver', 'generate_silver_price_articles', ai_settings, 'last_silver_price_at'
+    )
+    if silver_price_sites:
         silver_data = fetch_live_silver_prices()
         if silver_data:
             comparison_text = ""
@@ -2027,13 +2138,18 @@ def run_ai_generation_cycle():
                         f"{abs(round(diff, 2))} جنيه مصري (اذكر هذه المقارنة بدقة كما هي)."
                     )
             ai_settings.last_silver_price_egp = silver_data['price_999_egp']
-            ai_settings.last_silver_price_at = silver_data['timestamp']
-            ai_settings.save(update_fields=['last_silver_price_egp', 'last_silver_price_at'])
+            if silver_legacy_used:
+                ai_settings.last_silver_price_at = silver_data['timestamp']
+                ai_settings.save(update_fields=['last_silver_price_egp', 'last_silver_price_at'])
+            else:
+                ai_settings.save(update_fields=['last_silver_price_egp'])
 
             for wp_site in silver_price_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                if wp_site.id not in silver_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_silver_price_article_for_site(
                     wp_site, silver_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
@@ -2042,11 +2158,13 @@ def run_ai_generation_cycle():
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
+                    if wp_site.id in silver_due_slots:
+                        mark_slot_run(silver_due_slots[wp_site.id])
         else:
             logger.error("Failed to fetch live silver price data; skipping silver price article generation this cycle.")
 
-    dollar_price_sites = WordPressSite.objects.filter(is_active=True, generate_dollar_price_articles=True)
-    if dollar_price_sites.exists():
+    dollar_price_sites, dollar_due_slots, _ = sites_due_for_type('dollar', 'generate_dollar_price_articles')
+    if dollar_price_sites:
         dollar_data = fetch_live_dollar_price()
         if dollar_data:
             comparison_text = ""
@@ -2065,7 +2183,9 @@ def run_ai_generation_cycle():
             for wp_site in dollar_price_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                if wp_site.id not in dollar_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_dollar_price_article_for_site(
                     wp_site, dollar_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
@@ -2074,20 +2194,27 @@ def run_ai_generation_cycle():
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
+                    if wp_site.id in dollar_due_slots:
+                        mark_slot_run(dollar_due_slots[wp_site.id])
         else:
             logger.error("Failed to fetch live dollar price data; skipping dollar price article generation this cycle.")
 
-    iron_sites = WordPressSite.objects.filter(is_active=True, generate_iron_price_articles=True)
-    if iron_sites.exists() and _is_due(ai_settings.last_iron_price_at, min_hours=20):
+    iron_sites, iron_due_slots, iron_legacy_used = sites_due_for_type(
+        'iron', 'generate_iron_price_articles', ai_settings, 'last_iron_price_at'
+    )
+    if iron_sites:
         iron_data = fetch_idsc_indicator('iron')
         if iron_data:
-            ai_settings.last_iron_price_at = timezone.now()
-            ai_settings.save(update_fields=['last_iron_price_at'])
+            if iron_legacy_used:
+                ai_settings.last_iron_price_at = timezone.now()
+                ai_settings.save(update_fields=['last_iron_price_at'])
             source_url = f"{IDSC_API_BASE}/PricesData/GetMainIndicatorData/{IDSC_INDICATOR_IDS['iron']}"
             for wp_site in iron_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                if wp_site.id not in iron_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الحديد (حديد عز)", [("حديد عز", iron_data)], source_url,
@@ -2097,20 +2224,27 @@ def run_ai_generation_cycle():
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
+                    if wp_site.id in iron_due_slots:
+                        mark_slot_run(iron_due_slots[wp_site.id])
         else:
             logger.error("Failed to fetch official iron price data; skipping this cycle.")
 
-    cement_sites = WordPressSite.objects.filter(is_active=True, generate_cement_price_articles=True)
-    if cement_sites.exists() and _is_due(ai_settings.last_cement_price_at, min_hours=20):
+    cement_sites, cement_due_slots, cement_legacy_used = sites_due_for_type(
+        'cement', 'generate_cement_price_articles', ai_settings, 'last_cement_price_at'
+    )
+    if cement_sites:
         cement_data = fetch_idsc_indicator('cement')
         if cement_data:
-            ai_settings.last_cement_price_at = timezone.now()
-            ai_settings.save(update_fields=['last_cement_price_at'])
+            if cement_legacy_used:
+                ai_settings.last_cement_price_at = timezone.now()
+                ai_settings.save(update_fields=['last_cement_price_at'])
             source_url = f"{IDSC_API_BASE}/PricesData/GetMainIndicatorData/{IDSC_INDICATOR_IDS['cement']}"
             for wp_site in cement_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                if wp_site.id not in cement_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الإسمنت (الرمادي)", [("الأسمنت الرمادي", cement_data)], source_url,
@@ -2120,20 +2254,27 @@ def run_ai_generation_cycle():
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
+                    if wp_site.id in cement_due_slots:
+                        mark_slot_run(cement_due_slots[wp_site.id])
         else:
             logger.error("Failed to fetch official cement price data; skipping this cycle.")
 
-    poultry_sites = WordPressSite.objects.filter(is_active=True, generate_poultry_price_articles=True)
-    if poultry_sites.exists() and _is_due(ai_settings.last_poultry_price_at, min_hours=20):
+    poultry_sites, poultry_due_slots, poultry_legacy_used = sites_due_for_type(
+        'poultry', 'generate_poultry_price_articles', ai_settings, 'last_poultry_price_at'
+    )
+    if poultry_sites:
         poultry_data = fetch_idsc_indicator('poultry')
         if poultry_data:
-            ai_settings.last_poultry_price_at = timezone.now()
-            ai_settings.save(update_fields=['last_poultry_price_at'])
+            if poultry_legacy_used:
+                ai_settings.last_poultry_price_at = timezone.now()
+                ai_settings.save(update_fields=['last_poultry_price_at'])
             source_url = f"{IDSC_API_BASE}/PricesData/GetMainIndicatorData/{IDSC_INDICATOR_IDS['poultry']}"
             for wp_site in poultry_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                if wp_site.id not in poultry_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الدواجن (الفراخ)", [("الدواجن الطازجة", poultry_data)], source_url,
@@ -2143,20 +2284,27 @@ def run_ai_generation_cycle():
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
+                    if wp_site.id in poultry_due_slots:
+                        mark_slot_run(poultry_due_slots[wp_site.id])
         else:
             logger.error("Failed to fetch official poultry price data; skipping this cycle.")
 
-    fish_sites = WordPressSite.objects.filter(is_active=True, generate_fish_price_articles=True)
-    if fish_sites.exists() and _is_due(ai_settings.last_fish_price_at, min_hours=20):
+    fish_sites, fish_due_slots, fish_legacy_used = sites_due_for_type(
+        'fish', 'generate_fish_price_articles', ai_settings, 'last_fish_price_at'
+    )
+    if fish_sites:
         fish_data = fetch_idsc_indicator('fish')
         if fish_data:
-            ai_settings.last_fish_price_at = timezone.now()
-            ai_settings.save(update_fields=['last_fish_price_at'])
+            if fish_legacy_used:
+                ai_settings.last_fish_price_at = timezone.now()
+                ai_settings.save(update_fields=['last_fish_price_at'])
             source_url = f"{IDSC_API_BASE}/PricesData/GetMainIndicatorData/{IDSC_INDICATOR_IDS['fish']}"
             for wp_site in fish_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                if wp_site.id not in fish_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر السمك", [("السمك", fish_data)], source_url,
@@ -2166,17 +2314,22 @@ def run_ai_generation_cycle():
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
+                    if wp_site.id in fish_due_slots:
+                        mark_slot_run(fish_due_slots[wp_site.id])
         else:
             logger.error("Failed to fetch official fish price data; skipping this cycle.")
 
-    vegetable_sites = WordPressSite.objects.filter(is_active=True, generate_vegetable_price_articles=True)
-    if vegetable_sites.exists() and _is_due(ai_settings.last_vegetable_price_at, min_hours=20):
+    vegetable_sites, vegetable_due_slots, vegetable_legacy_used = sites_due_for_type(
+        'vegetable', 'generate_vegetable_price_articles', ai_settings, 'last_vegetable_price_at'
+    )
+    if vegetable_sites:
         tomatoes_data = fetch_idsc_indicator('tomatoes')
         potatoes_data = fetch_idsc_indicator('potatoes')
         onions_data = fetch_idsc_indicator('onions')
         if tomatoes_data and potatoes_data and onions_data:
-            ai_settings.last_vegetable_price_at = timezone.now()
-            ai_settings.save(update_fields=['last_vegetable_price_at'])
+            if vegetable_legacy_used:
+                ai_settings.last_vegetable_price_at = timezone.now()
+                ai_settings.save(update_fields=['last_vegetable_price_at'])
             source_url = f"{IDSC_API_BASE}/PricesData/GetMainIndicatorData/{IDSC_INDICATOR_IDS['tomatoes']}"
             vegetable_items = [
                 ("الطماطم", tomatoes_data),
@@ -2186,7 +2339,9 @@ def run_ai_generation_cycle():
             for wp_site in vegetable_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                if wp_site.id not in vegetable_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "أسعار الخضار (طماطم، بطاطس، بصل)", vegetable_items, source_url,
@@ -2196,20 +2351,27 @@ def run_ai_generation_cycle():
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
+                    if wp_site.id in vegetable_due_slots:
+                        mark_slot_run(vegetable_due_slots[wp_site.id])
         else:
             logger.error("Failed to fetch official vegetable price data; skipping this cycle.")
 
-    arab_currency_sites = WordPressSite.objects.filter(is_active=True, generate_arab_currencies_articles=True)
-    if arab_currency_sites.exists() and _is_due(ai_settings.last_arab_currencies_at, min_hours=20):
+    arab_currency_sites, arab_currency_due_slots, arab_currency_legacy_used = sites_due_for_type(
+        'arab_currencies', 'generate_arab_currencies_articles', ai_settings, 'last_arab_currencies_at'
+    )
+    if arab_currency_sites:
         currency_data = fetch_arab_currency_rates()
         if currency_data:
-            ai_settings.last_arab_currencies_at = timezone.now()
-            ai_settings.save(update_fields=['last_arab_currencies_at'])
+            if arab_currency_legacy_used:
+                ai_settings.last_arab_currencies_at = timezone.now()
+                ai_settings.save(update_fields=['last_arab_currencies_at'])
             source_url = f"{IDSC_API_BASE}/PricesData/GetCurrencyExchange"
             for wp_site in arab_currency_sites:
                 if generated_count >= limit:
                     break
-                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
+                if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit:
+                    continue
+                if wp_site.id not in arab_currency_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_arab_currencies_article_for_site(
                     wp_site, currency_data, source_url, ai_settings, api_key, allowed_cats, categories_list_str
@@ -2218,6 +2380,8 @@ def run_ai_generation_cycle():
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
                     wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
                     generated_count += 1
+                    if wp_site.id in arab_currency_due_slots:
+                        mark_slot_run(arab_currency_due_slots[wp_site.id])
         else:
             logger.error("Failed to fetch official Arab currency exchange rates; skipping this cycle.")
 
