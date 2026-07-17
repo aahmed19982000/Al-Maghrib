@@ -2,7 +2,7 @@
 /**
  * Plugin Name: متحكم الأخبار بالذكاء الاصطناعي (AI News Controller)
  * Description: إضافة لربط موقع ووردبريس بنظام الجدولة والتوليد الآلي والتحكم في إعدادات النشر من لوحة التحكم.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: Antigravity AI
  * License: GPL2
  */
@@ -39,12 +39,14 @@ class WP_AI_News_Controller {
         register_setting( 'wp_ai_settings_group', 'wp_ai_username' );
         
         register_setting( 'wp_ai_settings_group', 'wp_ai_default_author' );
-        register_setting( 'wp_ai_settings_group', 'wp_ai_default_categories' );
     }
 
     /**
      * Intercepts REST API post creation.
-     * If the post is created by the configured AI API user, it assigns the default author and categories.
+     * If the post is created by the configured AI API user, assigns the default
+     * author, then enriches the post's real category (already set by Django's
+     * initial REST push) with any configured secondary categories, and marks
+     * the real category as primary in Yoast.
      */
     public function assign_ai_post_defaults( $post, $request, $creating ) {
         if ( ! $creating ) {
@@ -56,7 +58,6 @@ class WP_AI_News_Controller {
 
         if ( $current_user && $current_user->user_login === $api_username ) {
             $default_author = get_option( 'wp_ai_default_author' );
-            $default_categories = get_option( 'wp_ai_default_categories' );
 
             $update_data = array( 'ID' => $post->ID );
 
@@ -66,11 +67,33 @@ class WP_AI_News_Controller {
 
             // Temporarily remove action to prevent recursion
             remove_action( 'rest_insert_post', array( $this, 'assign_ai_post_defaults' ), 10 );
-            
+
             wp_update_post( $update_data );
-            
-            if ( ! empty( $default_categories ) && is_array( $default_categories ) ) {
-                wp_set_post_categories( $post->ID, $default_categories );
+
+            $primary_secondary_map = get_option( 'wp_ai_primary_secondary_map', array() );
+            if ( ! empty( $primary_secondary_map ) && is_array( $primary_secondary_map ) ) {
+                // These are whatever category(ies) Django already assigned in its
+                // initial POST - this never overrides them, only adds to them.
+                $current_categories = wp_get_post_categories( $post->ID );
+                $categories_to_add = array();
+                $matched_primary_id = null;
+
+                foreach ( $current_categories as $cat_id ) {
+                    if ( isset( $primary_secondary_map[ $cat_id ] ) ) {
+                        $matched_primary_id = $cat_id;
+                        foreach ( (array) $primary_secondary_map[ $cat_id ] as $secondary_id ) {
+                            $categories_to_add[] = intval( $secondary_id );
+                        }
+                    }
+                }
+
+                if ( $matched_primary_id ) {
+                    update_post_meta( $post->ID, '_yoast_wpseo_primary_category', $matched_primary_id );
+                }
+                if ( ! empty( $categories_to_add ) ) {
+                    $merged = array_unique( array_merge( $current_categories, $categories_to_add ) );
+                    wp_set_post_categories( $post->ID, $merged );
+                }
             }
 
             add_action( 'rest_insert_post', array( $this, 'assign_ai_post_defaults' ), 10, 3 );
@@ -132,10 +155,18 @@ class WP_AI_News_Controller {
         if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['save_ai_config'] ) ) {
             // Save local WordPress options
             $selected_author = isset( $_POST['default_author_id'] ) ? intval( $_POST['default_author_id'] ) : 0;
-            $selected_categories = isset( $_POST['categories'] ) ? array_map( 'intval', $_POST['categories'] ) : array();
+
+            // Build the primary -> [secondary, ...] map from the submitted form.
+            $selected_primary = isset( $_POST['primary_categories'] ) ? array_map( 'intval', $_POST['primary_categories'] ) : array();
+            $secondary_input = isset( $_POST['secondary_categories'] ) && is_array( $_POST['secondary_categories'] ) ? $_POST['secondary_categories'] : array();
+            $primary_secondary_map = array();
+            foreach ( $selected_primary as $primary_id ) {
+                $secondaries = isset( $secondary_input[ $primary_id ] ) ? array_map( 'intval', (array) $secondary_input[ $primary_id ] ) : array();
+                $primary_secondary_map[ $primary_id ] = $secondaries;
+            }
 
             update_option( 'wp_ai_default_author', $selected_author );
-            update_option( 'wp_ai_default_categories', $selected_categories );
+            update_option( 'wp_ai_primary_secondary_map', $primary_secondary_map );
 
             if ( $token ) {
                 // Also update global settings in Django
@@ -160,10 +191,11 @@ class WP_AI_News_Controller {
         }
 
         $saved_wp_author = get_option( 'wp_ai_default_author' );
-        $saved_wp_categories = get_option( 'wp_ai_default_categories', array() );
-        if ( ! is_array( $saved_wp_categories ) ) {
-            $saved_wp_categories = array();
+        $saved_primary_secondary_map = get_option( 'wp_ai_primary_secondary_map', array() );
+        if ( ! is_array( $saved_primary_secondary_map ) ) {
+            $saved_primary_secondary_map = array();
         }
+        $saved_primary_categories = array_keys( $saved_primary_secondary_map );
 
         ?>
         <div class="wrap" dir="rtl">
@@ -252,16 +284,33 @@ class WP_AI_News_Controller {
                             </td>
                         </tr>
                         <tr>
-                            <th scope="row">أقسام النشر المستهدفة (ووردبريس)</th>
+                            <th scope="row">الأقسام الأساسية وربطها بأقسام فرعية (ووردبريس)</th>
                             <td>
-                                <p class="description" style="margin-bottom: 10px;">حدد الأقسام الحالية في موقع ووردبريس هذا ليتم إرسال الأخبار إليها:</p>
-                                <div style="max-height: 200px; overflow-y: auto; background: #f9f9f9; padding: 10px; border: 1px solid #ccd0d4; border-radius: 4px;">
+                                <p class="description" style="margin-bottom: 10px;">
+                                    حدد أي الأقسام يجب اعتبارها "أساسية". كل خبر يبقى منشوراً تحت قسمه الحقيقي الواحد الذي يحدده النظام تلقائياً حسب موضوعه؛
+                                    لكن إن كان ذلك القسم محدداً هنا كأساسي، يمكنك أيضاً اختيار قسم أو أكثر "فرعي" يُضاف تلقائياً معه (مثال: اجعل "الرئيسية" فرعياً لكل من "أسعار" و"خدمات" و"ترند").
+                                </p>
+                                <div style="max-height: 400px; overflow-y: auto; background: #f9f9f9; padding: 10px; border: 1px solid #ccd0d4; border-radius: 4px;">
                                     <?php foreach ( $wp_categories as $cat ) : ?>
-                                        <?php $is_checked = in_array( $cat->term_id, $saved_wp_categories ); ?>
-                                        <label style="display: block; margin-bottom: 5px;">
-                                            <input type="checkbox" name="categories[]" value="<?php echo esc_attr( $cat->term_id ); ?>" <?php checked( $is_checked, true ); ?> />
-                                            <?php echo esc_html( $cat->name ); ?>
-                                        </label>
+                                        <?php
+                                        $is_primary = in_array( $cat->term_id, $saved_primary_categories );
+                                        $secondary_selected = isset( $saved_primary_secondary_map[ $cat->term_id ] ) ? (array) $saved_primary_secondary_map[ $cat->term_id ] : array();
+                                        ?>
+                                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+                                            <label style="min-width: 200px; font-weight: 600;">
+                                                <input type="checkbox" name="primary_categories[]" value="<?php echo esc_attr( $cat->term_id ); ?>" <?php checked( $is_primary, true ); ?> />
+                                                <?php echo esc_html( $cat->name ); ?>
+                                            </label>
+                                            <span style="color: #888;">← أضف كقسم فرعي:</span>
+                                            <select name="secondary_categories[<?php echo esc_attr( $cat->term_id ); ?>][]" multiple style="min-width: 220px; height: 60px;">
+                                                <?php foreach ( $wp_categories as $sub_cat ) : ?>
+                                                    <?php if ( $sub_cat->term_id === $cat->term_id ) continue; ?>
+                                                    <option value="<?php echo esc_attr( $sub_cat->term_id ); ?>" <?php selected( in_array( $sub_cat->term_id, $secondary_selected ), true ); ?>>
+                                                        <?php echo esc_html( $sub_cat->name ); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
                                     <?php endforeach; ?>
                                 </div>
                             </td>
