@@ -19,14 +19,27 @@ logger = logging.getLogger(__name__)
 
 CAIRO_TZ = ZoneInfo("Africa/Cairo")
 
-# Gold/silver/dollar price news is excluded from the regular RSS-rewrite pipeline -
-# the dedicated live gold-price generator (generate_gold_price_article_for_site) is
-# the only source of truth for that topic, to avoid duplicate/conflicting articles.
-EXCLUDED_PRICE_TOPIC_KEYWORDS = ['ذهب', 'فضة', 'دولار']
+# Every official/live price topic is excluded from the regular RSS-rewrite
+# pipeline - the dedicated generators (generate_gold_price_article_for_site,
+# generate_official_commodity_article_for_site, generate_arab_currencies_article_for_site,
+# etc.) are the only source of truth for these topics, using real official
+# data, to avoid duplicate/conflicting/possibly-fabricated articles.
+# Iron/fish use narrower "price of X" phrases rather than the bare word
+# ("حديد"/"سمك" alone are too common in unrelated news - e.g. "السكة الحديد"
+# railway news - and would wrongly get blocked otherwise).
+EXCLUDED_PRICE_TOPIC_KEYWORDS = [
+    'ذهب', 'فضة', 'دولار',
+    'إسمنت', 'الإسمنت',
+    'سعر الحديد', 'أسعار الحديد', 'حديد عز',
+    'دواجن',
+    'سعر السمك', 'أسعار السمك',
+    'أسعار الخضار',
+    'الريال السعودي', 'الدينار الكويتي', 'الدرهم الإماراتي',
+]
 
 
 def is_excluded_price_topic(title, description=""):
-    """Returns True if the RSS item is about gold/silver/dollar prices."""
+    """Returns True if the RSS item is about a topic covered by a dedicated live/official price generator."""
     text = f"{title or ''} {description or ''}"
     return any(keyword in text for keyword in EXCLUDED_PRICE_TOPIC_KEYWORDS)
 
