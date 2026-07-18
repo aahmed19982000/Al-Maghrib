@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import random
@@ -347,11 +348,51 @@ def fetch_news_items_from_source(source_url):
 MAX_COVER_IMAGE_SIZE = (900, 600)
 
 
+def _process_cover_image_bytes(raw_bytes, filename):
+    """
+    Crops the bottom 10% (source watermarks), caps dimensions to
+    MAX_COVER_IMAGE_SIZE (shrink only, never upscaled), flattens transparency,
+    and re-encodes as JPEG. Returns a Django ContentFile, falling back to the
+    raw bytes unprocessed if Pillow can't handle this particular image.
+    """
+    filename = filename.rsplit('.', 1)[0] + '.jpg' if '.' in filename else (filename or 'cover') + '.jpg'
+    try:
+        from PIL import Image
+        import io
+
+        img = Image.open(io.BytesIO(raw_bytes))
+        width, height = img.size
+        # Crop bottom 10% (source watermarks) at full resolution first.
+        cropped_img = img.crop((0, 0, width, int(height * 0.90)))
+        # Cap dimensions to MAX_COVER_IMAGE_SIZE - thumbnail() only ever
+        # shrinks, never upscales, so smaller source images are left as-is
+        # (upscaling would make them blurrier, not fix quality).
+        cropped_img.thumbnail(MAX_COVER_IMAGE_SIZE, Image.LANCZOS)
+
+        # JPEG has no alpha channel - flatten transparency onto white first,
+        # otherwise Pillow raises and the except branch below would skip
+        # cropping/resizing entirely, silently publishing an oversized image.
+        if cropped_img.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', cropped_img.size, (255, 255, 255))
+            background.paste(cropped_img, mask=cropped_img.convert('RGBA').split()[-1])
+            cropped_img = background
+        elif cropped_img.mode != 'RGB':
+            cropped_img = cropped_img.convert('RGB')
+
+        img_io = io.BytesIO()
+        cropped_img.save(img_io, format='JPEG', quality=92, optimize=True)
+        img_io.seek(0)
+
+        return ContentFile(img_io.read(), name=filename)
+    except Exception as pe:
+        logger.warning(f"Failed to process cover image, using original bytes as-is: {pe}")
+        return ContentFile(raw_bytes, name=filename)
+
+
 def fetch_image_file(image_url):
     """
-    Downloads an image from a URL, crops the bottom 10% (source watermarks),
-    caps its dimensions to MAX_COVER_IMAGE_SIZE (never upscaled, only shrunk),
-    and returns it as a Django ContentFile encoded as JPEG - or None on failure.
+    Downloads an image from a URL and returns it processed via
+    _process_cover_image_bytes(), or None on failure.
     """
     if not image_url:
         return None
@@ -362,49 +403,40 @@ def fetch_image_file(image_url):
         res = requests.get(image_url, headers=headers, timeout=10)
         res.raise_for_status()
 
-        # Get filename, always saved as .jpg since the output is always re-encoded to JPEG below.
         filename = image_url.split('/')[-1]
         if '?' in filename:
             filename = filename.split('?')[0]
-        if not filename or '.' not in filename:
-            filename = 'cover'
-        filename = filename.rsplit('.', 1)[0] + '.jpg'
 
-        try:
-            from PIL import Image
-            import io
-
-            img = Image.open(io.BytesIO(res.content))
-            width, height = img.size
-            # Crop bottom 10% (source watermarks) at full resolution first.
-            cropped_img = img.crop((0, 0, width, int(height * 0.90)))
-            # Cap dimensions to MAX_COVER_IMAGE_SIZE - thumbnail() only ever
-            # shrinks, never upscales, so smaller source images are left as-is
-            # (upscaling would make them blurrier, not fix quality).
-            cropped_img.thumbnail(MAX_COVER_IMAGE_SIZE, Image.LANCZOS)
-
-            # JPEG has no alpha channel - flatten transparency onto white first,
-            # otherwise Pillow raises and the except branch below would skip
-            # cropping/resizing entirely, silently publishing an oversized image.
-            if cropped_img.mode in ('RGBA', 'LA', 'P'):
-                background = Image.new('RGB', cropped_img.size, (255, 255, 255))
-                background.paste(cropped_img, mask=cropped_img.convert('RGBA').split()[-1])
-                cropped_img = background
-            elif cropped_img.mode != 'RGB':
-                cropped_img = cropped_img.convert('RGB')
-
-            img_io = io.BytesIO()
-            cropped_img.save(img_io, format='JPEG', quality=92, optimize=True)
-            img_io.seek(0)
-
-            return ContentFile(img_io.read(), name=filename)
-        except Exception as pe:
-            logger.warning(f"Failed to process cover image, using original download as-is: {pe}")
-            return ContentFile(res.content, name=filename)
-
+        return _process_cover_image_bytes(res.content, filename)
     except Exception as e:
         logger.error(f"Error downloading image {image_url}: {e}")
     return None
+
+
+# Price/commodity articles have no per-item source photo the way RSS-rewritten
+# news does (there's no "photo of a price"), so they published with no cover
+# image at all. These are generic, appropriately-licensed illustrative photos
+# (originally sourced from Wikimedia Commons, verified real photos) bundled
+# locally under static/images/price_covers/ - purely visual, never used as a
+# data source; every number in these articles still comes exclusively from
+# the official price APIs. Bundled locally (rather than hotlinked) because
+# Wikimedia's own file host rate-limits repeated direct requests.
+DEFAULT_COVER_IMAGE_DIR = os.path.join(settings.BASE_DIR, 'static', 'images', 'price_covers')
+DEFAULT_COVER_IMAGE_TYPES = {'gold', 'silver', 'dollar', 'iron', 'cement', 'poultry', 'fish', 'vegetable', 'arab_currencies'}
+
+
+def attach_default_cover_image(article, content_type):
+    """Attaches the generic illustrative cover image for this price-article content type, if one is configured."""
+    if content_type not in DEFAULT_COVER_IMAGE_TYPES:
+        return
+    path = os.path.join(DEFAULT_COVER_IMAGE_DIR, f'{content_type}.jpg')
+    try:
+        with open(path, 'rb') as f:
+            raw_bytes = f.read()
+    except OSError as e:
+        logger.warning(f"Default cover image missing for '{content_type}': {e}")
+        return
+    article.cover_image = _process_cover_image_bytes(raw_bytes, f'{content_type}.jpg')
 
 
 def generate_slug_for_title(title):
@@ -757,7 +789,7 @@ def sites_due_for_type(content_type, legacy_bool_field, ai_settings=None, last_a
     return result, due_slots, legacy_used
 
 
-def generate_official_commodity_article_for_site(wp_site, topic_title, items, source_url, ai_settings, api_key, allowed_cats, categories_list_str):
+def generate_official_commodity_article_for_site(wp_site, topic_title, items, source_url, ai_settings, api_key, allowed_cats, categories_list_str, content_type=None):
     """
     Writes and publishes a fresh price-update article to a single WordPress site
     using one or more official IDSC price items, e.g. a single commodity (iron,
@@ -893,6 +925,8 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
             is_breaking=False,
             auto_translate=False
         )
+        if content_type:
+            attach_default_cover_image(article, content_type)
         article.save()
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
@@ -1064,6 +1098,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             is_breaking=False,
             auto_translate=False
         )
+        attach_default_cover_image(article, 'arab_currencies')
         article.save()
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
@@ -1398,6 +1433,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
             is_breaking=False,
             auto_translate=False
         )
+        attach_default_cover_image(article, 'gold')
         article.save()
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
@@ -1567,6 +1603,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
             is_breaking=False,
             auto_translate=False
         )
+        attach_default_cover_image(article, 'silver')
         article.save()
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
@@ -1732,6 +1769,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
             is_breaking=False,
             auto_translate=False
         )
+        attach_default_cover_image(article, 'dollar')
         article.save()
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
@@ -2295,7 +2333,7 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "أسعار الحديد (عز واستثماري)", iron_items, source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='iron'
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2325,7 +2363,7 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الإسمنت (الرمادي)", [("الأسمنت الرمادي", cement_data)], source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='cement'
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2355,7 +2393,7 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الدواجن (الفراخ)", [("الدواجن الطازجة", poultry_data)], source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='poultry'
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2394,7 +2432,7 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "أسعار الأسماك (بلطي، جمبري، سردين)", fish_items, source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='fish'
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2431,7 +2469,7 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "أسعار الخضار (طماطم، بطاطس، بصل)", vegetable_items, source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='vegetable'
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
