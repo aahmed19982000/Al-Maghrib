@@ -347,12 +347,14 @@ def fetch_news_items_from_source(source_url):
 
 
 MAX_COVER_IMAGE_SIZE = (900, 600)
-# Facebook's own documented minimum for a shared-link image (og:image) -
-# below ~200x200 it silently shows no image at all on Facebook shares rather
-# than a small/blurry one. 600x315 is Facebook's recommended minimum for a
-# reliable large-image preview, so a source photo smaller than this is
-# upscaled up to this floor - a bit softer beats no image showing at all.
-MIN_COVER_IMAGE_SIZE = (600, 315)
+# Facebook's Sharing Debugger rejects og:image outright below 200x200 ("did
+# not meet the minimum size constraint of 200px by 200px") - that hard cutoff
+# is the actual bar to clear, not Facebook's separate "recommended" size
+# (600x315+) for the large-card layout. Targeting only the real minimum (with
+# a small safety margin) keeps the upscale factor small for already-decent
+# small photos (e.g. many Egyptian news sites' RSS images sit right around
+# 380x200) instead of stretching them 2-3x and visibly softening them.
+MIN_COVER_IMAGE_SIZE = (220, 220)
 
 
 def _process_cover_image_bytes(raw_bytes, filename):
