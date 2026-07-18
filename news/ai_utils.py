@@ -405,27 +405,49 @@ def _process_cover_image_bytes(raw_bytes, filename):
         return ContentFile(raw_bytes, name=filename)
 
 
+def _strip_wp_thumbnail_suffix(url):
+    """
+    WordPress (and several other CMSs) name auto-generated thumbnails like
+    "photo-300x200.jpg" alongside the real full-size "photo.jpg". RSS feeds
+    often link the small thumbnail. Returns the guessed full-size URL, or the
+    original URL unchanged if it doesn't match this naming pattern.
+    """
+    return re.sub(r'-\d+x\d+(\.\w+)(\?.*)?$', r'\1\2', url)
+
+
 def fetch_image_file(image_url):
     """
     Downloads an image from a URL and returns it processed via
-    _process_cover_image_bytes(), or None on failure.
+    _process_cover_image_bytes(), or None on failure. If the URL looks like a
+    WordPress-style resized thumbnail, the guessed full-size original is
+    tried first (a real higher-resolution photo beats upscaling a small
+    thumbnail), falling back to the given URL if that guess doesn't exist.
     """
     if not image_url:
         return None
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        res = requests.get(image_url, headers=headers, timeout=10)
-        res.raise_for_status()
 
-        filename = image_url.split('/')[-1]
-        if '?' in filename:
-            filename = filename.split('?')[0]
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    full_size_guess = _strip_wp_thumbnail_suffix(image_url)
+    urls_to_try = [full_size_guess, image_url] if full_size_guess != image_url else [image_url]
 
-        return _process_cover_image_bytes(res.content, filename)
-    except Exception as e:
-        logger.error(f"Error downloading image {image_url}: {e}")
+    last_error = None
+    for url in urls_to_try:
+        try:
+            res = requests.get(url, headers=headers, timeout=10)
+            res.raise_for_status()
+
+            filename = url.split('/')[-1]
+            if '?' in filename:
+                filename = filename.split('?')[0]
+
+            return _process_cover_image_bytes(res.content, filename)
+        except Exception as e:
+            last_error = e
+            continue
+
+    logger.error(f"Error downloading image {image_url}: {last_error}")
     return None
 
 
