@@ -347,14 +347,21 @@ def fetch_news_items_from_source(source_url):
 
 
 MAX_COVER_IMAGE_SIZE = (900, 600)
+# Facebook's own documented minimum for a shared-link image (og:image) -
+# below ~200x200 it silently shows no image at all on Facebook shares rather
+# than a small/blurry one. 600x315 is Facebook's recommended minimum for a
+# reliable large-image preview, so a source photo smaller than this is
+# upscaled up to this floor - a bit softer beats no image showing at all.
+MIN_COVER_IMAGE_SIZE = (600, 315)
 
 
 def _process_cover_image_bytes(raw_bytes, filename):
     """
     Crops the bottom 10% (source watermarks), caps dimensions to
-    MAX_COVER_IMAGE_SIZE (shrink only, never upscaled), flattens transparency,
-    and re-encodes as JPEG. Returns a Django ContentFile, falling back to the
-    raw bytes unprocessed if Pillow can't handle this particular image.
+    MAX_COVER_IMAGE_SIZE (shrink only), upscales up to MIN_COVER_IMAGE_SIZE
+    if the source photo is smaller than that, flattens transparency, and
+    re-encodes as JPEG. Returns a Django ContentFile, falling back to the raw
+    bytes unprocessed if Pillow can't handle this particular image.
     """
     filename = filename.rsplit('.', 1)[0] + '.jpg' if '.' in filename else (filename or 'cover') + '.jpg'
     try:
@@ -365,10 +372,18 @@ def _process_cover_image_bytes(raw_bytes, filename):
         width, height = img.size
         # Crop bottom 10% (source watermarks) at full resolution first.
         cropped_img = img.crop((0, 0, width, int(height * 0.90)))
-        # Cap dimensions to MAX_COVER_IMAGE_SIZE - thumbnail() only ever
-        # shrinks, never upscales, so smaller source images are left as-is
-        # (upscaling would make them blurrier, not fix quality).
+        # Cap dimensions to MAX_COVER_IMAGE_SIZE (shrink only).
         cropped_img.thumbnail(MAX_COVER_IMAGE_SIZE, Image.LANCZOS)
+
+        # If the source photo was tiny, upscale up to MIN_COVER_IMAGE_SIZE so
+        # Facebook doesn't reject it outright for being under its own minimum.
+        cw, ch = cropped_img.size
+        min_w, min_h = MIN_COVER_IMAGE_SIZE
+        if cw < min_w or ch < min_h:
+            scale = max(min_w / cw, min_h / ch)
+            max_w, max_h = MAX_COVER_IMAGE_SIZE
+            new_size = (min(round(cw * scale), max_w), min(round(ch * scale), max_h))
+            cropped_img = cropped_img.resize(new_size, Image.LANCZOS)
 
         # JPEG has no alpha channel - flatten transparency onto white first,
         # otherwise Pillow raises and the except branch below would skip
