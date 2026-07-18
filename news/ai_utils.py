@@ -569,7 +569,10 @@ IDSC_INDICATOR_IDS = {
     'iron_investment': 8,   # حديد إستثماري
     'cement': 92,           # الأسمنت الرمادي
     'poultry': 880,         # الدواجن الطازجة
-    'fish': 827,            # السمك
+    'fish': 827,            # السمك (المتوسط العام)
+    'fish_tilapia': 326,    # البلطي (ممتاز)
+    'fish_shrimp': 331,     # الجمبري (وسط)
+    'fish_sardine': 338,    # السردين المجمد
     'tomatoes': 2,
     'potatoes': 1,
     'onions': 824,
@@ -2348,11 +2351,20 @@ def run_ai_generation_cycle():
     )
     if fish_sites:
         fish_data = fetch_idsc_indicator('fish')
-        if fish_data:
+        fish_tilapia_data = fetch_idsc_indicator('fish_tilapia')
+        fish_shrimp_data = fetch_idsc_indicator('fish_shrimp')
+        fish_sardine_data = fetch_idsc_indicator('fish_sardine')
+        if fish_data and fish_tilapia_data and fish_shrimp_data and fish_sardine_data:
             if fish_legacy_used:
                 ai_settings.last_fish_price_at = timezone.now()
                 ai_settings.save(update_fields=['last_fish_price_at'])
             source_url = f"{IDSC_API_BASE}/PricesData/GetMainIndicatorData/{IDSC_INDICATOR_IDS['fish']}"
+            fish_items = [
+                ("السمك (متوسط عام)", fish_data),
+                ("البلطي", fish_tilapia_data),
+                ("الجمبري", fish_shrimp_data),
+                ("السردين المجمد", fish_sardine_data),
+            ]
             for wp_site in fish_sites:
                 if generated_count >= limit:
                     break
@@ -2361,7 +2373,7 @@ def run_ai_generation_cycle():
                 if wp_site.id not in fish_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
-                    wp_site, "سعر السمك", [("السمك", fish_data)], source_url,
+                    wp_site, "أسعار الأسماك (بلطي، جمبري، سردين)", fish_items, source_url,
                     ai_settings, api_key, allowed_cats, categories_list_str
                 )
                 if success:
