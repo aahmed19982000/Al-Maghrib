@@ -565,10 +565,11 @@ def fetch_live_dollar_price():
 # Free, keyless, and includes a real day-over-day comparison already computed.
 IDSC_API_BASE = 'http://app.prices.idsc.gov.eg/api'
 IDSC_INDICATOR_IDS = {
-    'iron': 7,          # حديد عز
-    'cement': 92,       # الأسمنت الرمادي
-    'poultry': 880,     # الدواجن الطازجة
-    'fish': 827,        # السمك
+    'iron': 7,              # حديد عز
+    'iron_investment': 8,   # حديد إستثماري
+    'cement': 92,           # الأسمنت الرمادي
+    'poultry': 880,         # الدواجن الطازجة
+    'fish': 827,            # السمك
     'tomatoes': 2,
     'potatoes': 1,
     'onions': 824,
@@ -2252,11 +2253,16 @@ def run_ai_generation_cycle():
     )
     if iron_sites:
         iron_data = fetch_idsc_indicator('iron')
-        if iron_data:
+        iron_investment_data = fetch_idsc_indicator('iron_investment')
+        if iron_data and iron_investment_data:
             if iron_legacy_used:
                 ai_settings.last_iron_price_at = timezone.now()
                 ai_settings.save(update_fields=['last_iron_price_at'])
             source_url = f"{IDSC_API_BASE}/PricesData/GetMainIndicatorData/{IDSC_INDICATOR_IDS['iron']}"
+            iron_items = [
+                ("حديد عز", iron_data),
+                ("حديد إستثماري", iron_investment_data),
+            ]
             for wp_site in iron_sites:
                 if generated_count >= limit:
                     break
@@ -2265,7 +2271,7 @@ def run_ai_generation_cycle():
                 if wp_site.id not in iron_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
-                    wp_site, "سعر الحديد (حديد عز)", [("حديد عز", iron_data)], source_url,
+                    wp_site, "أسعار الحديد (عز واستثماري)", iron_items, source_url,
                     ai_settings, api_key, allowed_cats, categories_list_str
                 )
                 if success:
