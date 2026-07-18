@@ -789,7 +789,7 @@ def sites_due_for_type(content_type, legacy_bool_field, ai_settings=None, last_a
     return result, due_slots, legacy_used
 
 
-def generate_official_commodity_article_for_site(wp_site, topic_title, items, source_url, ai_settings, api_key, allowed_cats, categories_list_str, content_type=None):
+def generate_official_commodity_article_for_site(wp_site, topic_title, items, source_url, ai_settings, api_key, allowed_cats, categories_list_str, content_type=None, wp_category_id=None):
     """
     Writes and publishes a fresh price-update article to a single WordPress site
     using one or more official IDSC price items, e.g. a single commodity (iron,
@@ -934,7 +934,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
-                focus_keyword=focus_keyword, meta_description=meta_description
+                focus_keyword=focus_keyword, meta_description=meta_description, wp_category_id=wp_category_id
             )
         except Exception as wpe:
             logger.error(f"Error syndicating {topic_title} article to WP site {wp_site.name}: {wpe}")
@@ -963,7 +963,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
         return False
 
 
-def generate_arab_currencies_article_for_site(wp_site, currency_items, source_url, ai_settings, api_key, allowed_cats, categories_list_str):
+def generate_arab_currencies_article_for_site(wp_site, currency_items, source_url, ai_settings, api_key, allowed_cats, categories_list_str, wp_category_id=None):
     """
     Writes and publishes a fresh article covering Arab currencies' exchange
     rates (buy/sell) against the Egyptian pound to a single WordPress site,
@@ -1106,7 +1106,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
-                focus_keyword=focus_keyword, meta_description=meta_description
+                focus_keyword=focus_keyword, meta_description=meta_description, wp_category_id=wp_category_id
             )
         except Exception as wpe:
             logger.error(f"Error syndicating Arab currencies article to WP site {wp_site.name}: {wpe}")
@@ -1166,7 +1166,29 @@ def get_or_create_wp_tag_ids(wp_site, tag_names, auth):
     return tag_ids
 
 
-def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyword=None, meta_description=None):
+def fetch_wp_primary_categories(wp_site):
+    """
+    Fetches this WordPress site's real categories from the AI News Controller
+    plugin's own REST endpoint, filtered to the ones marked "primary" in the
+    plugin's admin UI. Returns a list of {'id': int, 'name': str} dicts, or []
+    if the request fails (e.g. an older plugin version without this route) -
+    callers should fall back to the legacy Django category_mapping behavior.
+    """
+    from requests.auth import HTTPBasicAuth
+    base_url = wp_site.url.rstrip('/')
+    url = f"{base_url}/wp-json/ai-controller/v1/categories"
+    auth = HTTPBasicAuth(wp_site.username, wp_site.application_password)
+    try:
+        resp = requests.get(url, auth=auth, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        logger.warning(f"Failed to fetch primary categories from plugin on {wp_site.name}: {e}")
+        return []
+    return [{'id': c['id'], 'name': c['name']} for c in data if c.get('is_primary')]
+
+
+def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyword=None, meta_description=None, wp_category_id=None):
     """
     Publishes an article to an external WordPress site via REST API.
     Handles uploading the cover image first and mapping categories.
@@ -1223,33 +1245,44 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
         except Exception as e:
             logger.error(f"Error uploading media to WP: {e}")
 
-    # 2. Map categories - a local category can map to a single WP category ID
-    # (legacy format, e.g. {"اقتصاد": 5}) or to a primary category plus extra
-    # secondary ones (e.g. {"اقتصاد": {"primary": 5, "secondary": [12, 20]}}).
+    # 2. Determine the real WP category. If the caller already resolved a real
+    # WP category id (e.g. via the plugin's own primary-categories list, or a
+    # forced category like "أسعار" for price articles), use it directly - the
+    # plugin's own rest_insert_post hook adds any configured secondary
+    # categories (like "الرئيسية") on top of it automatically. Otherwise fall
+    # back to the legacy Django category_mapping name lookup for sites that
+    # haven't set up the newer plugin-driven flow.
     wp_categories = []
     primary_category_id = None
-    cat_mappings = wp_site.get_category_mappings()
-    local_cat_name = article.category.name if article.category else ""
+    if wp_category_id is not None:
+        primary_category_id = int(wp_category_id)
+        wp_categories.append(primary_category_id)
+    else:
+        # Legacy: a local category can map to a single WP category ID (e.g.
+        # {"اقتصاد": 5}) or to a primary category plus extra secondary ones
+        # (e.g. {"اقتصاد": {"primary": 5, "secondary": [12, 20]}}).
+        cat_mappings = wp_site.get_category_mappings()
+        local_cat_name = article.category.name if article.category else ""
 
-    mapping = cat_mappings.get(local_cat_name)
-    if isinstance(mapping, dict):
-        try:
-            if mapping.get('primary') is not None:
-                primary_category_id = int(mapping['primary'])
-                wp_categories.append(primary_category_id)
-        except (ValueError, TypeError):
-            pass
-        for secondary_id in mapping.get('secondary') or []:
+        mapping = cat_mappings.get(local_cat_name)
+        if isinstance(mapping, dict):
             try:
-                wp_categories.append(int(secondary_id))
+                if mapping.get('primary') is not None:
+                    primary_category_id = int(mapping['primary'])
+                    wp_categories.append(primary_category_id)
             except (ValueError, TypeError):
                 pass
-    elif mapping is not None:
-        try:
-            primary_category_id = int(mapping)
-            wp_categories.append(primary_category_id)
-        except (ValueError, TypeError):
-            pass
+            for secondary_id in mapping.get('secondary') or []:
+                try:
+                    wp_categories.append(int(secondary_id))
+                except (ValueError, TypeError):
+                    pass
+        elif mapping is not None:
+            try:
+                primary_category_id = int(mapping)
+                wp_categories.append(primary_category_id)
+            except (ValueError, TypeError):
+                pass
 
 
     # 3. Prepare post body
@@ -1296,7 +1329,7 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
     return None
 
 
-def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str):
+def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str, wp_category_id=None):
     """
     Writes and publishes a fresh gold-price article to a single WordPress site,
     using the exact real numbers in gold_data rather than any AI-invented figures.
@@ -1441,7 +1474,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
-                focus_keyword=focus_keyword, meta_description=meta_description
+                focus_keyword=focus_keyword, meta_description=meta_description, wp_category_id=wp_category_id
             )
         except Exception as wpe:
             logger.error(f"Error syndicating gold price article to WP site {wp_site.name}: {wpe}")
@@ -1470,7 +1503,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
         return False
 
 
-def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str):
+def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str, wp_category_id=None):
     """
     Writes and publishes a fresh silver-price article to a single WordPress site,
     using the exact real numbers in silver_data rather than any AI-invented figures.
@@ -1611,7 +1644,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
-                focus_keyword=focus_keyword, meta_description=meta_description
+                focus_keyword=focus_keyword, meta_description=meta_description, wp_category_id=wp_category_id
             )
         except Exception as wpe:
             logger.error(f"Error syndicating silver price article to WP site {wp_site.name}: {wpe}")
@@ -1640,7 +1673,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
         return False
 
 
-def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str):
+def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str, wp_category_id=None):
     """
     Writes and publishes a fresh dollar-exchange-rate article to a single WordPress
     site, using the exact real number in dollar_data rather than any AI-invented figure.
@@ -1777,7 +1810,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
-                focus_keyword=focus_keyword, meta_description=meta_description
+                focus_keyword=focus_keyword, meta_description=meta_description, wp_category_id=wp_category_id
             )
         except Exception as wpe:
             logger.error(f"Error syndicating dollar price article to WP site {wp_site.name}: {wpe}")
@@ -1873,6 +1906,26 @@ def run_ai_generation_cycle():
         regular_news_caps[_site.id] = _cap
         if _due_slot:
             regular_due_slots[_site.id] = _due_slot
+
+    # Real WP category ids (from the plugin's own primary-categories endpoint)
+    # cached per site for this cycle, so multiple price-article types for the
+    # same site don't refetch. get_wp_category_id() returns None when the
+    # plugin doesn't expose the endpoint yet (older version) or the named
+    # category isn't configured as primary there - callers fall back to the
+    # legacy Django category_mapping behavior in that case.
+    wp_primary_categories_cache = {}
+
+    def get_wp_primary_categories(wp_site):
+        if wp_site.id not in wp_primary_categories_cache:
+            wp_primary_categories_cache[wp_site.id] = fetch_wp_primary_categories(wp_site)
+        return wp_primary_categories_cache[wp_site.id]
+
+    def get_wp_category_id(wp_site, category_name):
+        match = next(
+            (c for c in get_wp_primary_categories(wp_site) if c['name'].strip() == category_name),
+            None,
+        )
+        return match['id'] if match else None
 
     # Loop over all active sources
     for source in sources:
@@ -2051,6 +2104,18 @@ def run_ai_generation_cycle():
                             "المعتاد القصير."
                         )
 
+                    # Prefer the site's real WordPress categories (as configured
+                    # in the plugin's own admin UI) so Gemini picks a category
+                    # that actually exists on this site directly - no more
+                    # relying on Django's fragile name-based category_mapping.
+                    # Falls back to the shared local categories list for sites
+                    # on an older plugin version without this endpoint.
+                    site_primary_cats = get_wp_primary_categories(wp_site)
+                    if site_primary_cats:
+                        site_categories_list_str = "\n".join([f"- {c['id']}: {c['name']}" for c in site_primary_cats])
+                    else:
+                        site_categories_list_str = categories_list_str
+
                     prompt = (
                         f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
                         f"استناداً إلى المعلومات والخبر التالي:\n"
@@ -2074,7 +2139,7 @@ def run_ai_generation_cycle():
                         f"الخبر تحديداً (وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في "
                         f"جوجل عن هذا الموضوع بالذات (مثال لخبر عن سعر اليورو: \"سعر اليورو اليوم\"، \"اليورو مقابل "
                         f"الجنيه\")، بدون ذكر اسم أي موقع إخباري.\n\n"
-                        f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+                        f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{site_categories_list_str}\n"
                         f"{internal_link_instruction}"
                         f"{explainer_instruction}\n\n"
                         f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
@@ -2113,16 +2178,31 @@ def run_ai_generation_cycle():
                             chosen_cat_id = int(data.get("category_id"))
                         except (ValueError, TypeError):
                             chosen_cat_id = None
-                            
+
                         if not new_title or not new_body:
                             raise ValueError("بيانات العنوان أو المحتوى فارغة.")
-                            
-                        category = None
-                        if chosen_cat_id:
-                            category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
-                        if not category and allowed_cats:
-                            category = allowed_cats[0]
-                            
+
+                        wp_category_id_for_push = None
+                        if site_primary_cats:
+                            # chosen_cat_id is a real WP category id here (Gemini
+                            # picked from site_categories_list_str above) - use it
+                            # directly, falling back to the site's first primary
+                            # category if the id doesn't match one we offered.
+                            if chosen_cat_id and any(c['id'] == chosen_cat_id for c in site_primary_cats):
+                                wp_category_id_for_push = chosen_cat_id
+                            else:
+                                wp_category_id_for_push = site_primary_cats[0]['id']
+                            # The local Article record still needs *a* local
+                            # category (never shown publicly - these WP-bound
+                            # articles are saved as local drafts only).
+                            category = allowed_cats[0] if allowed_cats else None
+                        else:
+                            category = None
+                            if chosen_cat_id:
+                                category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
+                            if not category and allowed_cats:
+                                category = allowed_cats[0]
+
                         from core.utils import translate_text
                         title_en = translate_text(new_title)
                         body_en = translate_text(new_body)
@@ -2161,7 +2241,8 @@ def run_ai_generation_cycle():
                             tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
                             published_url = push_article_to_wordpress(
                                 wp_site, article, extra_tag_names=tag_names,
-                                focus_keyword=focus_keyword, meta_description=meta_description
+                                focus_keyword=focus_keyword, meta_description=meta_description,
+                                wp_category_id=wp_category_id_for_push
                             )
                         except Exception as wpe:
                             logger.error(f"Error syndicating to WP site {wp_site.name}: {wpe}")
@@ -2221,7 +2302,8 @@ def run_ai_generation_cycle():
                 if wp_site.id not in gold_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_gold_price_article_for_site(
-                    wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
+                    wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str,
+                    wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2262,7 +2344,8 @@ def run_ai_generation_cycle():
                 if wp_site.id not in silver_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_silver_price_article_for_site(
-                    wp_site, silver_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
+                    wp_site, silver_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str,
+                    wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2298,7 +2381,8 @@ def run_ai_generation_cycle():
                 if wp_site.id not in dollar_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_dollar_price_article_for_site(
-                    wp_site, dollar_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str
+                    wp_site, dollar_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str,
+                    wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2333,7 +2417,8 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "أسعار الحديد (عز واستثماري)", iron_items, source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='iron'
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='iron',
+                    wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2363,7 +2448,8 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الإسمنت (الرمادي)", [("الأسمنت الرمادي", cement_data)], source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='cement'
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='cement',
+                    wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2393,7 +2479,8 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "سعر الدواجن (الفراخ)", [("الدواجن الطازجة", poultry_data)], source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='poultry'
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='poultry',
+                    wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2432,7 +2519,8 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "أسعار الأسماك (بلطي، جمبري، سردين)", fish_items, source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='fish'
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='fish',
+                    wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2469,7 +2557,8 @@ def run_ai_generation_cycle():
                     continue
                 success = generate_official_commodity_article_for_site(
                     wp_site, "أسعار الخضار (طماطم، بطاطس، بصل)", vegetable_items, source_url,
-                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='vegetable'
+                    ai_settings, api_key, allowed_cats, categories_list_str, content_type='vegetable',
+                    wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
@@ -2498,7 +2587,8 @@ def run_ai_generation_cycle():
                 if wp_site.id not in arab_currency_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_arab_currencies_article_for_site(
-                    wp_site, currency_data, source_url, ai_settings, api_key, allowed_cats, categories_list_str
+                    wp_site, currency_data, source_url, ai_settings, api_key, allowed_cats, categories_list_str,
+                    wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
                 if success:
                     wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1

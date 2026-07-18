@@ -2,7 +2,7 @@
 /**
  * Plugin Name: متحكم الأخبار بالذكاء الاصطناعي (AI News Controller)
  * Description: إضافة لربط موقع ووردبريس بنظام الجدولة والتوليد الآلي والتحكم في إعدادات النشر من لوحة التحكم.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Antigravity AI
  * License: GPL2
  */
@@ -16,9 +16,47 @@ class WP_AI_News_Controller {
     public function __construct() {
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
-        
+        add_action( 'rest_api_init', array( $this, 'register_custom_routes' ) );
+
         // Intercept REST API post creation to assign the selected author and categories
         add_action( 'rest_insert_post', array( $this, 'assign_ai_post_defaults' ), 10, 3 );
+    }
+
+    /**
+     * Exposes this site's real categories to Django, including which ones are
+     * marked "primary" here in the plugin's own admin UI (and their configured
+     * secondaries) - so Django/Gemini can choose a real category directly
+     * instead of guessing via a separate name-mapping table.
+     */
+    public function register_custom_routes() {
+        register_rest_route( 'ai-controller/v1', '/categories', array(
+            'methods'             => 'GET',
+            'callback'            => array( $this, 'get_categories_for_ai' ),
+            'permission_callback' => function () {
+                return current_user_can( 'edit_posts' );
+            },
+        ) );
+    }
+
+    public function get_categories_for_ai( $request ) {
+        $wp_categories = get_categories( array( 'hide_empty' => false ) );
+        $primary_secondary_map = get_option( 'wp_ai_primary_secondary_map', array() );
+        if ( ! is_array( $primary_secondary_map ) ) {
+            $primary_secondary_map = array();
+        }
+
+        $result = array();
+        foreach ( $wp_categories as $cat ) {
+            $is_primary = array_key_exists( $cat->term_id, $primary_secondary_map );
+            $result[] = array(
+                'id'         => $cat->term_id,
+                'name'       => $cat->name,
+                'is_primary' => $is_primary,
+                'secondary'  => $is_primary ? array_map( 'intval', (array) $primary_secondary_map[ $cat->term_id ] ) : array(),
+            );
+        }
+
+        return rest_ensure_response( $result );
     }
 
     public function add_admin_menu() {
