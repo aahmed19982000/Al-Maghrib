@@ -421,7 +421,7 @@ class WordPressSite(models.Model):
     generate_poultry_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر الدواجن اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بسعر الدواجن الطازجة الرسمي لهذا الموقع فقط.")
     generate_fish_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات سعر السمك اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بسعر السمك الرسمي لهذا الموقع فقط.")
     generate_vegetable_price_articles = models.BooleanField(default=False, verbose_name="توليد مقالات أسعار الخضار اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بأسعار سلة خضار أساسية (طماطم، بطاطس، بصل) الرسمية لهذا الموقع فقط.")
-    generate_arab_currencies_articles = models.BooleanField(default=False, verbose_name="توليد مقالات أسعار العملات العربية اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بأسعار صرف الريال السعودي والدينار الكويتي والدرهم الإماراتي الرسمية مقابل الجنيه المصري لهذا الموقع فقط.")
+    generate_arab_currencies_articles = models.BooleanField(default=False, verbose_name="توليد مقالات أسعار العملات العربية والأجنبية اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بأسعار صرف الريال السعودي والدينار الكويتي والدرهم الإماراتي، بالإضافة لليورو والجنيه الاسترليني والفرنك السويسري، الرسمية مقابل الجنيه المصري لهذا الموقع فقط.")
     site_tags = models.TextField(blank=True, default='', verbose_name="وسوم ثابتة لهذا الموقع", help_text="وسوم ثابتة (افصل بينها بفاصلة) تُضاف تلقائياً لكل خبر يُنشر على هذا الموقع، مثال: بانكرز توداي, موقع بانكرز توداي الاخباري")
     use_explainer_style = models.BooleanField(default=False, verbose_name="أسلوب تفسيري (Explainer) عند الحاجة", help_text="عند التفعيل، يقرر الذكاء الاصطناعي تلقائياً استخدام أسلوب شرح بعناوين على شكل أسئلة (لماذا؟ هل؟ كيف؟) للأخبار الاقتصادية/التنظيمية (رسوم، ضرائب، قرارات) التي تحتاج تفصيلاً، بدلاً من الخبر القصير المعتاد.")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -463,7 +463,7 @@ class WordPressScheduleSlot(models.Model):
         ('poultry', 'سعر الدواجن'),
         ('fish', 'سعر السمك'),
         ('vegetable', 'أسعار الخضار'),
-        ('arab_currencies', 'أسعار العملات العربية'),
+        ('arab_currencies', 'أسعار العملات العربية والأجنبية'),
     ]
 
     wp_site = models.ForeignKey(WordPressSite, on_delete=models.CASCADE, related_name='schedule_slots', verbose_name="الموقع")

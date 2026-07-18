@@ -605,15 +605,19 @@ def fetch_idsc_indicator(indicator_key):
         return None
 
 
-ARAB_CURRENCY_NAMES = ['ريال سعودي', 'دينار كويتي', 'درهم إماراتي']
+# Arab currencies plus the other non-Arab foreign currencies the same IDSC
+# endpoint tracks (Euro, British Pound, Swiss Franc) - the US Dollar is
+# deliberately excluded here since it already has its own dedicated article.
+ARAB_CURRENCY_NAMES = ['ريال سعودي', 'دينار كويتي', 'درهم إماراتي', 'يورو', 'جنيه استرليني', 'فرنك سويسري']
 
 
 def fetch_arab_currency_rates():
     """
     Fetches official real buy/sell exchange rates (with built-in comparison to
-    yesterday) for Arab currencies against the Egyptian pound, from the same
-    IDSC price API used for gold/commodities. Returns None if the request
-    fails or none of the expected currencies are present in the response.
+    yesterday) for Arab and other foreign currencies against the Egyptian
+    pound, from the same IDSC price API used for gold/commodities. Returns
+    None if the request fails or none of the expected currencies are present
+    in the response.
     """
     try:
         resp = requests.get(
@@ -624,7 +628,7 @@ def fetch_arab_currency_rates():
         resp.raise_for_status()
         all_rates = resp.json()
     except Exception as e:
-        logger.error(f"Failed to fetch Arab currency exchange rates: {e}")
+        logger.error(f"Failed to fetch currency exchange rates: {e}")
         return None
 
     result = []
@@ -943,12 +947,12 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
 
     prompt = (
         f"بصفتك محررًا اقتصاديًا محترفًا باللغة العربية، اكتب خبرًا صحفيًا محدَّثًا عن أسعار صرف العملات العربية "
-        f"مقابل الجنيه المصري اليوم، معتمداً حصرياً على الأرقام الرسمية التالية الصادرة عن مركز معلومات مجلس "
-        f"الوزراء المصري لحظة كتابة الخبر - اذكرها كما هي تماماً دون تقريب أو اختراع أي رقم بديل:\n"
+        f"والأجنبية مقابل الجنيه المصري اليوم، معتمداً حصرياً على الأرقام الرسمية التالية الصادرة عن مركز معلومات "
+        f"مجلس الوزراء المصري لحظة كتابة الخبر - اذكرها كما هي تماماً دون تقريب أو اختراع أي رقم بديل:\n"
         f"{numbers_block}\n\n"
         f"الرجاء الالتزام التام بالتعليمات التالية:\n"
         f"1. اكتب بأسلوب صحفي اقتصادي مباشر وواضح، بين 200 و350 كلمة. {READABILITY_INSTRUCTION}\n"
-        f"2. قم بصياغة عنوان جذاب يذكر تحديث أسعار العملات العربية اليوم.\n"
+        f"2. قم بصياغة عنوان جذاب يذكر تحديث أسعار العملات العربية والأجنبية اليوم.\n"
         f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
         f"4. اذكر سعري الشراء والبيع لكل عملة كما وردا أعلاه بدقة، واذكر المقارنة بالأمس فقط إن وردت في الأرقام، "
         f"ولا تخترع أي مقارنة أو نسبة غير مذكورة.\n"
@@ -973,7 +977,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             source=None,
             source_url=source_url,
             wp_site=wp_site,
-            title="تحديث أسعار العملات العربية",
+            title="تحديث أسعار العملات العربية والأجنبية",
             status='failed',
             error_message="لم يستجب الـ API الخاص بـ Gemini أو فشل استخراج النص."
         )
@@ -1073,7 +1077,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             source=None,
             source_url=source_url,
             wp_site=wp_site,
-            title="تحديث أسعار العملات العربية",
+            title="تحديث أسعار العملات العربية والأجنبية",
             status='failed',
             error_message=f"فشل صياغة خبر أسعار العملات العربية لـ {wp_site.name}: {str(ex)}"
         )
