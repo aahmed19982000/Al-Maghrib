@@ -5,7 +5,8 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
-from .models import AISettings, AISource, AIImportLog, Category, Article, WordPressSite, WordPressScheduleSlot
+from django.db.models import Sum, Q
+from .models import AISettings, AISource, AIImportLog, Category, Article, WordPressSite, WordPressScheduleSlot, WordPressSiteGroup
 from .tasks import scrape_and_generate_news_task
 
 class StaffRequiredMixin(UserPassesTestMixin):
@@ -162,10 +163,15 @@ class WordPressSiteListView(StaffRequiredMixin, ListView):
     template_name = 'ai_dashboard/wp_sites_list.html'
     context_object_name = 'sites'
 
+    def get_queryset(self):
+        return WordPressSite.objects.select_related('merge_group').annotate(
+            real_cost=Sum('import_logs__estimated_cost', filter=Q(import_logs__status='success')),
+        )
+
 
 class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'articles_per_run', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'generate_arab_currencies_articles', 'site_tags', 'use_explainer_style']
+    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'articles_per_run', 'is_active', 'sources', 'merge_group', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'generate_arab_currencies_articles', 'site_tags', 'use_explainer_style']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
@@ -176,7 +182,7 @@ class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
 
 class WordPressSiteUpdateView(StaffRequiredMixin, UpdateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'articles_per_run', 'is_active', 'sources', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'generate_arab_currencies_articles', 'site_tags', 'use_explainer_style']
+    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'articles_per_run', 'is_active', 'sources', 'merge_group', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'generate_arab_currencies_articles', 'site_tags', 'use_explainer_style']
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
@@ -310,4 +316,46 @@ class ScheduleSlotDeleteView(StaffRequiredMixin, View):
 
     def get(self, request, wp_site_id, pk):
         return redirect('news_ai:schedule_slots', wp_site_id=wp_site_id)
+
+
+class WordPressSiteGroupListView(StaffRequiredMixin, ListView):
+    model = WordPressSiteGroup
+    template_name = 'ai_dashboard/wp_site_groups_list.html'
+    context_object_name = 'groups'
+
+    def get_queryset(self):
+        return WordPressSiteGroup.objects.prefetch_related('sites').all()
+
+
+class WordPressSiteGroupCreateView(StaffRequiredMixin, CreateView):
+    model = WordPressSiteGroup
+    fields = ['name', 'is_active']
+    template_name = 'ai_dashboard/wp_site_group_form.html'
+    success_url = reverse_lazy('news_ai:wp_site_groups')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"تمت إضافة مجموعة الدمج '{form.instance.name}' بنجاح.")
+        return super().form_valid(form)
+
+
+class WordPressSiteGroupUpdateView(StaffRequiredMixin, UpdateView):
+    model = WordPressSiteGroup
+    fields = ['name', 'is_active']
+    template_name = 'ai_dashboard/wp_site_group_form.html'
+    success_url = reverse_lazy('news_ai:wp_site_groups')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"تم تحديث مجموعة الدمج '{form.instance.name}' بنجاح.")
+        return super().form_valid(form)
+
+
+class WordPressSiteGroupDeleteView(StaffRequiredMixin, DeleteView):
+    model = WordPressSiteGroup
+    template_name = 'ai_dashboard/wp_site_group_confirm_delete.html'
+    success_url = reverse_lazy('news_ai:wp_site_groups')
+
+    def delete(self, request, *args, **kwargs):
+        obj = self.get_object()
+        messages.success(self.request, f"تم حذف مجموعة الدمج '{obj.name}' بنجاح.")
+        return super().delete(request, *args, **kwargs)
 

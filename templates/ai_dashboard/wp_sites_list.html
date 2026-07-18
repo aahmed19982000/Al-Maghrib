@@ -24,8 +24,9 @@
                 <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase bg-slate-900/80">
                     <th scope="col" class="px-6 py-4 font-bold">اسم الموقع</th>
                     <th scope="col" class="px-6 py-4 font-bold">رابط الموقع الأصلي</th>
-                    <th scope="col" class="px-6 py-4 font-bold">اسم المستخدم</th>
+                    <th scope="col" class="px-6 py-4 font-bold">مجموعة الدمج</th>
                     <th scope="col" class="px-6 py-4 font-bold text-center">الحد اليومي</th>
+                    <th scope="col" class="px-6 py-4 font-bold text-center">التكلفة الفعلية</th>
                     <th scope="col" class="px-6 py-4 font-bold text-center">الحالة</th>
                     <th scope="col" class="px-6 py-4 font-bold text-center">الإجراءات</th>
                 </tr>
@@ -35,8 +36,15 @@
                 <tr class="hover:bg-slate-800/30 transition duration-150">
                     <td class="px-6 py-4 font-semibold text-slate-100">{{ site.name }}</td>
                     <td class="px-6 py-4 font-mono text-xs text-slate-400 max-w-xs truncate" title="{{ site.url }}">{{ site.url }}</td>
-                    <td class="px-6 py-4 text-xs font-mono text-slate-400">{{ site.username }}</td>
+                    <td class="px-6 py-4 text-xs text-slate-400">
+                        {% if site.merge_group %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-400 border border-teal-500/20"><i class="fa-solid fa-layer-group ml-1 text-[10px]"></i>{{ site.merge_group.name }}</span>
+                        {% else %}
+                            <span class="text-slate-600">مستقل</span>
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4 text-center font-semibold text-teal-400">{{ site.daily_limit }} <span class="text-[10px] text-slate-500 font-normal">أخبار/يوم</span></td>
+                    <td class="px-6 py-4 text-center font-semibold text-emerald-400">${{ site.real_cost|default:0|floatformat:4 }}</td>
                     <td class="px-6 py-4 text-center">
                         {% if site.is_active %}
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 bg-emerald-400 rounded-full ml-1"></span>نشط</span>

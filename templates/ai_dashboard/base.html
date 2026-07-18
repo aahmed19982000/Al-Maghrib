@@ -110,9 +110,13 @@
                 <i class="fa-solid fa-rss w-6 text-lg"></i>
                 <span>مصادر الأخبار</span>
             </a>
-            <a href="{% url 'news_ai:wp_sites' %}" class="flex items-center px-4 py-3 rounded-xl transition duration-200 {% if 'wp-sites' in request.resolver_match.view_name or 'wp_site' in request.resolver_match.view_name %}bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30{% else %}text-slate-400 hover:bg-slate-800 hover:text-slate-100{% endif %}">
+            <a href="{% url 'news_ai:wp_sites' %}" class="flex items-center px-4 py-3 rounded-xl transition duration-200 {% if request.resolver_match.view_name == 'news_ai:wp_sites' or request.resolver_match.view_name == 'news_ai:wp_site_add' or request.resolver_match.view_name == 'news_ai:wp_site_edit' or request.resolver_match.view_name == 'news_ai:wp_site_delete' or request.resolver_match.view_name == 'news_ai:wp_site_articles' or request.resolver_match.view_name == 'news_ai:schedule_slots' %}bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30{% else %}text-slate-400 hover:bg-slate-800 hover:text-slate-100{% endif %}">
                 <i class="fa-brands fa-wordpress w-6 text-lg"></i>
                 <span>مواقع ووردبريس</span>
+            </a>
+            <a href="{% url 'news_ai:wp_site_groups' %}" class="flex items-center px-4 py-3 rounded-xl transition duration-200 {% if 'wp_site_group' in request.resolver_match.view_name %}bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30{% else %}text-slate-400 hover:bg-slate-800 hover:text-slate-100{% endif %}">
+                <i class="fa-solid fa-layer-group w-6 text-lg"></i>
+                <span>مجموعات الدمج</span>
             </a>
             <a href="{% url 'news_ai:settings' %}" class="flex items-center px-4 py-3 rounded-xl transition duration-200 {% if request.resolver_match.view_name == 'news_ai:settings' %}bg-primary-600 text-white font-semibold shadow-lg shadow-primary-600/30{% else %}text-slate-400 hover:bg-slate-800 hover:text-slate-100{% endif %}">
                 <i class="fa-solid fa-sliders w-6 text-lg"></i>

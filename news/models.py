@@ -352,7 +352,9 @@ class AIImportLog(models.Model):
     title = models.CharField(max_length=255, blank=True, null=True, verbose_name="عنوان الخبر")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='success')
     error_message = models.TextField(blank=True, null=True, verbose_name="رسالة الخطأ")
-    estimated_cost = models.DecimalField(max_digits=10, decimal_places=6, default=0, editable=False, verbose_name="التكلفة التقديرية (USD)")
+    estimated_cost = models.DecimalField(max_digits=10, decimal_places=6, default=0, editable=False, verbose_name="التكلفة الفعلية (USD)")
+    input_tokens = models.PositiveIntegerField(null=True, blank=True, editable=False, verbose_name="توكنات الإدخال الفعلية")
+    output_tokens = models.PositiveIntegerField(null=True, blank=True, editable=False, verbose_name="توكنات الإخراج الفعلية")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -362,29 +364,32 @@ class AIImportLog(models.Model):
 
     def _calculate_estimated_cost(self):
         """
-        Estimates the API cost of the Gemini request in USD.
-        Computed once at creation time and cached in estimated_cost, since the
-        inputs (article word count, status) never change afterward.
+        Computes the API cost of the Gemini request in USD, once at creation
+        time and cached in estimated_cost (inputs never change afterward).
+        Prefers the real token counts reported by Gemini's usageMetadata
+        (set on input_tokens/output_tokens before save() by the caller) and
+        only falls back to a rough word-count-based guess for older call
+        sites or failures where no usage data was ever returned.
         """
         if self.status == 'failed' and self.error_message and "لم يستجب الـ API" in self.error_message:
             return Decimal('0')
 
-        # Estimating input tokens (Prompt has instructions, categories, and original title/desc)
-        # Average input token count is about 1500 tokens
-        input_tokens = 1500
-
-        # Output token estimation based on generated word count (if successful)
-        output_tokens = 0
-        if self.article_id:
-            text = f"{self.article.title or ''} {self.article.excerpt or ''} {self.article.body or ''}"
-            word_count = len(text.split())
-            output_tokens = int(word_count * 2.2)  # Arabic words are ~2.2 tokens on Gemini
-        elif self.status == 'success':
-            output_tokens = 800
+        if self.input_tokens is not None and self.output_tokens is not None:
+            input_tokens = self.input_tokens
+            output_tokens = self.output_tokens
         else:
-            # If failed but API was called
-            output_tokens = 400
+            # Legacy fallback estimate (no real usage data available)
+            input_tokens = 1500
+            if self.article_id:
+                text = f"{self.article.title or ''} {self.article.excerpt or ''} {self.article.body or ''}"
+                word_count = len(text.split())
+                output_tokens = int(word_count * 2.2)  # Arabic words are ~2.2 tokens on Gemini
+            elif self.status == 'success':
+                output_tokens = 800
+            else:
+                output_tokens = 400
 
+        # Gemini 2.5 Flash pricing (USD per 1M tokens)
         input_cost = (input_tokens / 1000000.0) * 0.30
         output_cost = (output_tokens / 1000000.0) * 2.50
         return Decimal(str(input_cost + output_cost))
@@ -399,6 +404,27 @@ class AIImportLog(models.Model):
 
 
 
+class WordPressSiteGroup(models.Model):
+    """
+    A syndication group of WordPress sites: when a news item qualifies for
+    two or more active member sites at once, only one full ("master")
+    generation call is made and the rest get a cheaper rewording pass based
+    on the master's content, instead of each site paying for a full
+    independent generation. Sites outside any active group keep the
+    original fully-independent behavior.
+    """
+    name = models.CharField(max_length=255, verbose_name="اسم المجموعة")
+    is_active = models.BooleanField(default=True, verbose_name="نشطة (تفعيل الدمج)", help_text="عند التعطيل، تُعامل كل المواقع الأعضاء كمواقع مستقلة كالمعتاد.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "مجموعة دمج مواقع"
+        verbose_name_plural = "مجموعات دمج المواقع"
+
+    def __str__(self):
+        return self.name
+
+
 class WordPressSite(models.Model):
     name = models.CharField(max_length=255, verbose_name="اسم الموقع")
     url = models.URLField(max_length=1000, verbose_name="رابط الموقع (WordPress URL)")
@@ -408,6 +434,7 @@ class WordPressSite(models.Model):
     daily_limit = models.PositiveIntegerField(default=3, verbose_name="الحد الأقصى للنشر اليومي")
     articles_per_run = models.PositiveIntegerField(default=1, verbose_name="عدد المقالات لكل تشغيل", help_text="أقصى عدد أخبار تُنشر لهذا الموقع في كل مرة تعمل فيها الدورة (يدوياً أو تلقائياً كل 4 ساعات)، بالإضافة إلى الحد الأقصى اليومي الإجمالي أعلاه.")
     is_active = models.BooleanField(default=True, verbose_name="نشط")
+    merge_group = models.ForeignKey(WordPressSiteGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='sites', verbose_name="مجموعة الدمج", help_text="إذا انضم موقعان أو أكثر من نفس المجموعة النشطة لنفس الخبر، يُولَّد الخبر مرة واحدة (Master) ثم تُعاد صياغته بشكل أخف وأرخص لباقي أعضاء المجموعة بدلاً من توليد كامل ومستقل لكل موقع، لتقليل التكلفة. اتركه فارغاً ليبقى الموقع مستقلاً بالكامل بأسلوبه الخاص.")
     sources = models.ManyToManyField(AISource, related_name='wp_sites', verbose_name="مصادر الأخبار المرتبطة", blank=True)
     category_mapping = models.TextField(default="{}", help_text="خريطة الأقسام بتنسيق JSON. رقم واحد يُستخدم كقسم أساسي: {\"اقتصاد\": 5}. أو قسم أساسي وأقسام فرعية معاً: {\"اقتصاد\": {\"primary\": 5, \"secondary\": [12, 20]}}", verbose_name="خريطة الأقسام")
     use_rich_formatting = models.BooleanField(default=False, verbose_name="تنسيق غني بعناوين فرعية ملوّنة (SEO)", help_text="عند التفعيل، يُقسَّم الخبر إلى عناوين فرعية H2/H3 ملوّنة بدلاً من فقرات فقط، مع إضافة وسوم (Tags) تلقائية لتحسين توافق السيو (Yoast).")

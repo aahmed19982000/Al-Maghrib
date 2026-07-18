@@ -137,19 +137,22 @@ def apply_heading_color(html, color):
 def call_gemini_api(prompt, api_key=None):
     """
     Calls the Gemini API directly using requests REST call.
-    Uses Gemini 1.5 Flash. Returns JSON parsed response or None.
+    Uses Gemini 2.5 Flash. Returns a (text, usage) tuple, where usage is a
+    dict with the real 'input_tokens'/'output_tokens' counts reported by
+    Gemini's usageMetadata (used to compute the real cost instead of a
+    guess), or (None, {}) on failure.
     """
     if not api_key:
         ai_settings = AISettings.get_settings()
         api_key = ai_settings.gemini_api_key or getattr(settings, 'GEMINI_API_KEY', None)
-        
+
     if not api_key:
         logger.error("Gemini API key is not configured.")
         raise ValueError("Gemini API Key missing.")
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     headers = {"Content-Type": "application/json"}
-    
+
     # Request JSON to output standard structured data
     payload = {
         "contents": [
@@ -165,22 +168,30 @@ def call_gemini_api(prompt, api_key=None):
             "responseMimeType": "application/json"
         }
     }
-    
+
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
-        
+
+        usage_meta = data.get("usageMetadata", {}) or {}
+        usage = {
+            "input_tokens": usage_meta.get("promptTokenCount"),
+            # candidatesTokenCount is the visible output; thoughtsTokenCount
+            # (Gemini 2.5 "thinking" tokens) is billed at the output rate too.
+            "output_tokens": (usage_meta.get("candidatesTokenCount") or 0) + (usage_meta.get("thoughtsTokenCount") or 0) or None,
+        }
+
         # Extract response text
         candidates = data.get("candidates", [])
         if candidates:
             text_response = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-            return text_response
+            return text_response, usage
     except Exception as e:
         logger.error(f"Error calling Gemini API: {e}")
         if 'response' in locals():
             logger.error(f"Response: {response.text}")
-    return None
+    return None, {}
 
 
 def fetch_google_trends_items(source_url):
@@ -888,7 +899,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
         f"{internal_link_instruction}"
     )
 
-    ai_response = call_gemini_api(prompt, api_key=api_key)
+    ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
     if not ai_response:
         AIImportLog.objects.create(
             source=None,
@@ -987,7 +998,9 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس'
+            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return bool(published_url)
     except Exception as ex:
@@ -998,7 +1011,9 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
             wp_site=wp_site,
             title=f"تحديث {topic_title}",
             status='failed',
-            error_message=f"فشل صياغة خبر {topic_title} لـ {wp_site.name}: {str(ex)}"
+            error_message=f"فشل صياغة خبر {topic_title} لـ {wp_site.name}: {str(ex)}",
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return False
 
@@ -1061,7 +1076,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
         f"{internal_link_instruction}"
     )
 
-    ai_response = call_gemini_api(prompt, api_key=api_key)
+    ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
     if not ai_response:
         AIImportLog.objects.create(
             source=None,
@@ -1159,7 +1174,9 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس'
+            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return bool(published_url)
     except Exception as ex:
@@ -1170,7 +1187,9 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             wp_site=wp_site,
             title="تحديث أسعار العملات العربية والأجنبية",
             status='failed',
-            error_message=f"فشل صياغة خبر أسعار العملات العربية لـ {wp_site.name}: {str(ex)}"
+            error_message=f"فشل صياغة خبر أسعار العملات العربية لـ {wp_site.name}: {str(ex)}",
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return False
 
@@ -1455,7 +1474,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
         f"{internal_link_instruction}"
     )
 
-    ai_response = call_gemini_api(prompt, api_key=api_key)
+    ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
     if not ai_response:
         AIImportLog.objects.create(
             source=None,
@@ -1553,7 +1572,9 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس'
+            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return bool(published_url)
     except Exception as ex:
@@ -1564,7 +1585,9 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
             wp_site=wp_site,
             title="تحديث سعر الذهب",
             status='failed',
-            error_message=f"فشل صياغة خبر سعر الذهب لـ {wp_site.name}: {str(ex)}"
+            error_message=f"فشل صياغة خبر سعر الذهب لـ {wp_site.name}: {str(ex)}",
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return False
 
@@ -1625,7 +1648,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
         f"{internal_link_instruction}"
     )
 
-    ai_response = call_gemini_api(prompt, api_key=api_key)
+    ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
     if not ai_response:
         AIImportLog.objects.create(
             source=None,
@@ -1723,7 +1746,9 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس'
+            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return bool(published_url)
     except Exception as ex:
@@ -1734,7 +1759,9 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
             wp_site=wp_site,
             title="تحديث سعر الفضة",
             status='failed',
-            error_message=f"فشل صياغة خبر سعر الفضة لـ {wp_site.name}: {str(ex)}"
+            error_message=f"فشل صياغة خبر سعر الفضة لـ {wp_site.name}: {str(ex)}",
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return False
 
@@ -1791,7 +1818,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
         f"{internal_link_instruction}"
     )
 
-    ai_response = call_gemini_api(prompt, api_key=api_key)
+    ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
     if not ai_response:
         AIImportLog.objects.create(
             source=None,
@@ -1889,7 +1916,9 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس'
+            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return bool(published_url)
     except Exception as ex:
@@ -1900,9 +1929,376 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
             wp_site=wp_site,
             title="تحديث سعر الدولار",
             status='failed',
-            error_message=f"فشل صياغة خبر سعر الدولار لـ {wp_site.name}: {str(ex)}"
+            error_message=f"فشل صياغة خبر سعر الدولار لـ {wp_site.name}: {str(ex)}",
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
         )
         return False
+
+
+def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_key, allowed_cats,
+                                       categories_list_str, get_wp_primary_categories):
+    """
+    Generates a fully unique AI-rewritten article for one WordPress site and pushes it.
+    Used both for standalone sites and as the "master" generation for a merge group
+    (WordPressSiteGroup) - siblings in the group reuse this result via
+    reword_regular_article_for_site() instead of calling Gemini from scratch, to cut cost.
+
+    Returns None only when nothing usable came back (API failure or JSON parse failure) -
+    in that case the caller must not increment generated_count, matching legacy behavior.
+    On any parsed response (even if the WP push itself failed) returns a dict with
+    'published' (bool) plus everything reword_regular_article_for_site() needs to build a
+    lighter, reworded sibling article without another full Gemini generation call.
+    """
+    if wp_site.use_rich_formatting:
+        body_format_instruction = f"محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): {HEADING_STRUCTURE_INSTRUCTION}"
+    else:
+        body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
+
+    internal_link_instruction = ""
+    if wp_site.use_internal_links:
+        candidate_posts = fetch_recent_wp_posts(wp_site)
+        if candidate_posts:
+            links_list_str = "\n".join([f"- {p['title']}: {p['link']}" for p in candidate_posts])
+            internal_link_instruction = (
+                f"\n7. إن أمكن بشكل طبيعي، ضمّن رابطاً داخلياً واحداً أو رابطين على الأكثر باستخدام وسم "
+                f"<a href=\"...\">نص الرابط</a> داخل فقرات الخبر، يشيران فقط إلى أحد الروابط التالية "
+                f"لمقالات أخرى على نفس الموقع (لا تخترع أي رابط جديد، استخدم الروابط أدناه حرفياً):\n{links_list_str}"
+            )
+
+    explainer_instruction = ""
+    if wp_site.use_explainer_style:
+        explainer_instruction = (
+            "\n8. إذا كان هذا الخبر يتعلق بقرار تنظيمي أو رسوم أو ضرائب أو تغييرات أسعار تستحق شرحاً "
+            "تفصيلياً (وليس مجرد خبر عاجل سريع)، فاختر أسلوباً تفسيرياً بدلاً من الأسلوب المعتاد: صغ "
+            "العنوان كسؤال يعكس جوهر الموضوع، وقسّم محتوى الخبر إلى عناوين فرعية على شكل أسئلة فرعية "
+            "(مثل: لماذا...؟ هل...؟ ما حجم/تأثير...؟ كيف...؟) باتباع نفس ترتيب مستويات العناوين "
+            "الموضح أعلاه (أول عنوان فرعي <h2>، والذي يليه <h3>، وهكذا)، بحيث يجيب كل قسم عن سؤاله "
+            "مباشرة، ويمكن أن يصل طول الخبر في هذه الحالة حتى 800 كلمة متجاوزاً الحد المذكور في "
+            "التعليمة الثانية. أما إذا كان الخبر عاجلاً أو حدثياً عادياً لا يحتاج شرحاً، فاتبع التنسيق "
+            "المعتاد القصير."
+        )
+
+    # Prefer the site's real WordPress categories (as configured in the plugin's
+    # own admin UI) so Gemini picks a category that actually exists on this site
+    # directly - no more relying on Django's fragile name-based category_mapping.
+    # Falls back to the shared local categories list for sites on an older plugin
+    # version without this endpoint.
+    site_primary_cats = get_wp_primary_categories(wp_site)
+    if site_primary_cats:
+        site_categories_list_str = "\n".join([f"- {c['id']}: {c['name']}" for c in site_primary_cats])
+    else:
+        site_categories_list_str = categories_list_str
+
+    prompt = (
+        f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
+        f"استناداً إلى المعلومات والخبر التالي:\n"
+        f"المصدر: {source.name}\n"
+        f"عنوان الخبر الأصلي: {item['title']}\n"
+        f"تفاصيل الخبر: {item['description']}\n\n"
+        f"الرجاء الالتزام التام بالتعليمات التالية:\n"
+        f"1. اكتب الخبر باللغة العربية الفصحى وبأسلوب صحفي متميز وجذاب ومحايد. {READABILITY_INSTRUCTION}\n"
+        f"2. يجب أن لا يزيد حجم الخبر الإجمالي عن {ai_settings.max_words} كلمة إطلاقاً (تأكد أن يتراوح طول الخبر بين 300 إلى 450 كلمة كحد أقصى لتفادي الإطالة).\n"
+        f"3. اكتب عنواناً مختلفاً تماماً عن العنوان الأصلي بصياغتك الخاصة. {STRONG_TITLE_INSTRUCTION}\n"
+        f"4. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
+        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
+        f"- \"title\": عنوان الخبر الجديد\n"
+        f"- \"excerpt\": ملخص الخبر\n"
+        f"- \"body\": {body_format_instruction}\n"
+        f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
+        f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر الأساسي، لاستخدامها في تحليل السيو (SEO).\n"
+        f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً، يتضمن العبارة المفتاحية أعلاه.\n"
+        f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا "
+        f"الخبر تحديداً (وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في "
+        f"جوجل عن هذا الموضوع بالذات (مثال لخبر عن سعر اليورو: \"سعر اليورو اليوم\"، \"اليورو مقابل "
+        f"الجنيه\")، بدون ذكر اسم أي موقع إخباري.\n\n"
+        f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{site_categories_list_str}\n"
+        f"{internal_link_instruction}"
+        f"{explainer_instruction}\n\n"
+        f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
+    )
+
+    ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
+    if not ai_response:
+        return None
+
+    try:
+        cleaned_response = ai_response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]
+        cleaned_response = cleaned_response.strip()
+
+        data = json.loads(cleaned_response)
+        new_title = sanitize_ai_text(data.get("title", "").strip())
+        new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
+        new_body = sanitize_ai_body(
+            data.get("body", "").strip(),
+            allow_headings=wp_site.use_rich_formatting or wp_site.use_explainer_style,
+            allow_links=wp_site.use_internal_links,
+            link_base_url=wp_site.url,
+        )
+        if wp_site.use_rich_formatting:
+            new_body = apply_heading_color(new_body, wp_site.heading_color)
+        focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
+        meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        raw_tags = data.get("tags") or []
+        if not isinstance(raw_tags, list):
+            raw_tags = []
+        ai_tags = [sanitize_ai_text(str(t).strip()) for t in raw_tags[:5] if str(t).strip()]
+        try:
+            chosen_cat_id = int(data.get("category_id"))
+        except (ValueError, TypeError):
+            chosen_cat_id = None
+
+        if not new_title or not new_body:
+            raise ValueError("بيانات العنوان أو المحتوى فارغة.")
+
+        wp_category_id_for_push = None
+        category_name_for_group = ''
+        if site_primary_cats:
+            # chosen_cat_id is a real WP category id here (Gemini picked from
+            # site_categories_list_str above) - use it directly, falling back to
+            # the site's first primary category if the id doesn't match one we offered.
+            chosen_cat = next((c for c in site_primary_cats if c['id'] == chosen_cat_id), None) if chosen_cat_id else None
+            if not chosen_cat:
+                chosen_cat = site_primary_cats[0]
+            wp_category_id_for_push = chosen_cat['id']
+            category_name_for_group = chosen_cat['name']
+            # The local Article record still needs *a* local category (never
+            # shown publicly - these WP-bound articles are saved as local drafts only).
+            category = allowed_cats[0] if allowed_cats else None
+        else:
+            category = None
+            if chosen_cat_id:
+                category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
+            if not category and allowed_cats:
+                category = allowed_cats[0]
+            category_name_for_group = category.name if category else ''
+
+        from core.utils import translate_text
+        title_en = translate_text(new_title)
+        body_en = translate_text(new_body)
+        excerpt_en = translate_text(new_excerpt)
+
+        author = pick_default_author(ai_settings)
+        article = Article(
+            title=new_title,
+            title_ar=new_title,
+            title_en=title_en,
+            slug=generate_slug_for_title(new_title),
+            body=new_body,
+            body_ar=new_body,
+            body_en=body_en,
+            excerpt=new_excerpt,
+            excerpt_ar=new_excerpt,
+            excerpt_en=excerpt_en,
+            author=author,
+            category=category,
+            status='draft',
+            published_at=timezone.now(),
+            is_featured=False,
+            is_breaking=False,
+            auto_translate=False
+        )
+        if item.get('image_url'):
+            img_file = fetch_image_file(item['image_url'])
+            if img_file:
+                article.cover_image = img_file
+
+        article.save()
+
+        # Push this unique version to this specific WP site
+        published_url = None
+        try:
+            tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
+            published_url = push_article_to_wordpress(
+                wp_site, article, extra_tag_names=tag_names,
+                focus_keyword=focus_keyword, meta_description=meta_description,
+                wp_category_id=wp_category_id_for_push
+            )
+        except Exception as wpe:
+            logger.error(f"Error syndicating to WP site {wp_site.name}: {wpe}")
+
+        AIImportLog.objects.create(
+            source=source,
+            article=article,
+            wp_site=wp_site,
+            source_url=item['link'],
+            published_url=published_url or '',
+            title=new_title,
+            status='success' if published_url else 'failed',
+            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
+        )
+        return {
+            'published': bool(published_url),
+            'title': new_title,
+            'body': new_body,
+            'excerpt': new_excerpt,
+            'tags': ai_tags,
+            'local_category': category,
+            'category_name': category_name_for_group,
+            'focus_keyword': focus_keyword,
+            'meta_description': meta_description,
+        }
+    except Exception as ex:
+        logger.error(f"Failed to generate unique WP article: {ex}")
+        AIImportLog.objects.create(
+            source=source,
+            source_url=item['link'],
+            title=item['title'],
+            status='failed',
+            error_message=f"فشل صياغة فريدة للووردبريس {wp_site.name}: {str(ex)}",
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
+        )
+        return None
+
+
+def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, api_key,
+                                     get_wp_primary_categories, get_wp_category_id):
+    """
+    Lighter-weight sibling of generate_regular_article_for_site(): reuses an
+    already-generated "master" article's category/tags/SEO fields (chosen once per
+    merge group, via a WordPressSiteGroup, to cut Gemini calls) and only asks Gemini
+    to reword the title/body/excerpt for this specific site in a distinct style -
+    every site in a group still publishes its own unique wording, only the research/
+    categorization work is shared to reduce cost (a partial, not full, cost reduction).
+    """
+    if wp_site.use_rich_formatting:
+        body_format_instruction = f"محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): {HEADING_STRUCTURE_INSTRUCTION}"
+    else:
+        body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
+
+    master_plain_text = BeautifulSoup(master['body'], 'html.parser').get_text(separator=' ', strip=True)
+
+    prompt = (
+        f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، لديك خبر صحفي جاهز، والمطلوب منك إعادة صياغته بالكامل "
+        f"بأسلوب مختلف تماماً (مفردات وتراكيب جديدة) ليُنشر على موقع مختلف، مع الحفاظ التام على المعنى والمعلومات "
+        f"والحقائق كما هي دون أي إضافة أو حذف:\n"
+        f"العنوان الحالي: {master['title']}\n"
+        f"نص الخبر الحالي: {master_plain_text}\n\n"
+        f"الرجاء الالتزام التام بالتعليمات التالية:\n"
+        f"1. أعد صياغة الخبر بالكامل بأسلوب صحفي متميز وجذاب ومحايد يختلف تماماً عن الصياغة الحالية من حيث "
+        f"المفردات وترتيب الجمل، مع الحفاظ على نفس المعنى والمعلومات تماماً. {READABILITY_INSTRUCTION}\n"
+        f"2. اكتب عنواناً بصياغة مختلفة تماماً عن العنوان الحالي يحمل نفس المعنى. {STRONG_TITLE_INSTRUCTION}\n"
+        f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر بصياغة جديدة.\n"
+        f"4. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
+        f"- \"title\": العنوان الجديد بالصياغة المختلفة\n"
+        f"- \"excerpt\": الملخص الجديد\n"
+        f"- \"body\": {body_format_instruction}\n\n"
+        f"هام جداً: يجب أن تكون الصياغة فريدة تماماً ومختلفة عن النص الأصلي أعلاه لموقع الويب المحدد: {wp_site.name}، "
+        f"مع عدم تغيير أي معلومة أو رقم أو حقيقة واردة في النص الأصلي."
+    )
+
+    ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
+    if not ai_response:
+        return None
+
+    try:
+        cleaned_response = ai_response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]
+        cleaned_response = cleaned_response.strip()
+
+        data = json.loads(cleaned_response)
+        new_title = sanitize_ai_text(data.get("title", "").strip())
+        new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
+        new_body = sanitize_ai_body(
+            data.get("body", "").strip(),
+            allow_headings=wp_site.use_rich_formatting or wp_site.use_explainer_style,
+            allow_links=False,
+            link_base_url=wp_site.url,
+        )
+        if wp_site.use_rich_formatting:
+            new_body = apply_heading_color(new_body, wp_site.heading_color)
+
+        if not new_title or not new_body:
+            raise ValueError("بيانات العنوان أو المحتوى فارغة.")
+
+        site_primary_cats = get_wp_primary_categories(wp_site)
+        wp_category_id_for_push = None
+        if site_primary_cats:
+            wp_category_id_for_push = get_wp_category_id(wp_site, master['category_name'])
+            if wp_category_id_for_push is None:
+                wp_category_id_for_push = site_primary_cats[0]['id']
+        category = master['local_category']
+
+        from core.utils import translate_text
+        title_en = translate_text(new_title)
+        body_en = translate_text(new_body)
+        excerpt_en = translate_text(new_excerpt)
+
+        author = pick_default_author(ai_settings)
+        article = Article(
+            title=new_title,
+            title_ar=new_title,
+            title_en=title_en,
+            slug=generate_slug_for_title(new_title),
+            body=new_body,
+            body_ar=new_body,
+            body_en=body_en,
+            excerpt=new_excerpt,
+            excerpt_ar=new_excerpt,
+            excerpt_en=excerpt_en,
+            author=author,
+            category=category,
+            status='draft',
+            published_at=timezone.now(),
+            is_featured=False,
+            is_breaking=False,
+            auto_translate=False
+        )
+        if item.get('image_url'):
+            img_file = fetch_image_file(item['image_url'])
+            if img_file:
+                article.cover_image = img_file
+
+        article.save()
+
+        published_url = None
+        try:
+            tag_names = (master['tags'] if master['tags'] else ([category.name] if category else [])) + wp_site.get_site_tags_list()
+            published_url = push_article_to_wordpress(
+                wp_site, article, extra_tag_names=tag_names,
+                focus_keyword=master['focus_keyword'], meta_description=master['meta_description'],
+                wp_category_id=wp_category_id_for_push
+            )
+        except Exception as wpe:
+            logger.error(f"Error syndicating reworded article to WP site {wp_site.name}: {wpe}")
+
+        AIImportLog.objects.create(
+            source=source,
+            article=article,
+            wp_site=wp_site,
+            source_url=item['link'],
+            published_url=published_url or '',
+            title=new_title,
+            status='success' if published_url else 'failed',
+            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
+        )
+        return {'published': bool(published_url)}
+    except Exception as ex:
+        logger.error(f"Failed to reword article for {wp_site.name}: {ex}")
+        AIImportLog.objects.create(
+            source=source,
+            source_url=item['link'],
+            title=item['title'],
+            status='failed',
+            error_message=f"فشل إعادة صياغة الخبر لـ {wp_site.name}: {str(ex)}",
+            input_tokens=ai_usage.get('input_tokens'),
+            output_tokens=ai_usage.get('output_tokens'),
+        )
+        return None
 
 
 def run_ai_generation_cycle():
@@ -2042,7 +2438,7 @@ def run_ai_generation_cycle():
                     f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}"
                 )
                 
-                ai_response = call_gemini_api(prompt, api_key=api_key)
+                ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
                 if not ai_response:
                     AIImportLog.objects.create(
                         source=source,
@@ -2118,9 +2514,11 @@ def run_ai_generation_cycle():
                         source_url=item['link'],
                         published_url=article.get_absolute_url() if article else '',
                         title=new_title,
-                        status='success'
+                        status='success',
+                        input_tokens=ai_usage.get('input_tokens'),
+                        output_tokens=ai_usage.get('output_tokens'),
                     )
-                    
+
                     generated_count += 1
                 except Exception as ex:
                     logger.error(f"Failed to parse/save local article: {ex}")
@@ -2129,216 +2527,71 @@ def run_ai_generation_cycle():
                         source_url=item['link'],
                         title=item['title'],
                         status='failed',
-                        error_message=f"فشل معالجة استجابة الـ JSON: {str(ex)}"
+                        error_message=f"فشل معالجة استجابة الـ JSON: {str(ex)}",
+                        input_tokens=ai_usage.get('input_tokens'),
+                        output_tokens=ai_usage.get('output_tokens'),
                     )
             
             # Case 2: External WordPress sites connected!
-            # Generate a unique article for each site
+            # Generate a unique article for each site - unless several sites are
+            # linked to the same active WordPressSiteGroup (merge group), in which
+            # case only one "master" article is generated via Gemini and the rest
+            # of the group gets a cheaper reword pass instead of a full generation,
+            # to reduce cost while each site still publishes its own unique wording.
             if wp_sites:
+                standalone_sites = []
+                grouped_sites = {}
                 for wp_site in wp_sites:
                     if generated_count >= limit:
                         break
                     if wp_site_counts.get(wp_site.id, 0) >= wp_site.daily_limit or wp_site_run_counts.get(wp_site.id, 0) >= regular_news_caps.get(wp_site.id, 0):
                         continue
-
-                    if wp_site.use_rich_formatting:
-                        body_format_instruction = f"محتوى الخبر الكامل مقسماً بأسلوب متوافق مع السيو (SEO): {HEADING_STRUCTURE_INSTRUCTION}"
+                    group = wp_site.merge_group
+                    if group and group.is_active:
+                        grouped_sites.setdefault(group.id, []).append(wp_site)
                     else:
-                        body_format_instruction = "محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً."
+                        standalone_sites.append(wp_site)
 
-                    internal_link_instruction = ""
-                    if wp_site.use_internal_links:
-                        candidate_posts = fetch_recent_wp_posts(wp_site)
-                        if candidate_posts:
-                            links_list_str = "\n".join([f"- {p['title']}: {p['link']}" for p in candidate_posts])
-                            internal_link_instruction = (
-                                f"\n7. إن أمكن بشكل طبيعي، ضمّن رابطاً داخلياً واحداً أو رابطين على الأكثر باستخدام وسم "
-                                f"<a href=\"...\">نص الرابط</a> داخل فقرات الخبر، يشيران فقط إلى أحد الروابط التالية "
-                                f"لمقالات أخرى على نفس الموقع (لا تخترع أي رابط جديد، استخدم الروابط أدناه حرفياً):\n{links_list_str}"
-                            )
+                def _apply_publish_result(wp_site, result):
+                    nonlocal generated_count
+                    if result is None:
+                        return
+                    if result['published']:
+                        wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
+                        wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
+                        if wp_site.id in regular_due_slots:
+                            mark_slot_run(regular_due_slots[wp_site.id], 'regular')
+                    generated_count += 1
 
-                    explainer_instruction = ""
-                    if wp_site.use_explainer_style:
-                        explainer_instruction = (
-                            "\n8. إذا كان هذا الخبر يتعلق بقرار تنظيمي أو رسوم أو ضرائب أو تغييرات أسعار تستحق شرحاً "
-                            "تفصيلياً (وليس مجرد خبر عاجل سريع)، فاختر أسلوباً تفسيرياً بدلاً من الأسلوب المعتاد: صغ "
-                            "العنوان كسؤال يعكس جوهر الموضوع، وقسّم محتوى الخبر إلى عناوين فرعية على شكل أسئلة فرعية "
-                            "(مثل: لماذا...؟ هل...؟ ما حجم/تأثير...؟ كيف...؟) باتباع نفس ترتيب مستويات العناوين "
-                            "الموضح أعلاه (أول عنوان فرعي <h2>، والذي يليه <h3>، وهكذا)، بحيث يجيب كل قسم عن سؤاله "
-                            "مباشرة، ويمكن أن يصل طول الخبر في هذه الحالة حتى 800 كلمة متجاوزاً الحد المذكور في "
-                            "التعليمة الثانية. أما إذا كان الخبر عاجلاً أو حدثياً عادياً لا يحتاج شرحاً، فاتبع التنسيق "
-                            "المعتاد القصير."
-                        )
-
-                    # Prefer the site's real WordPress categories (as configured
-                    # in the plugin's own admin UI) so Gemini picks a category
-                    # that actually exists on this site directly - no more
-                    # relying on Django's fragile name-based category_mapping.
-                    # Falls back to the shared local categories list for sites
-                    # on an older plugin version without this endpoint.
-                    site_primary_cats = get_wp_primary_categories(wp_site)
-                    if site_primary_cats:
-                        site_categories_list_str = "\n".join([f"- {c['id']}: {c['name']}" for c in site_primary_cats])
-                    else:
-                        site_categories_list_str = categories_list_str
-
-                    prompt = (
-                        f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
-                        f"استناداً إلى المعلومات والخبر التالي:\n"
-                        f"المصدر: {source.name}\n"
-                        f"عنوان الخبر الأصلي: {item['title']}\n"
-                        f"تفاصيل الخبر: {item['description']}\n\n"
-                        f"الرجاء الالتزام التام بالتعليمات التالية:\n"
-                        f"1. اكتب الخبر باللغة العربية الفصحى وبأسلوب صحفي متميز وجذاب ومحايد. {READABILITY_INSTRUCTION}\n"
-                        f"2. يجب أن لا يزيد حجم الخبر الإجمالي عن {ai_settings.max_words} كلمة إطلاقاً (تأكد أن يتراوح طول الخبر بين 300 إلى 450 كلمة كحد أقصى لتفادي الإطالة).\n"
-                        f"3. اكتب عنواناً مختلفاً تماماً عن العنوان الأصلي بصياغتك الخاصة. {STRONG_TITLE_INSTRUCTION}\n"
-                        f"4. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
-                        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
-                        f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
-                        f"- \"title\": عنوان الخبر الجديد\n"
-                        f"- \"excerpt\": ملخص الخبر\n"
-                        f"- \"body\": {body_format_instruction}\n"
-                        f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
-                        f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر الأساسي، لاستخدامها في تحليل السيو (SEO).\n"
-                        f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً، يتضمن العبارة المفتاحية أعلاه.\n"
-                        f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا "
-                        f"الخبر تحديداً (وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في "
-                        f"جوجل عن هذا الموضوع بالذات (مثال لخبر عن سعر اليورو: \"سعر اليورو اليوم\"، \"اليورو مقابل "
-                        f"الجنيه\")، بدون ذكر اسم أي موقع إخباري.\n\n"
-                        f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{site_categories_list_str}\n"
-                        f"{internal_link_instruction}"
-                        f"{explainer_instruction}\n\n"
-                        f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
+                for wp_site in standalone_sites:
+                    if generated_count >= limit:
+                        break
+                    result = generate_regular_article_for_site(
+                        wp_site, source, item, ai_settings, api_key, allowed_cats,
+                        categories_list_str, get_wp_primary_categories,
                     )
+                    _apply_publish_result(wp_site, result)
 
-                    ai_response = call_gemini_api(prompt, api_key=api_key)
-                    if not ai_response:
+                for group_sites in grouped_sites.values():
+                    if generated_count >= limit:
+                        break
+                    master_site = group_sites[0]
+                    master_result = generate_regular_article_for_site(
+                        master_site, source, item, ai_settings, api_key, allowed_cats,
+                        categories_list_str, get_wp_primary_categories,
+                    )
+                    _apply_publish_result(master_site, master_result)
+                    if master_result is None:
                         continue
 
-                    try:
-                        cleaned_response = ai_response.strip()
-                        if cleaned_response.startswith("```json"):
-                            cleaned_response = cleaned_response[7:]
-                        if cleaned_response.endswith("```"):
-                            cleaned_response = cleaned_response[:-3]
-                        cleaned_response = cleaned_response.strip()
-
-                        data = json.loads(cleaned_response)
-                        new_title = sanitize_ai_text(data.get("title", "").strip())
-                        new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
-                        new_body = sanitize_ai_body(
-                            data.get("body", "").strip(),
-                            allow_headings=wp_site.use_rich_formatting or wp_site.use_explainer_style,
-                            allow_links=wp_site.use_internal_links,
-                            link_base_url=wp_site.url,
+                    for wp_site in group_sites[1:]:
+                        if generated_count >= limit:
+                            break
+                        reword_result = reword_regular_article_for_site(
+                            wp_site, source, item, master_result, ai_settings, api_key,
+                            get_wp_primary_categories, get_wp_category_id,
                         )
-                        if wp_site.use_rich_formatting:
-                            new_body = apply_heading_color(new_body, wp_site.heading_color)
-                        focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
-                        meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
-                        raw_tags = data.get("tags") or []
-                        if not isinstance(raw_tags, list):
-                            raw_tags = []
-                        ai_tags = [sanitize_ai_text(str(t).strip()) for t in raw_tags[:5] if str(t).strip()]
-                        try:
-                            chosen_cat_id = int(data.get("category_id"))
-                        except (ValueError, TypeError):
-                            chosen_cat_id = None
-
-                        if not new_title or not new_body:
-                            raise ValueError("بيانات العنوان أو المحتوى فارغة.")
-
-                        wp_category_id_for_push = None
-                        if site_primary_cats:
-                            # chosen_cat_id is a real WP category id here (Gemini
-                            # picked from site_categories_list_str above) - use it
-                            # directly, falling back to the site's first primary
-                            # category if the id doesn't match one we offered.
-                            if chosen_cat_id and any(c['id'] == chosen_cat_id for c in site_primary_cats):
-                                wp_category_id_for_push = chosen_cat_id
-                            else:
-                                wp_category_id_for_push = site_primary_cats[0]['id']
-                            # The local Article record still needs *a* local
-                            # category (never shown publicly - these WP-bound
-                            # articles are saved as local drafts only).
-                            category = allowed_cats[0] if allowed_cats else None
-                        else:
-                            category = None
-                            if chosen_cat_id:
-                                category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
-                            if not category and allowed_cats:
-                                category = allowed_cats[0]
-
-                        from core.utils import translate_text
-                        title_en = translate_text(new_title)
-                        body_en = translate_text(new_body)
-                        excerpt_en = translate_text(new_excerpt)
-                        
-                        author = pick_default_author(ai_settings)
-                        article = Article(
-                            title=new_title,
-                            title_ar=new_title,
-                            title_en=title_en,
-                            slug=generate_slug_for_title(new_title),
-                            body=new_body,
-                            body_ar=new_body,
-                            body_en=body_en,
-                            excerpt=new_excerpt,
-                            excerpt_ar=new_excerpt,
-                            excerpt_en=excerpt_en,
-                            author=author,
-                            category=category,
-                            status='draft',
-                            published_at=timezone.now(),
-                            is_featured=False,
-                            is_breaking=False,
-                            auto_translate=False
-                        )
-                        if item.get('image_url'):
-                            img_file = fetch_image_file(item['image_url'])
-                            if img_file:
-                                article.cover_image = img_file
-                                
-                        article.save()
-                        
-                        # Push this unique version to this specific WP site
-                        published_url = None
-                        try:
-                            tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
-                            published_url = push_article_to_wordpress(
-                                wp_site, article, extra_tag_names=tag_names,
-                                focus_keyword=focus_keyword, meta_description=meta_description,
-                                wp_category_id=wp_category_id_for_push
-                            )
-                        except Exception as wpe:
-                            logger.error(f"Error syndicating to WP site {wp_site.name}: {wpe}")
-                            
-                        AIImportLog.objects.create(
-                            source=source,
-                            article=article,
-                            wp_site=wp_site,
-                            source_url=item['link'],
-                            published_url=published_url or '',
-                            title=new_title,
-                            status='success' if published_url else 'failed',
-                            error_message='' if published_url else 'فشل النشر على ووردبريس'
-                        )
-                        if published_url:
-                            wp_site_counts[wp_site.id] = wp_site_counts.get(wp_site.id, 0) + 1
-                            wp_site_run_counts[wp_site.id] = wp_site_run_counts.get(wp_site.id, 0) + 1
-                            if wp_site.id in regular_due_slots:
-                                mark_slot_run(regular_due_slots[wp_site.id], 'regular')
-
-                        generated_count += 1
-                    except Exception as ex:
-                        logger.error(f"Failed to generate unique WP article: {ex}")
-                        AIImportLog.objects.create(
-                            source=source,
-                            source_url=item['link'],
-                            title=item['title'],
-                            status='failed',
-                            error_message=f"فشل صياغة فريدة للووردبريس {wp_site.name}: {str(ex)}"
-                        )
+                        _apply_publish_result(wp_site, reword_result)
 
     # Live gold price articles: independent of RSS sources. Sites with no
     # schedule slots keep firing every cycle (legacy behavior); sites with

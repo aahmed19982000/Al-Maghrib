@@ -23,4 +23,9 @@ urlpatterns = [
     path('wp-sites/<int:wp_site_id>/schedule/add/', views_ai.ScheduleSlotCreateView.as_view(), name='schedule_slot_add'),
     path('wp-sites/<int:wp_site_id>/schedule/<int:pk>/edit/', views_ai.ScheduleSlotUpdateView.as_view(), name='schedule_slot_edit'),
     path('wp-sites/<int:wp_site_id>/schedule/<int:pk>/delete/', views_ai.ScheduleSlotDeleteView.as_view(), name='schedule_slot_delete'),
+    # WordPress site merge groups
+    path('wp-site-groups/', views_ai.WordPressSiteGroupListView.as_view(), name='wp_site_groups'),
+    path('wp-site-groups/add/', views_ai.WordPressSiteGroupCreateView.as_view(), name='wp_site_group_add'),
+    path('wp-site-groups/<int:pk>/edit/', views_ai.WordPressSiteGroupUpdateView.as_view(), name='wp_site_group_edit'),
+    path('wp-site-groups/<int:pk>/delete/', views_ai.WordPressSiteGroupDeleteView.as_view(), name='wp_site_group_delete'),
 ]
