@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import time
 import random
 import logging
 import bleach
@@ -1285,12 +1286,17 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
                 pass
 
 
-    # 3. Prepare post body
+    # 3. Prepare post body. Created as a draft first (see step 4 below) so the
+    # featured image is fully attached and processed on WordPress's side
+    # before the post is actually published - mirrors how a human editor
+    # publishes (set the image, then click Publish) and avoids Jetpack
+    # Social/Publicize picking up a stale fallback share image when a post
+    # is created and published in the exact same request.
     payload = {
         'title': article.title,
         'content': article.body,
         'excerpt': article.excerpt or '',
-        'status': 'publish',
+        'status': 'draft',
     }
     wp_author_ids = wp_site.get_wp_author_ids_list()
     if wp_author_ids:
@@ -1312,20 +1318,41 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
         if primary_category_id:
             payload['meta']['_yoast_wpseo_primary_category'] = primary_category_id
 
-    # 4. Push post
+    # 4. Push post as a draft, then transition it to published in a separate
+    # follow-up request a few seconds later, giving WordPress time to finish
+    # processing the featured image before Jetpack Social reads it for the
+    # Facebook share preview.
     try:
         headers = {'Content-Type': 'application/json'}
         response = requests.post(posts_url, auth=auth, headers=headers, json=payload, timeout=20)
-        if response.status_code == 201:
-            post_data = response.json()
-            published_url = post_data.get('link', '')
-            logger.info(f"Successfully syndicated article to WordPress site {wp_site.name}, URL: {published_url}")
-            return published_url
-        else:
+        if response.status_code != 201:
             logger.error(f"Failed to push post to WP site {wp_site.name}: {response.text}")
+            return None
+
+        post_data = response.json()
+        post_id = post_data.get('id')
+        published_url = post_data.get('link', '')
+
+        if featured_media_id:
+            time.sleep(5)
+
+        try:
+            publish_response = requests.post(
+                f"{posts_url}/{post_id}", auth=auth, headers=headers,
+                json={'status': 'publish'}, timeout=20,
+            )
+            if publish_response.status_code == 200:
+                published_url = publish_response.json().get('link', published_url)
+            else:
+                logger.error(f"Failed to publish (from draft) post {post_id} on WP site {wp_site.name}: {publish_response.text}")
+        except Exception as pe:
+            logger.error(f"Error publishing (from draft) post {post_id} on WP: {pe}")
+
+        logger.info(f"Successfully syndicated article to WordPress site {wp_site.name}, URL: {published_url}")
+        return published_url
     except Exception as e:
         logger.error(f"Error pushing post to WP: {e}")
-        
+
     return None
 
 
