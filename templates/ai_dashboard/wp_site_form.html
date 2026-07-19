@@ -34,7 +34,7 @@
         </div>
         {% endif %}
 
-        <form method="post" class="space-y-6">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -271,6 +271,78 @@
                 {% if form.site_tags.errors %}
                     <p class="text-xs text-rose-400">{{ form.site_tags.errors.as_text }}</p>
                 {% endif %}
+            </div>
+
+            <!-- Social Share Image Generation -->
+            <div class="space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <input type="checkbox" name="social_image_enabled" id="id_social_image_enabled" {% if form.social_image_enabled.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
+                    <div class="flex-1">
+                        <label for="id_social_image_enabled" class="block text-sm font-bold text-slate-200"><i class="fa-solid fa-image ml-1"></i>تفعيل توليد صور السوشال ميديا</label>
+                        <p class="text-xs text-slate-500">عند التفعيل، يُولَّد تلقائياً تصميم صورة (صورة الخبر + العنوان + لوجو الموقع وألوانه) عند نشر كل خبر جديد لهذا الموقع، مع إمكانية إعادة التوليد يدوياً لاحقاً من صفحة "المقالات المنشورة".</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Template Choice -->
+                    <div class="space-y-2">
+                        <label for="id_social_template" class="block text-sm font-semibold text-slate-300">قالب تصميم الصورة</label>
+                        <select name="social_template" id="id_social_template" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150">
+                            {% for value, label in form.fields.social_template.choices %}
+                            <option value="{{ value }}" {% if form.social_template.value == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Logo Upload -->
+                    <div class="space-y-2">
+                        <label for="id_social_logo" class="block text-sm font-semibold text-slate-300">لوجو الموقع</label>
+                        <input type="file" name="social_logo" id="id_social_logo" accept="image/*" class="block w-full text-xs text-slate-400 file:ml-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-teal-400 hover:file:bg-slate-700 bg-slate-900 border border-slate-800 rounded-xl transition duration-150">
+                        {% if object and object.social_logo %}
+                        <div class="flex items-center gap-2 mt-1">
+                            <img src="{{ object.social_logo.url }}" class="w-10 h-10 rounded-full bg-white object-contain border border-slate-800">
+                            <span class="text-[10px] text-slate-500">اللوجو الحالي — اختر ملفاً جديداً لاستبداله.</span>
+                        </div>
+                        {% else %}
+                        <p class="text-[10px] text-slate-500">يُفضَّل صورة PNG بخلفية شفافة.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Primary Color -->
+                    <div class="space-y-2">
+                        <label for="id_social_primary_color" class="block text-sm font-semibold text-slate-300">اللون الأساسي للتصميم</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" id="id_social_primary_color_picker" value="{{ form.social_primary_color.value|default:'#0d9488' }}" oninput="document.getElementById('id_social_primary_color').value = this.value" class="w-12 h-10 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer">
+                            <input type="text" name="social_primary_color" id="id_social_primary_color" value="{{ form.social_primary_color.value|default:'#0d9488' }}" oninput="document.getElementById('id_social_primary_color_picker').value = this.value" pattern="^#[0-9A-Fa-f]{6}$" class="block w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 font-mono text-xs transition duration-150">
+                        </div>
+                    </div>
+
+                    <!-- Secondary Color -->
+                    <div class="space-y-2">
+                        <label for="id_social_secondary_color" class="block text-sm font-semibold text-slate-300">اللون الثانوي للتصميم</label>
+                        <div class="flex items-center gap-3">
+                            <input type="color" id="id_social_secondary_color_picker" value="{{ form.social_secondary_color.value|default:'#0f172a' }}" oninput="document.getElementById('id_social_secondary_color').value = this.value" class="w-12 h-10 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer">
+                            <input type="text" name="social_secondary_color" id="id_social_secondary_color" value="{{ form.social_secondary_color.value|default:'#0f172a' }}" oninput="document.getElementById('id_social_secondary_color_picker').value = this.value" pattern="^#[0-9A-Fa-f]{6}$" class="block w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 font-mono text-xs transition duration-150">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-800 pt-4 space-y-4">
+                    <p class="text-xs font-bold text-slate-300"><i class="fa-brands fa-facebook text-blue-400 ml-1"></i>النشر التلقائي على فيسبوك (اختياري)</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-2">
+                            <label for="id_facebook_page_id" class="block text-sm font-semibold text-slate-300">معرّف صفحة فيسبوك (Page ID)</label>
+                            <input type="text" name="facebook_page_id" id="id_facebook_page_id" value="{{ form.facebook_page_id.value|default:'' }}" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150 font-mono text-xs" placeholder="1234567890">
+                        </div>
+                        <div class="space-y-2">
+                            <label for="id_facebook_access_token" class="block text-sm font-semibold text-slate-300">توكن وصول الصفحة (Page Access Token)</label>
+                            <input type="password" name="facebook_access_token" id="id_facebook_access_token" value="{{ form.facebook_access_token.value|default:'' }}" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150 font-mono text-xs" placeholder="EAAxxxxxxxx...">
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-500">اتركهما فارغين لتعطيل النشر التلقائي على فيسبوك مع إبقاء توليد الصورة فقط. التوكن يجب أن يكون توكن وصول دائم (Long-Lived Page Access Token) خاص بهذه الصفحة تحديداً، يُنشأ يدوياً من أدوات مطوري فيسبوك.</p>
+                </div>
             </div>
 
             <!-- Form Actions -->

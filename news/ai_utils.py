@@ -1456,6 +1456,17 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
             logger.error(f"Error publishing (from draft) post {post_id} on WP: {pe}")
 
         logger.info(f"Successfully syndicated article to WordPress site {wp_site.name}, URL: {published_url}")
+
+        if wp_site.social_image_enabled:
+            try:
+                from .social_image_utils import generate_and_publish_social_share
+                generate_and_publish_social_share(article, wp_site)
+            except Exception as social_e:
+                # Social-card generation/Facebook publishing is a best-effort
+                # add-on - it must never affect the success of the actual
+                # WordPress publish above.
+                logger.error(f"Error generating social share image for {wp_site.name}: {social_e}")
+
         return published_url
     except Exception as e:
         logger.error(f"Error pushing post to WP: {e}")

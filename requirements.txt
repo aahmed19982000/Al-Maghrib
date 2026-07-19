@@ -27,3 +27,5 @@ beautifulsoup4
 requests
 bleach
 cryptography
+arabic-reshaper
+python-bidi

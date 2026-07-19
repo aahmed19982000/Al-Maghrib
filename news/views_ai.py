@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.db.models import Sum, Q
-from .models import AISettings, AISource, AIImportLog, Category, Article, WordPressSite, WordPressScheduleSlot, WordPressSiteGroup
+from .models import AISettings, AISource, AIImportLog, Category, Article, WordPressSite, WordPressScheduleSlot, WordPressSiteGroup, SocialSharePost
 from .tasks import scrape_and_generate_news_task
 
 class StaffRequiredMixin(UserPassesTestMixin):
@@ -169,9 +169,12 @@ class WordPressSiteListView(StaffRequiredMixin, ListView):
         )
 
 
+WP_SITE_FORM_FIELDS = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'articles_per_run', 'is_active', 'sources', 'merge_group', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'generate_arab_currencies_articles', 'site_tags', 'use_explainer_style', 'social_image_enabled', 'social_template', 'social_logo', 'social_primary_color', 'social_secondary_color', 'facebook_page_id', 'facebook_access_token']
+
+
 class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'articles_per_run', 'is_active', 'sources', 'merge_group', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'generate_arab_currencies_articles', 'site_tags', 'use_explainer_style']
+    fields = WP_SITE_FORM_FIELDS
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
@@ -182,7 +185,7 @@ class WordPressSiteCreateView(StaffRequiredMixin, CreateView):
 
 class WordPressSiteUpdateView(StaffRequiredMixin, UpdateView):
     model = WordPressSite
-    fields = ['name', 'url', 'username', 'application_password', 'wp_author_ids', 'daily_limit', 'articles_per_run', 'is_active', 'sources', 'merge_group', 'category_mapping', 'use_rich_formatting', 'heading_color', 'use_internal_links', 'generate_gold_price_articles', 'generate_silver_price_articles', 'generate_dollar_price_articles', 'generate_iron_price_articles', 'generate_cement_price_articles', 'generate_poultry_price_articles', 'generate_fish_price_articles', 'generate_vegetable_price_articles', 'generate_arab_currencies_articles', 'site_tags', 'use_explainer_style']
+    fields = WP_SITE_FORM_FIELDS
     template_name = 'ai_dashboard/wp_site_form.html'
     success_url = reverse_lazy('news_ai:wp_sites')
 
@@ -217,12 +220,54 @@ class WordPressSitePublishedArticlesView(StaffRequiredMixin, ListView):
         self.wp_site = get_object_or_404(WordPressSite, pk=self.kwargs['wp_site_id'])
         return AIImportLog.objects.filter(
             wp_site=self.wp_site, status='success'
-        ).exclude(published_url='').order_by('-created_at')
+        ).exclude(published_url='').select_related('article').order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['wp_site'] = self.wp_site
+
+        logs = context['logs']
+        article_ids = [log.article_id for log in logs if log.article_id]
+        latest_social_posts = {}
+        if article_ids:
+            posts = SocialSharePost.objects.filter(
+                wp_site=self.wp_site, article_id__in=article_ids
+            ).order_by('article_id', '-created_at')
+            for post in posts:
+                latest_social_posts.setdefault(post.article_id, post)
+        # Attached directly on each row object (rather than exposed as a
+        # separate dict) since Django templates can't do dynamic dict
+        # lookups by variable key without a custom filter.
+        for log in logs:
+            log.social_post = latest_social_posts.get(log.article_id)
         return context
+
+
+class RegenerateSocialImageView(StaffRequiredMixin, View):
+    """
+    Manual "regenerate social image" action - triggered by a button on the
+    site's published-articles list, regardless of the site's automatic
+    social_image_enabled toggle (an explicit click always regenerates).
+    """
+    def post(self, request, log_id):
+        from .social_image_utils import generate_and_publish_social_share
+
+        log = get_object_or_404(AIImportLog, pk=log_id)
+        if not log.article or not log.wp_site:
+            messages.error(request, "لا يمكن إعادة توليد الصورة: الخبر أو الموقع غير متاح.")
+        else:
+            social_post = generate_and_publish_social_share(log.article, log.wp_site, force=True)
+            if social_post and social_post.status != 'failed':
+                messages.success(request, "تم توليد صورة السوشال ميديا بنجاح.")
+            else:
+                error = social_post.error_message if social_post else "تعذر توليد الصورة."
+                messages.error(request, f"فشل توليد صورة السوشال ميديا: {error}")
+
+        return redirect('news_ai:wp_site_articles', wp_site_id=log.wp_site_id)
+
+    def get(self, request, log_id):
+        log = get_object_or_404(AIImportLog, pk=log_id)
+        return redirect('news_ai:wp_site_articles', wp_site_id=log.wp_site_id)
 
 
 def _parse_slot_form(request):

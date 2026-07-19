@@ -455,6 +455,21 @@ class WordPressSite(models.Model):
     generate_arab_currencies_articles = models.BooleanField(default=False, verbose_name="توليد مقالات أسعار العملات العربية والأجنبية اليومية", help_text="عند التفعيل، يُنشئ النظام مرة واحدة يومياً مقالاً بأسعار صرف الريال السعودي والدينار الكويتي والدرهم الإماراتي، بالإضافة لليورو والجنيه الاسترليني والفرنك السويسري، الرسمية مقابل الجنيه المصري لهذا الموقع فقط.")
     site_tags = models.TextField(blank=True, default='', verbose_name="وسوم ثابتة لهذا الموقع", help_text="وسوم ثابتة (افصل بينها بفاصلة) تُضاف تلقائياً لكل خبر يُنشر على هذا الموقع، مثال: بانكرز توداي, موقع بانكرز توداي الاخباري")
     use_explainer_style = models.BooleanField(default=False, verbose_name="أسلوب تفسيري (Explainer) عند الحاجة", help_text="عند التفعيل، يقرر الذكاء الاصطناعي تلقائياً استخدام أسلوب شرح بعناوين على شكل أسئلة (لماذا؟ هل؟ كيف؟) للأخبار الاقتصادية/التنظيمية (رسوم، ضرائب، قرارات) التي تحتاج تفصيلاً، بدلاً من الخبر القصير المعتاد.")
+
+    # --- Social share image generation (Facebook cards) ---
+    SOCIAL_TEMPLATE_CHOICES = [
+        ('bottom_banner', 'شريط سفلي (صورة كاملة + شريط عنوان أسفل)'),
+        ('boxed_card', 'بطاقة مؤطرة (صورة مع إطار وصندوق عنوان)'),
+        ('split_block', 'تقسيم علوي/سفلي (صورة أعلى وكتلة لون بالعنوان أسفل)'),
+    ]
+    social_image_enabled = models.BooleanField(default=False, verbose_name="تفعيل توليد صور السوشال ميديا", help_text="عند التفعيل، يُولَّد تصميم صورة تلقائياً (صورة الخبر + عنوان + لوجو الموقع) عند نشر كل خبر جديد لهذا الموقع.")
+    social_template = models.CharField(max_length=20, choices=SOCIAL_TEMPLATE_CHOICES, default='bottom_banner', verbose_name="قالب تصميم الصورة")
+    social_logo = models.ImageField(upload_to='site_logos/', blank=True, null=True, verbose_name="لوجو الموقع", help_text="يُفضَّل صورة PNG بخلفية شفافة.")
+    social_primary_color = models.CharField(max_length=7, default='#0d9488', verbose_name="اللون الأساسي للتصميم", help_text="كود اللون السداسي عشري (Hex)، مثال: #0d9488")
+    social_secondary_color = models.CharField(max_length=7, default='#0f172a', verbose_name="اللون الثانوي للتصميم", help_text="كود اللون السداسي عشري (Hex)، مثال: #0f172a")
+    facebook_page_id = models.CharField(max_length=100, blank=True, default='', verbose_name="معرّف صفحة فيسبوك (Page ID)", help_text="اتركه فارغاً لتعطيل النشر التلقائي على فيسبوك مع إبقاء توليد الصورة فقط.")
+    facebook_access_token = EncryptedCharField(max_length=1000, blank=True, null=True, verbose_name="توكن وصول صفحة فيسبوك (Page Access Token)", help_text="توكن وصول دائم (Long-Lived Page Access Token) يُنشأ يدوياً من أدوات مطوري فيسبوك لهذه الصفحة تحديداً.")
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -481,6 +496,36 @@ class WordPressSite(models.Model):
             if part.isdigit():
                 ids.append(int(part))
         return ids
+
+    @property
+    def facebook_auto_publish_enabled(self):
+        return bool(self.facebook_page_id and self.facebook_access_token)
+
+
+class SocialSharePost(models.Model):
+    STATUS_CHOICES = [
+        ('generated', 'تم توليد الصورة'),
+        ('posted', 'نُشرت على فيسبوك'),
+        ('failed', 'فشل'),
+    ]
+    wp_site = models.ForeignKey(WordPressSite, on_delete=models.CASCADE, related_name='social_posts', verbose_name="الموقع")
+    article = models.ForeignKey('Article', on_delete=models.SET_NULL, null=True, blank=True, related_name='social_posts', verbose_name="الخبر")
+    article_title = models.CharField(max_length=255, blank=True, default='', verbose_name="عنوان الخبر (وقت التوليد)")
+    template_used = models.CharField(max_length=20, choices=WordPressSite.SOCIAL_TEMPLATE_CHOICES, verbose_name="القالب المستخدم")
+    generated_image = models.ImageField(upload_to='social_shares/%Y/%m/', blank=True, null=True, verbose_name="الصورة المولَّدة")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='generated', verbose_name="الحالة")
+    facebook_post_id = models.CharField(max_length=100, blank=True, default='', verbose_name="معرّف منشور فيسبوك")
+    error_message = models.TextField(blank=True, default='', verbose_name="رسالة الخطأ")
+    created_at = models.DateTimeField(auto_now_add=True)
+    posted_at = models.DateTimeField(null=True, blank=True, verbose_name="وقت النشر على فيسبوك")
+
+    class Meta:
+        verbose_name = "صورة سوشال ميديا"
+        verbose_name_plural = "صور السوشال ميديا"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.article_title or self.pk} - {self.wp_site.name}"
 
 
 class WordPressScheduleSlot(models.Model):
