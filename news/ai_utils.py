@@ -678,6 +678,7 @@ IDSC_INDICATOR_IDS = {
     'iron_investment': 8,   # حديد إستثماري
     'cement': 92,           # الأسمنت الرمادي
     'poultry': 880,         # الدواجن الطازجة
+    'red_meat': 877,        # اللحوم الطازجة
     'fish': 827,            # السمك (المتوسط العام)
     'fish_tilapia': 326,    # البلطي (ممتاز)
     'fish_shrimp': 331,     # الجمبري (وسط)
@@ -2824,11 +2825,16 @@ def run_ai_generation_cycle():
     )
     if poultry_sites:
         poultry_data = fetch_idsc_indicator('poultry')
-        if poultry_data:
+        red_meat_data = fetch_idsc_indicator('red_meat')
+        if poultry_data and red_meat_data:
             if poultry_legacy_used:
                 ai_settings.last_poultry_price_at = timezone.now()
                 ai_settings.save(update_fields=['last_poultry_price_at'])
             source_url = f"{IDSC_API_BASE}/PricesData/GetMainIndicatorData/{IDSC_INDICATOR_IDS['poultry']}"
+            poultry_items = [
+                ("الدواجن الطازجة", poultry_data),
+                ("اللحوم الطازجة", red_meat_data),
+            ]
             for wp_site in poultry_sites:
                 if generated_count >= limit:
                     break
@@ -2837,7 +2843,7 @@ def run_ai_generation_cycle():
                 if wp_site.id not in poultry_due_slots and wp_site_run_counts.get(wp_site.id, 0) >= wp_site.articles_per_run:
                     continue
                 success = generate_official_commodity_article_for_site(
-                    wp_site, "سعر الدواجن (الفراخ)", [("الدواجن الطازجة", poultry_data)], source_url,
+                    wp_site, "أسعار اللحوم والدواجن", poultry_items, source_url,
                     ai_settings, api_key, allowed_cats, categories_list_str, content_type='poultry',
                     wp_category_id=get_wp_category_id(wp_site, 'أسعار')
                 )
