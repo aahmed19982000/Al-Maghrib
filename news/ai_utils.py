@@ -99,6 +99,25 @@ IMAGE_ALT_INSTRUCTION = (
 )
 
 
+def build_seo_keyphrase_instruction(use_rich_formatting):
+    """
+    Shared instruction ensuring the focus_keyword Gemini picks actually meets
+    Yoast's own SEO analysis checks (keyphrase density, keyphrase in intro
+    sentence, keyphrase in subheading, keyphrase in title/slug) - without this,
+    Gemini tends to pick a focus_keyword post-hoc that barely appears in the
+    body it already wrote.
+    """
+    instruction = (
+        "اختر العبارة المفتاحية (focus_keyword) بما يناسب موضوع الخبر تحديداً، ثم تأكد أن هذه العبارة نفسها - أو "
+        "صياغة قريبة جداً منها - تظهر حرفياً في: (1) العنوان، (2) الجملة الأولى من النص، (3) مرتين على الأقل "
+        "إجمالاً ضمن النص الكامل"
+    )
+    if use_rich_formatting:
+        instruction += "، (4) عنوان فرعي واحد على الأقل"
+    instruction += ". اكتب حول العبارة بأسلوب طبيعي ومتدفق دون حشو مصطنع أو تكرار غير مبرر."
+    return instruction
+
+
 def sanitize_ai_body(html, allow_headings=False, allow_links=False, link_base_url=None):
     """
     Strips any tag/attribute outside a safe allowlist from AI-generated article HTML.
@@ -896,8 +915,9 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
         f"2. {STRONG_TITLE_INSTRUCTION}\n"
         f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
         f"4. اذكر المقارنة بالأمس فقط إن وردت في الأرقام أعلاه، ولا تخترع أي مقارنة أو نسبة غير مذكورة.\n"
-        f"5. {IMAGE_ALT_INSTRUCTION}\n"
-        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {build_seo_keyphrase_instruction(wp_site.use_rich_formatting)}\n"
+        f"6. {IMAGE_ALT_INSTRUCTION}\n"
+        f"7. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -908,7 +928,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
         f"- \"image_alt\": النص البديل لصورة الغلاف كما هو موضح أعلاه.\n"
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات.\n\n"
-        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"8. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -1076,8 +1096,9 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
         f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
         f"4. اذكر سعري الشراء والبيع لكل عملة كما وردا أعلاه بدقة، واذكر المقارنة بالأمس فقط إن وردت في الأرقام، "
         f"ولا تخترع أي مقارنة أو نسبة غير مذكورة.\n"
-        f"5. {IMAGE_ALT_INSTRUCTION}\n"
-        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {build_seo_keyphrase_instruction(wp_site.use_rich_formatting)}\n"
+        f"6. {IMAGE_ALT_INSTRUCTION}\n"
+        f"7. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -1089,7 +1110,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
         f"(مثال: \"سعر الريال السعودي اليوم\"، \"سعر الدرهم الإماراتي مقابل الجنيه المصري\").\n\n"
-        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"8. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -1478,8 +1499,9 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
         f"بصياغة عامة ومتحفظة (مثل تأثير سعر الصرف أو حركة السوق العالمي)، على أن تنتهي الفقرة حرفياً بجملة توضيحية "
         f"مشابهة لـ: \"هذه قراءة عامة لحركة السوق ولا تُعد توصية استثمارية.\" لا تذكر أي أرقام أو مستويات أو نسب "
         f"مستقبلية مختلَقة، فقط وصف عام للاتجاه.\n"
-        f"5. {IMAGE_ALT_INSTRUCTION}\n"
-        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {build_seo_keyphrase_instruction(wp_site.use_rich_formatting)}\n"
+        f"6. {IMAGE_ALT_INSTRUCTION}\n"
+        f"7. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -1491,7 +1513,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
         f"(مثال: \"سعر الذهب اليوم\"، \"سعر جرام الذهب عيار 21\"، \"سعر جنيه الذهب في مصر\").\n\n"
-        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"8. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -1656,8 +1678,9 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
         f"بصياغة عامة ومتحفظة (مثل تأثير سعر الصرف أو حركة السوق العالمي)، على أن تنتهي الفقرة حرفياً بجملة توضيحية "
         f"مشابهة لـ: \"هذه قراءة عامة لحركة السوق ولا تُعد توصية استثمارية.\" لا تذكر أي أرقام أو مستويات أو نسب "
         f"مستقبلية مختلَقة، فقط وصف عام للاتجاه.\n"
-        f"5. {IMAGE_ALT_INSTRUCTION}\n"
-        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {build_seo_keyphrase_instruction(wp_site.use_rich_formatting)}\n"
+        f"6. {IMAGE_ALT_INSTRUCTION}\n"
+        f"7. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -1669,7 +1692,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
         f"(مثال: \"سعر الفضة اليوم\"، \"سعر جرام الفضة في مصر\").\n\n"
-        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"8. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -1830,8 +1853,9 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
         f"4. أضف في نهاية الخبر فقرة قصيرة بعنوان \"نظرة عامة على السوق\" تصف الاتجاه العام لحركة سعر الصرف "
         f"بصياغة عامة ومتحفظة، على أن تنتهي الفقرة حرفياً بجملة توضيحية مشابهة لـ: \"هذه قراءة عامة لحركة السوق "
         f"ولا تُعد توصية استثمارية.\" لا تذكر أي أرقام أو مستويات أو نسب مستقبلية مختلَقة، فقط وصف عام للاتجاه.\n"
-        f"5. {IMAGE_ALT_INSTRUCTION}\n"
-        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {build_seo_keyphrase_instruction(wp_site.use_rich_formatting)}\n"
+        f"6. {IMAGE_ALT_INSTRUCTION}\n"
+        f"7. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -1843,7 +1867,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
         f"(مثال: \"سعر الدولار اليوم\"، \"سعر الدولار مقابل الجنيه المصري\").\n\n"
-        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"8. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -2032,8 +2056,9 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
         f"2. يجب أن لا يزيد حجم الخبر الإجمالي عن {ai_settings.max_words} كلمة إطلاقاً (تأكد أن يتراوح طول الخبر بين 300 إلى 450 كلمة كحد أقصى لتفادي الإطالة).\n"
         f"3. اكتب عنواناً مختلفاً تماماً عن العنوان الأصلي بصياغتك الخاصة. {STRONG_TITLE_INSTRUCTION}\n"
         f"4. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
-        f"5. {IMAGE_ALT_INSTRUCTION}\n"
-        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {build_seo_keyphrase_instruction(wp_site.use_rich_formatting)}\n"
+        f"6. {IMAGE_ALT_INSTRUCTION}\n"
+        f"7. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر الجديد\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -2046,7 +2071,7 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
         f"الخبر تحديداً (وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في "
         f"جوجل عن هذا الموضوع بالذات (مثال لخبر عن سعر اليورو: \"سعر اليورو اليوم\"، \"اليورو مقابل "
         f"الجنيه\")، بدون ذكر اسم أي موقع إخباري.\n\n"
-        f"7. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{site_categories_list_str}\n"
+        f"8. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{site_categories_list_str}\n"
         f"{internal_link_instruction}"
         f"{explainer_instruction}\n\n"
         f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
