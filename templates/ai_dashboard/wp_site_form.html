@@ -331,6 +331,25 @@
 
                 <div class="border-t border-slate-800 pt-4 space-y-4">
                     <p class="text-xs font-bold text-slate-300"><i class="fa-brands fa-facebook text-blue-400 ml-1"></i>النشر التلقائي على فيسبوك (اختياري)</p>
+
+                    {% if facebook_connect_link %}
+                    <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 space-y-3">
+                        <p class="text-xs font-semibold text-blue-300">
+                            <i class="fa-solid fa-link ml-1"></i>
+                            رابط ربط ذاتي للعميل - أرسله للعميل ليربط صفحته بنفسه (يملأ الحقلين تحت تلقائياً بعد موافقته على فيسبوك، بدون أي تدخل يدوي):
+                        </p>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="fb-connect-link" value="{{ facebook_connect_link }}" readonly class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-slate-300 font-mono text-[10px]" onclick="this.select()">
+                            <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('fb-connect-link').value); this.innerText='تم النسخ ✓'; setTimeout(()=>{this.innerText='نسخ'}, 2000)" class="shrink-0 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition">نسخ</button>
+                        </div>
+                        <p class="text-[10px] text-blue-300/70">الرابط صالح لمدة 30 يوماً، ويخص هذا الموقع فقط. لن يستطيع العميل رؤية أو تعديل أي إعداد آخر - فقط ربط صفحته.</p>
+                    </div>
+                    {% elif object %}
+                    <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                        <p class="text-[10px] text-amber-300">لتفعيل رابط الربط الذاتي للعميل، أضف FACEBOOK_APP_ID و FACEBOOK_APP_SECRET في إعدادات الخادم أولاً.</p>
+                    </div>
+                    {% endif %}
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-2">
                             <label for="id_facebook_page_id" class="block text-sm font-semibold text-slate-300">معرّف صفحة فيسبوك (Page ID)</label>
@@ -341,7 +360,7 @@
                             <input type="password" name="facebook_access_token" id="id_facebook_access_token" value="{{ form.facebook_access_token.value|default:'' }}" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150 font-mono text-xs" placeholder="EAAxxxxxxxx...">
                         </div>
                     </div>
-                    <p class="text-[10px] text-slate-500">اتركهما فارغين لتعطيل النشر التلقائي على فيسبوك مع إبقاء توليد الصورة فقط. التوكن يجب أن يكون توكن وصول دائم (Long-Lived Page Access Token) خاص بهذه الصفحة تحديداً، يُنشأ يدوياً من أدوات مطوري فيسبوك.</p>
+                    <p class="text-[10px] text-slate-500">تُملأ هذه الحقول تلقائياً بعد أن يربط العميل صفحته عبر الرابط أعلاه. يمكنك أيضاً تعبئتهما يدوياً إذا لزم الأمر (توكن وصول دائم - Long-Lived Page Access Token - خاص بهذه الصفحة تحديداً). اتركهما فارغين لتعطيل النشر التلقائي على فيسبوك مع إبقاء توليد الصورة فقط.</p>
                 </div>
             </div>
 

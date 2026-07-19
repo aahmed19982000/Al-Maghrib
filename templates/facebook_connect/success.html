@@ -1,0 +1,13 @@
+{% extends 'facebook_connect/base.html' %}
+{% block title %}تم الربط بنجاح{% endblock %}
+{% block content %}
+<div class="text-center space-y-4">
+    <i class="fa-solid fa-circle-check text-4xl text-emerald-500"></i>
+    <h1 class="text-lg font-bold text-white">تم ربط صفحة فيسبوك بنجاح</h1>
+    <p class="text-sm text-slate-400 leading-relaxed">
+        تم ربط صفحة "<strong>{{ page_name }}</strong>" بموقع "<strong>{{ wp_site.name }}</strong>" بنجاح.
+        سيتم الآن نشر صور الأخبار تلقائياً على هذه الصفحة عند تفعيل الخاصية من إدارتنا.
+    </p>
+    <p class="text-xs text-slate-500">يمكنك إغلاق هذه الصفحة الآن.</p>
+</div>
+{% endblock %}

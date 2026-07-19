@@ -20,6 +20,7 @@ from django.conf.urls.i18n import i18n_patterns
 
 from django.contrib.sitemaps.views import sitemap
 from news.sitemaps import ArticleSitemap, CategorySitemap, StaticSitemap
+from news import views_facebook_connect
 
 sitemaps = {
     'static': StaticSitemap,
@@ -32,6 +33,12 @@ urlpatterns = [
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('ckeditor5/', include('django_ckeditor_5.urls')),
     path('ai-dashboard/', include('news.urls_ai')),
+    # Public, staff-free "Connect Facebook Page" flow for clients (see
+    # news/views_facebook_connect.py for the security model). Fixed paths
+    # must come before the generic <token>/ pattern.
+    path('connect-facebook/callback/', views_facebook_connect.FacebookConnectCallbackView.as_view(), name='facebook_connect_callback'),
+    path('connect-facebook/<str:token>/select-page/', views_facebook_connect.FacebookConnectSelectPageView.as_view(), name='facebook_connect_select_page'),
+    path('connect-facebook/<str:token>/', views_facebook_connect.FacebookConnectStartView.as_view(), name='facebook_connect_start'),
 ]
 
 urlpatterns += i18n_patterns(

@@ -1,0 +1,9 @@
+{% extends 'facebook_connect/base.html' %}
+{% block title %}تعذر إتمام الربط{% endblock %}
+{% block content %}
+<div class="text-center space-y-4">
+    <i class="fa-solid fa-triangle-exclamation text-4xl text-rose-500"></i>
+    <h1 class="text-lg font-bold text-white">تعذر إتمام الربط</h1>
+    <p class="text-sm text-slate-400 leading-relaxed">{{ message }}</p>
+</div>
+{% endblock %}

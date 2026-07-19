@@ -20,6 +20,13 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-default-key-for-dev')
 # Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 FIELD_ENCRYPTION_KEY = env('FIELD_ENCRYPTION_KEY', default='5q3zduDPj233xFGBU_U5zY41OsqhA-kGOEgnb3PAwTg=')
 
+# Facebook App credentials used for the self-service "Connect Facebook Page"
+# OAuth flow (lets a client authorize their own Facebook Page without staff
+# having to manually walk the Graph API Explorer). Get these from
+# https://developers.facebook.com -> your App -> Settings -> Basic.
+FACEBOOK_APP_ID = env('FACEBOOK_APP_ID', default='')
+FACEBOOK_APP_SECRET = env('FACEBOOK_APP_SECRET', default='')
+
 ALLOWED_HOSTS = ['*']
 
 # Application definition

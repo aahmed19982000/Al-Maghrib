@@ -2,10 +2,11 @@ from datetime import datetime
 from django.shortcuts import render, redirect
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View, TemplateView
 from django.contrib.auth.mixins import UserPassesTestMixin
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from django.db.models import Sum, Q
+from django.conf import settings
 from .models import AISettings, AISource, AIImportLog, Category, Article, WordPressSite, WordPressScheduleSlot, WordPressSiteGroup, SocialSharePost
 from .tasks import scrape_and_generate_news_task
 
@@ -192,6 +193,12 @@ class WordPressSiteUpdateView(StaffRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['has_schedule_slots'] = self.object.schedule_slots.filter(is_active=True).exists()
+        from .views_facebook_connect import make_facebook_connect_token
+        if settings.FACEBOOK_APP_ID:
+            token = make_facebook_connect_token(self.object.pk)
+            context['facebook_connect_link'] = self.request.build_absolute_uri(
+                reverse('facebook_connect_start', kwargs={'token': token})
+            )
         return context
 
     def form_valid(self, form):

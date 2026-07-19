@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ربط صفحة فيسبوك{% endblock %} - المغرب اليوم</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { cairo: ['Cairo', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#f0fdfa', 100: '#ccfbf1', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e', 800: '#115e59', 900: '#134e4a' },
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background: #0f172a; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6 text-slate-200">
+    <div class="w-full max-w-md">
+        <div class="text-center mb-6">
+            <i class="fa-brands fa-facebook text-4xl text-blue-500"></i>
+        </div>
+        <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 shadow-xl">
+            {% block content %}{% endblock %}
+        </div>
+        <p class="text-center text-xs text-slate-500 mt-6">المغرب اليوم &middot; بوابة الذكاء الاصطناعي</p>
+    </div>
+</body>
+</html>

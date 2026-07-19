@@ -1,0 +1,15 @@
+{% extends 'facebook_connect/base.html' %}
+{% block title %}ربط صفحة فيسبوك - {{ wp_site.name }}{% endblock %}
+{% block content %}
+<div class="text-center space-y-4">
+    <h1 class="text-lg font-bold text-white">ربط صفحة فيسبوك الخاصة بـ "{{ wp_site.name }}"</h1>
+    <p class="text-sm text-slate-400 leading-relaxed">
+        بالضغط على الزر بالأسفل سيتم تحويلك إلى فيسبوك لتسجيل الدخول والموافقة على ربط صفحتك.
+        تأكد أنك تدخل بالحساب الذي يملك صلاحية <strong>مسؤول (Admin)</strong> على صفحة الفيسبوك المطلوب ربطها.
+    </p>
+    <a href="{{ oauth_url }}" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3 rounded-xl transition">
+        <i class="fa-brands fa-facebook"></i>
+        <span>المتابعة لتسجيل الدخول بفيسبوك</span>
+    </a>
+</div>
+{% endblock %}
