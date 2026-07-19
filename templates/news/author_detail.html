@@ -129,7 +129,7 @@
         <a href="{{ article.get_absolute_url }}" class="aspect-video overflow-hidden bg-surface-variant block shrink-0 relative">
             {% if article.cover_image %}
                 {% thumbnail article.cover_image "600x337" crop="center" as im %}
-                    <img src="{{ im.url }}" alt="{{ article.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
+                    <img src="{{ im.url }}" alt="{{ article.get_cover_image_alt }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
                 {% endthumbnail %}
             {% else %}
                 <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=600" alt="Default Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">

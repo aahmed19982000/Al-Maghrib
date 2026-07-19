@@ -103,7 +103,7 @@
                     <!-- Article Cover -->
                     <div class="w-20 h-14 bg-slate-800 rounded-lg overflow-hidden flex-shrink-0 border border-slate-700">
                         {% if article.cover_image %}
-                            <img src="{{ article.cover_image.url }}" alt="{{ article.title }}" class="w-full h-full object-cover">
+                            <img src="{{ article.cover_image.url }}" alt="{{ article.get_cover_image_alt }}" class="w-full h-full object-cover">
                         {% else %}
                             <div class="w-full h-full flex items-center justify-center bg-slate-950 text-slate-600 text-xs">لا توجد صورة</div>
                         {% endif %}

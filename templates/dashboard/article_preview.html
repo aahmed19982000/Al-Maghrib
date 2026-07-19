@@ -117,7 +117,7 @@
 <div class="preview-card">
     <!-- Cover Image -->
     {% if article.cover_image %}
-        <img src="{{ article.cover_image.url }}" alt="{{ article.title }}" class="preview-cover">
+        <img src="{{ article.cover_image.url }}" alt="{{ article.get_cover_image_alt }}" class="preview-cover">
     {% endif %}
 
     <!-- Meta Data Grid -->

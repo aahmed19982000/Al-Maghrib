@@ -117,7 +117,7 @@
 <div class="relative aspect-video overflow-hidden rounded-xl bg-surface-variant border border-outline-variant">
     {% if article.cover_image %}
         {% thumbnail article.cover_image "1200x675" crop="center" as im %}
-            <img alt="{{ article.title }}" class="w-full h-full object-cover" src="{{ im.url }}"/>
+            <img alt="{{ article.get_cover_image_alt }}" class="w-full h-full object-cover" src="{{ im.url }}"/>
         {% empty %}
             <div class="w-full h-full bg-surface-variant"></div>
         {% endthumbnail %}
@@ -328,7 +328,7 @@
     <div class="h-48 overflow-hidden bg-surface-variant shrink-0">
         {% if r_art.cover_image %}
             {% thumbnail r_art.cover_image "600x337" crop="center" as im %}
-                <img alt="{{ r_art.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="{{ im.url }}"/>
+                <img alt="{{ r_art.get_cover_image_alt }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="{{ im.url }}"/>
             {% endthumbnail %}
         {% endif %}
     </div>

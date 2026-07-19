@@ -22,7 +22,7 @@
         <a href="{{ art.get_absolute_url }}" class="absolute inset-0 block z-0">
             {% if art.cover_image %}
                 {% thumbnail art.cover_image "1600x900" crop="center" as im %}
-                    <img src="{{ im.url }}" alt="{{ art.title }}" class="w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
+                    <img src="{{ im.url }}" alt="{{ art.get_cover_image_alt }}" class="w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
                 {% empty %}
                     <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?q=80&w=1600" alt="Placeholder" class="w-full h-full object-cover" {% if forloop.first %}fetchpriority="high" loading="eager"{% else %}loading="lazy"{% endif %}/>
                 {% endthumbnail %}
@@ -136,7 +136,7 @@
                 <div class="relative overflow-hidden aspect-video rounded-xl">
                     {% if main_art.cover_image %}
                         {% thumbnail main_art.cover_image "800x450" crop="center" as im %}
-                            <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="{{ im.url }}" alt="{{ main_art.title }}"/>
+                            <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="{{ im.url }}" alt="{{ main_art.get_cover_image_alt }}"/>
                         {% empty %}
                             <div class="w-full h-full bg-surface-variant"></div>
                         {% endthumbnail %}
@@ -159,7 +159,7 @@
                 <a href="{{ art.get_absolute_url }}" class="flex gap-4 group cursor-pointer">
                     {% if art.cover_image %}
                         {% thumbnail art.cover_image "120x120" crop="center" as im %}
-                            <img class="w-24 h-24 rounded object-cover" src="{{ im.url }}" alt="{{ art.title }}"/>
+                            <img class="w-24 h-24 rounded object-cover" src="{{ im.url }}" alt="{{ art.get_cover_image_alt }}"/>
                         {% empty %}
                             <div class="w-24 h-24 rounded bg-surface-variant"></div>
                         {% endthumbnail %}
@@ -194,7 +194,7 @@
                     <div class="aspect-video overflow-hidden rounded mb-4">
                         {% if art.cover_image %}
                             {% thumbnail art.cover_image "400x225" crop="center" as im %}
-                                <img class="w-full h-full object-cover transition-transform group-hover:scale-105" src="{{ im.url }}" alt="{{ art.title }}"/>
+                                <img class="w-full h-full object-cover transition-transform group-hover:scale-105" src="{{ im.url }}" alt="{{ art.get_cover_image_alt }}"/>
                             {% empty %}
                                 <div class="w-full h-full bg-white/10"></div>
                             {% endthumbnail %}
@@ -227,7 +227,7 @@
                 <div class="relative aspect-video rounded overflow-hidden mb-4">
                     {% if main_art.cover_image %}
                         {% thumbnail main_art.cover_image "600x337" crop="center" as im %}
-                            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="{{ im.url }}" alt="{{ main_art.title }}"/>
+                            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="{{ im.url }}" alt="{{ main_art.get_cover_image_alt }}"/>
                         {% empty %}
                             <div class="w-full h-full bg-surface-variant"></div>
                         {% endthumbnail %}
@@ -279,7 +279,7 @@
                 <a href="{{ art.get_absolute_url }}" class="relative group h-[400px] rounded-xl overflow-hidden shadow-lg cursor-pointer block">
                     {% if art.cover_image %}
                         {% thumbnail art.cover_image "400x500" crop="center" as im %}
-                            <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="{{ im.url }}" alt="{{ art.title }}"/>
+                            <img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="{{ im.url }}" alt="{{ art.get_cover_image_alt }}"/>
                         {% empty %}
                             <div class="w-full h-full bg-surface-variant"></div>
                         {% endthumbnail %}
@@ -311,7 +311,7 @@
             <a href="{{ art.get_absolute_url }}" class="group cursor-pointer block">
                 {% if art.cover_image %}
                     {% thumbnail art.cover_image "300x168" crop="center" as im %}
-                        <img class="aspect-video w-full rounded object-cover mb-4" src="{{ im.url }}" alt="{{ art.title }}"/>
+                        <img class="aspect-video w-full rounded object-cover mb-4" src="{{ im.url }}" alt="{{ art.get_cover_image_alt }}"/>
                     {% empty %}
                         <div class="aspect-video w-full rounded bg-surface-variant mb-4"></div>
                     {% endthumbnail %}
@@ -337,7 +337,7 @@
                     <div class="aspect-[3/2] overflow-hidden">
                         {% if art.cover_image %}
                             {% thumbnail art.cover_image "300x200" crop="center" as im %}
-                                <img alt="{{ art.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="{{ im.url }}"/>
+                                <img alt="{{ art.get_cover_image_alt }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="{{ im.url }}"/>
                             {% empty %}
                                 <div class="w-full h-full bg-surface-variant"></div>
                             {% endthumbnail %}
@@ -370,7 +370,7 @@
             <a href="{{ art.get_absolute_url }}" class="flex gap-4 items-start pb-4 border-b border-outline-variant last:border-0 last:pb-0 group">
                 {% if art.cover_image %}
                     {% thumbnail art.cover_image "320x240" crop="center" as im %}
-                        <img src="{{ im.url }}" alt="{{ art.title }}" class="w-24 h-24 md:w-32 md:h-24 shrink-0 rounded object-cover border border-outline-variant group-hover:scale-105 transition-transform duration-300" loading="lazy">
+                        <img src="{{ im.url }}" alt="{{ art.get_cover_image_alt }}" class="w-24 h-24 md:w-32 md:h-24 shrink-0 rounded object-cover border border-outline-variant group-hover:scale-105 transition-transform duration-300" loading="lazy">
                     {% empty %}
                         <div class="w-24 h-24 md:w-32 md:h-24 shrink-0 rounded bg-surface-variant border border-outline-variant"></div>
                     {% endthumbnail %}
@@ -397,7 +397,7 @@
             <a href="{{ art.get_absolute_url }}" class="group cursor-pointer block border border-outline-variant rounded overflow-hidden">
                 {% if art.cover_image %}
                     {% thumbnail art.cover_image "400x225" crop="center" as im %}
-                        <img class="aspect-video w-full object-cover" src="{{ im.url }}" alt="{{ art.title }}"/>
+                        <img class="aspect-video w-full object-cover" src="{{ im.url }}" alt="{{ art.get_cover_image_alt }}"/>
                     {% empty %}
                         <div class="aspect-video w-full bg-surface-variant"></div>
                     {% endthumbnail %}

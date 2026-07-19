@@ -75,6 +75,7 @@ class Article(models.Model):
     is_breaking = models.BooleanField(default=True)
     auto_translate = models.BooleanField(default=False, help_text="ترجمة تلقائية للإنجليزية (Auto-translate to English)")
     cover_image = models.ImageField(upload_to='articles/', blank=True, null=True)
+    cover_image_alt = models.CharField(max_length=300, blank=True, default='', verbose_name="النص البديل للصورة (Alt Text)", help_text="وصف احترافي لمحتوى الصورة نفسها لأغراض السيو وإمكانية الوصول - وليس تكراراً لعنوان الخبر. يُترك فارغاً لاستخدام العنوان كبديل احتياطي.")
     views_count = models.PositiveIntegerField(default=0)
     read_time = models.PositiveIntegerField(default=0, help_text="Read time in minutes")
     allow_comments = models.BooleanField(default=True)
@@ -187,6 +188,9 @@ class Article(models.Model):
     def get_absolute_url(self):
         from django.urls import reverse
         return reverse('news:article_detail', kwargs={'slug': self.slug})
+
+    def get_cover_image_alt(self):
+        return self.cover_image_alt or self.title
 
 class Comment(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='comments')

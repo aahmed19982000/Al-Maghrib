@@ -88,6 +88,16 @@ STRONG_TITLE_INSTRUCTION = (
     "الحقيقة بشكل مؤثر، وليس من تضخيمها أو تزييفها."
 )
 
+# Shared instruction for the image's alt text - deliberately separate from
+# the headline: alt text should describe what the photo actually shows
+# (professional accessibility/SEO practice), not just repeat the title.
+IMAGE_ALT_INSTRUCTION = (
+    "اكتب وصفاً احترافياً موجزاً لما تُظهره صورة الغلاف بصرياً (مثال: \"سبائك ذهب معروضة في محل مجوهرات\"، "
+    "\"عملات ورقية مصرية وأجنبية متنوعة\"، \"عامل بناء يقوم بتركيب حديد التسليح في موقع إنشائي\") - وليس تكراراً "
+    "لعنوان الخبر أو ملخصاً له. اجعله من 6 إلى 12 كلمة، وصفياً وطبيعياً دون حشو كلمات مفتاحية، ومناسباً كنص بديل "
+    "(Alt Text) لمحرك بحث وقارئ شاشة."
+)
+
 
 def sanitize_ai_body(html, allow_headings=False, allow_links=False, link_base_url=None):
     """
@@ -885,7 +895,8 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
         f"2. {STRONG_TITLE_INSTRUCTION}\n"
         f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
         f"4. اذكر المقارنة بالأمس فقط إن وردت في الأرقام أعلاه، ولا تخترع أي مقارنة أو نسبة غير مذكورة.\n"
-        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {IMAGE_ALT_INSTRUCTION}\n"
+        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -893,9 +904,10 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
         f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
         f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر، لاستخدامها في تحليل السيو (SEO).\n"
         f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً.\n"
+        f"- \"image_alt\": النص البديل لصورة الغلاف كما هو موضح أعلاه.\n"
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات.\n\n"
-        f"6. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -932,6 +944,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
             new_body = apply_heading_color(new_body, wp_site.heading_color)
         focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
         meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        image_alt = sanitize_ai_text(data.get("image_alt", "").strip())
         raw_tags = data.get("tags") or []
         if not isinstance(raw_tags, list):
             raw_tags = []
@@ -970,6 +983,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
             excerpt_en=excerpt_en,
             author=author,
             category=category,
+            cover_image_alt=image_alt,
             status='draft',
             published_at=timezone.now(),
             is_featured=False,
@@ -1061,7 +1075,8 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
         f"3. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
         f"4. اذكر سعري الشراء والبيع لكل عملة كما وردا أعلاه بدقة، واذكر المقارنة بالأمس فقط إن وردت في الأرقام، "
         f"ولا تخترع أي مقارنة أو نسبة غير مذكورة.\n"
-        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {IMAGE_ALT_INSTRUCTION}\n"
+        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -1069,10 +1084,11 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
         f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
         f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر، لاستخدامها في تحليل السيو (SEO).\n"
         f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً.\n"
+        f"- \"image_alt\": النص البديل لصورة الغلاف كما هو موضح أعلاه.\n"
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
         f"(مثال: \"سعر الريال السعودي اليوم\"، \"سعر الدرهم الإماراتي مقابل الجنيه المصري\").\n\n"
-        f"6. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -1109,6 +1125,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             new_body = apply_heading_color(new_body, wp_site.heading_color)
         focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
         meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        image_alt = sanitize_ai_text(data.get("image_alt", "").strip())
         raw_tags = data.get("tags") or []
         if not isinstance(raw_tags, list):
             raw_tags = []
@@ -1147,6 +1164,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             excerpt_en=excerpt_en,
             author=author,
             category=category,
+            cover_image_alt=image_alt,
             status='draft',
             published_at=timezone.now(),
             is_featured=False,
@@ -1294,7 +1312,7 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
                     requests.post(
                         f"{media_url}/{featured_media_id}",
                         auth=auth,
-                        json={'alt_text': article.title},
+                        json={'alt_text': article.get_cover_image_alt()},
                         timeout=10,
                     )
                 except Exception as alt_e:
@@ -1459,7 +1477,8 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
         f"بصياغة عامة ومتحفظة (مثل تأثير سعر الصرف أو حركة السوق العالمي)، على أن تنتهي الفقرة حرفياً بجملة توضيحية "
         f"مشابهة لـ: \"هذه قراءة عامة لحركة السوق ولا تُعد توصية استثمارية.\" لا تذكر أي أرقام أو مستويات أو نسب "
         f"مستقبلية مختلَقة، فقط وصف عام للاتجاه.\n"
-        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {IMAGE_ALT_INSTRUCTION}\n"
+        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -1467,10 +1486,11 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
         f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
         f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر، لاستخدامها في تحليل السيو (SEO).\n"
         f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً.\n"
+        f"- \"image_alt\": النص البديل لصورة الغلاف كما هو موضح أعلاه.\n"
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
         f"(مثال: \"سعر الذهب اليوم\"، \"سعر جرام الذهب عيار 21\"، \"سعر جنيه الذهب في مصر\").\n\n"
-        f"6. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -1507,6 +1527,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
             new_body = apply_heading_color(new_body, wp_site.heading_color)
         focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
         meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        image_alt = sanitize_ai_text(data.get("image_alt", "").strip())
         raw_tags = data.get("tags") or []
         if not isinstance(raw_tags, list):
             raw_tags = []
@@ -1545,6 +1566,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
             excerpt_en=excerpt_en,
             author=author,
             category=category,
+            cover_image_alt=image_alt,
             status='draft',
             published_at=timezone.now(),
             is_featured=False,
@@ -1633,7 +1655,8 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
         f"بصياغة عامة ومتحفظة (مثل تأثير سعر الصرف أو حركة السوق العالمي)، على أن تنتهي الفقرة حرفياً بجملة توضيحية "
         f"مشابهة لـ: \"هذه قراءة عامة لحركة السوق ولا تُعد توصية استثمارية.\" لا تذكر أي أرقام أو مستويات أو نسب "
         f"مستقبلية مختلَقة، فقط وصف عام للاتجاه.\n"
-        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {IMAGE_ALT_INSTRUCTION}\n"
+        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -1641,10 +1664,11 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
         f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
         f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر، لاستخدامها في تحليل السيو (SEO).\n"
         f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً.\n"
+        f"- \"image_alt\": النص البديل لصورة الغلاف كما هو موضح أعلاه.\n"
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
         f"(مثال: \"سعر الفضة اليوم\"، \"سعر جرام الفضة في مصر\").\n\n"
-        f"6. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -1681,6 +1705,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
             new_body = apply_heading_color(new_body, wp_site.heading_color)
         focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
         meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        image_alt = sanitize_ai_text(data.get("image_alt", "").strip())
         raw_tags = data.get("tags") or []
         if not isinstance(raw_tags, list):
             raw_tags = []
@@ -1719,6 +1744,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
             excerpt_en=excerpt_en,
             author=author,
             category=category,
+            cover_image_alt=image_alt,
             status='draft',
             published_at=timezone.now(),
             is_featured=False,
@@ -1803,7 +1829,8 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
         f"4. أضف في نهاية الخبر فقرة قصيرة بعنوان \"نظرة عامة على السوق\" تصف الاتجاه العام لحركة سعر الصرف "
         f"بصياغة عامة ومتحفظة، على أن تنتهي الفقرة حرفياً بجملة توضيحية مشابهة لـ: \"هذه قراءة عامة لحركة السوق "
         f"ولا تُعد توصية استثمارية.\" لا تذكر أي أرقام أو مستويات أو نسب مستقبلية مختلَقة، فقط وصف عام للاتجاه.\n"
-        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {IMAGE_ALT_INSTRUCTION}\n"
+        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -1811,10 +1838,11 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
         f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
         f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر، لاستخدامها في تحليل السيو (SEO).\n"
         f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً.\n"
+        f"- \"image_alt\": النص البديل لصورة الغلاف كما هو موضح أعلاه.\n"
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا الخبر تحديداً "
         f"(وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في جوجل عن هذا الموضوع بالذات "
         f"(مثال: \"سعر الدولار اليوم\"، \"سعر الدولار مقابل الجنيه المصري\").\n\n"
-        f"6. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+        f"7. اختر القسم الأنسب لهذا الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
         f"{internal_link_instruction}"
     )
 
@@ -1851,6 +1879,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
             new_body = apply_heading_color(new_body, wp_site.heading_color)
         focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
         meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        image_alt = sanitize_ai_text(data.get("image_alt", "").strip())
         raw_tags = data.get("tags") or []
         if not isinstance(raw_tags, list):
             raw_tags = []
@@ -1889,6 +1918,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
             excerpt_en=excerpt_en,
             author=author,
             category=category,
+            cover_image_alt=image_alt,
             status='draft',
             published_at=timezone.now(),
             is_featured=False,
@@ -2001,7 +2031,8 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
         f"2. يجب أن لا يزيد حجم الخبر الإجمالي عن {ai_settings.max_words} كلمة إطلاقاً (تأكد أن يتراوح طول الخبر بين 300 إلى 450 كلمة كحد أقصى لتفادي الإطالة).\n"
         f"3. اكتب عنواناً مختلفاً تماماً عن العنوان الأصلي بصياغتك الخاصة. {STRONG_TITLE_INSTRUCTION}\n"
         f"4. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
-        f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+        f"5. {IMAGE_ALT_INSTRUCTION}\n"
+        f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
         f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
         f"- \"title\": عنوان الخبر الجديد\n"
         f"- \"excerpt\": ملخص الخبر\n"
@@ -2009,11 +2040,12 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
         f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
         f"- \"focus_keyword\": عبارة مفتاحية قصيرة (2-4 كلمات) تلخص موضوع الخبر الأساسي، لاستخدامها في تحليل السيو (SEO).\n"
         f"- \"meta_description\": وصف تعريفي (Meta Description) لمحركات البحث لا يتجاوز 155 حرفاً، يتضمن العبارة المفتاحية أعلاه.\n"
+        f"- \"image_alt\": النص البديل لصورة الغلاف كما هو موضح أعلاه.\n"
         f"- \"tags\": قائمة (array) من 3 إلى 5 وسوم؛ يجب أن يكون كل وسم مرتبطاً مباشرة بمحتوى هذا "
         f"الخبر تحديداً (وليس عاماً)، وأن يكون عبارة بحثية واقعية يستخدمها القارئ فعلاً عند البحث في "
         f"جوجل عن هذا الموضوع بالذات (مثال لخبر عن سعر اليورو: \"سعر اليورو اليوم\"، \"اليورو مقابل "
         f"الجنيه\")، بدون ذكر اسم أي موقع إخباري.\n\n"
-        f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{site_categories_list_str}\n"
+        f"7. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{site_categories_list_str}\n"
         f"{internal_link_instruction}"
         f"{explainer_instruction}\n\n"
         f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
@@ -2044,6 +2076,7 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             new_body = apply_heading_color(new_body, wp_site.heading_color)
         focus_keyword = sanitize_ai_text(data.get("focus_keyword", "").strip())
         meta_description = sanitize_ai_text(data.get("meta_description", "").strip())
+        image_alt = sanitize_ai_text(data.get("image_alt", "").strip())
         raw_tags = data.get("tags") or []
         if not isinstance(raw_tags, list):
             raw_tags = []
@@ -2097,6 +2130,7 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             excerpt_en=excerpt_en,
             author=author,
             category=category,
+            cover_image_alt=image_alt,
             status='draft',
             published_at=timezone.now(),
             is_featured=False,
@@ -2144,6 +2178,7 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             'category_name': category_name_for_group,
             'focus_keyword': focus_keyword,
             'meta_description': meta_description,
+            'image_alt': image_alt,
         }
     except Exception as ex:
         logger.error(f"Failed to generate unique WP article: {ex}")
@@ -2250,6 +2285,7 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
             excerpt_en=excerpt_en,
             author=author,
             category=category,
+            cover_image_alt=master.get('image_alt', ''),
             status='draft',
             published_at=timezone.now(),
             is_featured=False,
@@ -2429,13 +2465,15 @@ def run_ai_generation_cycle():
                     f"2. يجب أن لا يزيد حجم الخبر الإجمالي عن {ai_settings.max_words} كلمة إطلاقاً (تأكد أن يتراوح طول الخبر بين 300 إلى 450 كلمة كحد أقصى لتفادي الإطالة).\n"
                     f"3. اكتب عنواناً مختلفاً تماماً عن العنوان الأصلي بصياغتك الخاصة. {STRONG_TITLE_INSTRUCTION}\n"
                     f"4. اكتب ملخصًا قصيرًا وموجزًا للخبر (Excerpt) مكون من سطرين إلى ثلاثة أسطر.\n"
-                    f"5. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
+                    f"5. {IMAGE_ALT_INSTRUCTION}\n"
+                    f"6. قم بإرجاع الإجابة بتنسيق JSON حصريًا دون أي علامات markdown أو علامات برمجية إضافية مثل ```json. "
                     f"يجب أن يكون ملف الـ JSON يحتوي على المفاتيح التالية تماماً باللغة الإنجليزية:\n"
                     f"- \"title\": عنوان الخبر الجديد\n"
                     f"- \"excerpt\": ملخص الخبر\n"
                     f"- \"body\": محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً.\n"
-                    f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n\n"
-                    f"6. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}"
+                    f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
+                    f"- \"image_alt\": النص البديل لصورة الغلاف كما هو موضح أعلاه.\n\n"
+                    f"7. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}"
                 )
                 
                 ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
@@ -2461,25 +2499,26 @@ def run_ai_generation_cycle():
                     new_title = sanitize_ai_text(data.get("title", "").strip())
                     new_excerpt = sanitize_ai_text(data.get("excerpt", "").strip())
                     new_body = sanitize_ai_body(data.get("body", "").strip())
+                    image_alt = sanitize_ai_text(data.get("image_alt", "").strip())
                     try:
                         chosen_cat_id = int(data.get("category_id"))
                     except (ValueError, TypeError):
                         chosen_cat_id = None
-                        
+
                     if not new_title or not new_body:
                         raise ValueError("بيانات العنوان أو المحتوى فارغة في استجابة الذكاء الاصطناعي.")
-                        
+
                     category = None
                     if chosen_cat_id:
                         category = Category.objects.filter(id=chosen_cat_id, is_active=True).first()
                     if not category and allowed_cats:
                         category = allowed_cats[0]
-                        
+
                     from core.utils import translate_text
                     title_en = translate_text(new_title)
                     body_en = translate_text(new_body)
                     excerpt_en = translate_text(new_excerpt)
-                    
+
                     author = pick_default_author(ai_settings)
                     article = Article(
                         title=new_title,
@@ -2494,6 +2533,7 @@ def run_ai_generation_cycle():
                         excerpt_en=excerpt_en,
                         author=author,
                         category=category,
+                        cover_image_alt=image_alt,
                         status='published',
                         published_at=timezone.now(),
                         is_featured=False,
@@ -2504,7 +2544,7 @@ def run_ai_generation_cycle():
                         img_file = fetch_image_file(item['image_url'])
                         if img_file:
                             article.cover_image = img_file
-                            
+
                     article.save()
                     
                     AIImportLog.objects.create(
