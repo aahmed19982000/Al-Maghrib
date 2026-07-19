@@ -52,13 +52,17 @@ def compress_article_image_task(self, article_id):
 
 
 @shared_task(bind=True, max_retries=1, default_retry_delay=60)
-def scrape_and_generate_news_task(self):
+def scrape_and_generate_news_task(self, target_site_id=None):
     """
     Periodic task to scrape news sources and write unique articles using Gemini AI.
+
+    `target_site_id`: optional. When set, this is a manual "generate now"
+    trigger for one specific WordPressSite (see TriggerSiteScraperView)
+    instead of the normal all-sites scheduled cycle.
     """
     try:
         from news.ai_utils import run_ai_generation_cycle
-        count = run_ai_generation_cycle()
+        count = run_ai_generation_cycle(target_site_id=target_site_id)
         logger.info(f"AI news generation cycle completed. Generated {count} articles.")
         return f"Success: {count} articles generated"
     except Exception as exc:

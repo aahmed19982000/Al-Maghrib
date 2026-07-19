@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db.models import Sum, Q
 from django.conf import settings
 from .models import AISettings, AISource, AIImportLog, Category, Article, WordPressSite, WordPressScheduleSlot, WordPressSiteGroup, SocialSharePost
@@ -157,6 +158,32 @@ class TriggerScraperView(StaffRequiredMixin, View):
     
     def get(self, request, *args, **kwargs):
         return redirect('news_ai:index')
+
+
+class TriggerSiteScraperView(StaffRequiredMixin, View):
+    """
+    Manual "generate now" trigger scoped to a single WordPress site, so staff
+    don't have to wait for that site's next scheduled slot (or fire the
+    global trigger, which touches every active site). See
+    run_ai_generation_cycle(target_site_id=...) for how the scheduling
+    gates are bypassed for just this one site without disturbing anything else.
+    """
+    def post(self, request, wp_site_id, *args, **kwargs):
+        wp_site = get_object_or_404(WordPressSite, pk=wp_site_id)
+        try:
+            scrape_and_generate_news_task.delay(target_site_id=wp_site.id)
+            messages.success(request, f"تم إرسال طلب التوليد الفوري لموقع '{wp_site.name}' إلى الخلفية، وسيتم تنفيذه خلال دقائق قليلة. تحقّق من سجلات الاستيراد بعد قليل لمتابعة النتيجة.")
+        except Exception as e:
+            messages.error(request, f"فشل إرسال طلب التوليد الآلي: {str(e)}")
+
+        fallback_url = reverse('news_ai:wp_site_edit', kwargs={'pk': wp_site_id})
+        referer = request.META.get('HTTP_REFERER')
+        if referer and url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+            return redirect(referer)
+        return redirect(fallback_url)
+
+    def get(self, request, wp_site_id, *args, **kwargs):
+        return redirect('news_ai:wp_site_edit', pk=wp_site_id)
 
 
 class WordPressSiteListView(StaffRequiredMixin, ListView):

@@ -823,7 +823,7 @@ def mark_slot_run(slot, content_type):
     slot.set_last_run_date_for_type(content_type, timezone.now().astimezone(CAIRO_TZ).date())
 
 
-def get_regular_news_run_cap(wp_site):
+def get_regular_news_run_cap(wp_site, force=False):
     """
     Returns (cap, due_slot) for how many regular RSS/Trends articles this site
     may receive this cycle:
@@ -831,7 +831,14 @@ def get_regular_news_run_cap(wp_site):
       `articles_per_run` cap, applied every cycle (unchanged behavior).
     - Sites with schedule slots only get "regular" articles when one of their
       slots is due right now, capped by that slot's own `regular_news_count`.
+    - `force=True` (manual "generate now" trigger for one specific site)
+      bypasses the slot-timing check entirely and always allows up to
+      `articles_per_run`, without returning a due_slot - so no schedule
+      bookkeeping is touched and the site's normal scheduled slot still fires
+      later today as usual.
     """
+    if force:
+        return wp_site.articles_per_run, None
     if not wp_site.schedule_slots.filter(is_active=True).exists():
         return wp_site.articles_per_run, None
     due_slot = get_due_slot(wp_site, 'regular')
@@ -840,7 +847,7 @@ def get_regular_news_run_cap(wp_site):
     return 0, None
 
 
-def sites_due_for_type(content_type, legacy_bool_field, ai_settings=None, last_at_field=None, min_hours=20):
+def sites_due_for_type(content_type, legacy_bool_field, ai_settings=None, last_at_field=None, min_hours=20, force_site_id=None):
     """
     Returns (list_of_wp_sites, due_slots_dict, legacy_used) of which active
     WordPress sites should generate a `content_type` price article this cycle:
@@ -857,6 +864,15 @@ def sites_due_for_type(content_type, legacy_bool_field, ai_settings=None, last_a
     legacy gate - callers should only bump the shared `ai_settings.<last_at_field>`
     timestamp in that case, so a slot-only fetch doesn't skew the legacy gate
     for sites that aren't using slots.
+
+    `force_site_id`: manual "generate now" trigger for one specific site.
+    Restricts the result to that single site and bypasses both the slot-timing
+    check and the legacy cooldown gate - but a site is still only included if
+    this content type is actually configured for it (listed in one of its
+    active slots, or its legacy boolean toggle is on for sites without slots).
+    Deliberately never populates due_slots/legacy_used in this mode, so the
+    caller never marks schedule bookkeeping as run and the site's normal
+    automatic schedule for this type is left completely undisturbed.
     """
     result = []
     due_slots = {}
@@ -865,8 +881,23 @@ def sites_due_for_type(content_type, legacy_bool_field, ai_settings=None, last_a
     if last_at_field is not None and ai_settings is not None:
         legacy_gate_open = _is_due(getattr(ai_settings, last_at_field), min_hours)
 
-    for wp_site in WordPressSite.objects.filter(is_active=True):
+    sites_qs = WordPressSite.objects.filter(is_active=True)
+    if force_site_id:
+        sites_qs = sites_qs.filter(id=force_site_id)
+
+    for wp_site in sites_qs:
         has_slots = wp_site.schedule_slots.filter(is_active=True).exists()
+        if force_site_id:
+            if has_slots:
+                configured = any(
+                    content_type in slot.get_content_types_list()
+                    for slot in wp_site.schedule_slots.filter(is_active=True)
+                )
+            else:
+                configured = bool(getattr(wp_site, legacy_bool_field))
+            if configured:
+                result.append(wp_site)
+            continue
         if has_slots:
             slot = get_due_slot(wp_site, content_type)
             if slot:
@@ -2383,7 +2414,7 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
         return None
 
 
-def run_ai_generation_cycle():
+def run_ai_generation_cycle(target_site_id=None):
     """
     Executes a complete AI generation cycle:
     1. Reads active settings.
@@ -2393,6 +2424,16 @@ def run_ai_generation_cycle():
     5. Calls Gemini API to rewrite articles.
     6. Downloads cover images.
     7. Saves the synthesized articles.
+
+    `target_site_id`: optional. When set, this is a manual "generate now"
+    trigger for one specific WordPressSite (see TriggerSiteScraperView) -
+    the cycle only considers that site (never the local/main site, and never
+    any other WordPress site), and bypasses schedule-slot timing / legacy
+    cooldown gates for it so content is generated immediately regardless of
+    the configured schedule. It still respects that site's own daily_limit
+    and articles_per_run caps, and the global ai_settings.articles_per_day
+    quota, and never marks schedule bookkeeping as run - so the site's normal
+    automatic schedule is left completely undisturbed.
     """
     ai_settings = AISettings.get_settings()
     if not ai_settings.is_active:
@@ -2445,8 +2486,11 @@ def run_ai_generation_cycle():
     # no slots keep the legacy fixed articles_per_run cap on every cycle run.
     regular_news_caps = {}
     regular_due_slots = {}
-    for _site in WordPressSite.objects.filter(is_active=True):
-        _cap, _due_slot = get_regular_news_run_cap(_site)
+    _regular_cap_sites = WordPressSite.objects.filter(is_active=True)
+    if target_site_id:
+        _regular_cap_sites = _regular_cap_sites.filter(id=target_site_id)
+    for _site in _regular_cap_sites:
+        _cap, _due_slot = get_regular_news_run_cap(_site, force=bool(target_site_id))
         regular_news_caps[_site.id] = _cap
         if _due_slot:
             regular_due_slots[_site.id] = _due_slot
@@ -2481,7 +2525,10 @@ def run_ai_generation_cycle():
             continue
             
         # Get WordPress sites mapped to this source
-        wp_sites = list(WordPressSite.objects.filter(is_active=True, sources=source))
+        _wp_sites_qs = WordPressSite.objects.filter(is_active=True, sources=source)
+        if target_site_id:
+            _wp_sites_qs = _wp_sites_qs.filter(id=target_site_id)
+        wp_sites = list(_wp_sites_qs)
         
         for item in items:
             if generated_count >= limit:
@@ -2498,7 +2545,7 @@ def run_ai_generation_cycle():
                 continue
 
             source_allowed_for_local = not local_sources_restricted or source.id in local_source_ids
-            if ai_settings.publish_to_main_site and source_allowed_for_local:
+            if ai_settings.publish_to_main_site and source_allowed_for_local and not target_site_id:
                 # Always generate and publish locally first (Case 1)
                 prompt = (
                     f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
@@ -2682,7 +2729,7 @@ def run_ai_generation_cycle():
     # Live gold price articles: independent of RSS sources. Sites with no
     # schedule slots keep firing every cycle (legacy behavior); sites with
     # slots only fire when a "gold" slot is due right now (Cairo time).
-    gold_price_sites, gold_due_slots, _ = sites_due_for_type('gold', 'generate_gold_price_articles')
+    gold_price_sites, gold_due_slots, _ = sites_due_for_type('gold', 'generate_gold_price_articles', force_site_id=target_site_id)
     if gold_price_sites:
         gold_data = fetch_live_gold_prices()
         if gold_data:
@@ -2720,7 +2767,7 @@ def run_ai_generation_cycle():
             logger.error("Failed to fetch live gold price data; skipping gold price article generation this cycle.")
 
     silver_price_sites, silver_due_slots, silver_legacy_used = sites_due_for_type(
-        'silver', 'generate_silver_price_articles', ai_settings, 'last_silver_price_at'
+        'silver', 'generate_silver_price_articles', ai_settings, 'last_silver_price_at', force_site_id=target_site_id
     )
     if silver_price_sites:
         silver_data = fetch_live_silver_prices()
@@ -2761,7 +2808,7 @@ def run_ai_generation_cycle():
         else:
             logger.error("Failed to fetch live silver price data; skipping silver price article generation this cycle.")
 
-    dollar_price_sites, dollar_due_slots, _ = sites_due_for_type('dollar', 'generate_dollar_price_articles')
+    dollar_price_sites, dollar_due_slots, _ = sites_due_for_type('dollar', 'generate_dollar_price_articles', force_site_id=target_site_id)
     if dollar_price_sites:
         dollar_data = fetch_live_dollar_price()
         if dollar_data:
@@ -2799,7 +2846,7 @@ def run_ai_generation_cycle():
             logger.error("Failed to fetch live dollar price data; skipping dollar price article generation this cycle.")
 
     iron_sites, iron_due_slots, iron_legacy_used = sites_due_for_type(
-        'iron', 'generate_iron_price_articles', ai_settings, 'last_iron_price_at'
+        'iron', 'generate_iron_price_articles', ai_settings, 'last_iron_price_at', force_site_id=target_site_id
     )
     if iron_sites:
         iron_data = fetch_idsc_indicator('iron')
@@ -2835,7 +2882,7 @@ def run_ai_generation_cycle():
             logger.error("Failed to fetch official iron price data; skipping this cycle.")
 
     cement_sites, cement_due_slots, cement_legacy_used = sites_due_for_type(
-        'cement', 'generate_cement_price_articles', ai_settings, 'last_cement_price_at'
+        'cement', 'generate_cement_price_articles', ai_settings, 'last_cement_price_at', force_site_id=target_site_id
     )
     if cement_sites:
         cement_data = fetch_idsc_indicator('cement')
@@ -2866,7 +2913,7 @@ def run_ai_generation_cycle():
             logger.error("Failed to fetch official cement price data; skipping this cycle.")
 
     poultry_sites, poultry_due_slots, poultry_legacy_used = sites_due_for_type(
-        'poultry', 'generate_poultry_price_articles', ai_settings, 'last_poultry_price_at'
+        'poultry', 'generate_poultry_price_articles', ai_settings, 'last_poultry_price_at', force_site_id=target_site_id
     )
     if poultry_sites:
         poultry_data = fetch_idsc_indicator('poultry')
@@ -2902,7 +2949,7 @@ def run_ai_generation_cycle():
             logger.error("Failed to fetch official poultry price data; skipping this cycle.")
 
     fish_sites, fish_due_slots, fish_legacy_used = sites_due_for_type(
-        'fish', 'generate_fish_price_articles', ai_settings, 'last_fish_price_at'
+        'fish', 'generate_fish_price_articles', ai_settings, 'last_fish_price_at', force_site_id=target_site_id
     )
     if fish_sites:
         fish_data = fetch_idsc_indicator('fish')
@@ -2942,7 +2989,7 @@ def run_ai_generation_cycle():
             logger.error("Failed to fetch official fish price data; skipping this cycle.")
 
     vegetable_sites, vegetable_due_slots, vegetable_legacy_used = sites_due_for_type(
-        'vegetable', 'generate_vegetable_price_articles', ai_settings, 'last_vegetable_price_at'
+        'vegetable', 'generate_vegetable_price_articles', ai_settings, 'last_vegetable_price_at', force_site_id=target_site_id
     )
     if vegetable_sites:
         tomatoes_data = fetch_idsc_indicator('tomatoes')
@@ -2980,7 +3027,7 @@ def run_ai_generation_cycle():
             logger.error("Failed to fetch official vegetable price data; skipping this cycle.")
 
     arab_currency_sites, arab_currency_due_slots, arab_currency_legacy_used = sites_due_for_type(
-        'arab_currencies', 'generate_arab_currencies_articles', ai_settings, 'last_arab_currencies_at'
+        'arab_currencies', 'generate_arab_currencies_articles', ai_settings, 'last_arab_currencies_at', force_site_id=target_site_id
     )
     if arab_currency_sites:
         currency_data = fetch_arab_currency_rates()

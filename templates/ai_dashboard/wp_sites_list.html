@@ -54,6 +54,10 @@
                     </td>
                     <td class="px-6 py-4 text-center">
                         <div class="flex items-center justify-center space-x-2 space-x-reverse">
+                            <form action="{% url 'news_ai:wp_site_trigger' site.pk %}" method="post" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" class="text-xs text-teal-400 hover:text-teal-300 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 transition" title="توليد الآن لهذا الموقع"><i class="fa-solid fa-bolt"></i></button>
+                            </form>
                             <a href="{% url 'news_ai:wp_site_articles' site.pk %}" class="text-xs text-slate-400 hover:text-teal-400 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 transition" title="المقالات المنشورة"><i class="fa-solid fa-newspaper"></i></a>
                             <a href="{% url 'news_ai:schedule_slots' site.pk %}" class="text-xs text-slate-400 hover:text-teal-400 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 transition" title="الجدول الزمني"><i class="fa-solid fa-clock"></i></a>
                             <a href="{% url 'news_ai:wp_site_edit' site.pk %}" class="text-xs text-slate-400 hover:text-teal-400 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 transition" title="تعديل"><i class="fa-solid fa-pen"></i></a>

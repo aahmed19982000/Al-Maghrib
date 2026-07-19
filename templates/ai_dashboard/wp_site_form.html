@@ -12,10 +12,19 @@
                 {% if object %}تعديل خيارات ربط ووردبريس{% else %}بيانات الربط مع موقع ووردبريس خارجي{% endif %}
             </h3>
             {% if object %}
-            <a href="{% url 'news_ai:schedule_slots' object.pk %}" class="text-xs text-slate-400 hover:text-teal-400 flex items-center gap-1.5">
-                <i class="fa-solid fa-clock"></i>
-                <span>الجدول الزمني</span>
-            </a>
+            <div class="flex items-center gap-4">
+                <form action="{% url 'news_ai:wp_site_trigger' object.pk %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-glow px-3 py-1.5 bg-gradient-to-r from-primary-600 to-teal-500 hover:from-primary-700 hover:to-teal-600 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition duration-200">
+                        <i class="fa-solid fa-bolt animate-pulse"></i>
+                        <span>توليد الآن لهذا الموقع</span>
+                    </button>
+                </form>
+                <a href="{% url 'news_ai:schedule_slots' object.pk %}" class="text-xs text-slate-400 hover:text-teal-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock"></i>
+                    <span>الجدول الزمني</span>
+                </a>
+            </div>
             {% endif %}
         </div>
 
