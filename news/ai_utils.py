@@ -1095,6 +1095,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
         published_url = None
+        wp_error_detail = None
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
@@ -1102,6 +1103,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
             )
         except Exception as wpe:
             logger.error(f"Error syndicating {topic_title} article to WP site {wp_site.name}: {wpe}")
+            wp_error_detail = str(wpe)
 
         AIImportLog.objects.create(
             source=None,
@@ -1111,7 +1113,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -1276,6 +1278,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
         published_url = None
+        wp_error_detail = None
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
@@ -1283,6 +1286,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             )
         except Exception as wpe:
             logger.error(f"Error syndicating Arab currencies article to WP site {wp_site.name}: {wpe}")
+            wp_error_detail = str(wpe)
 
         AIImportLog.objects.create(
             source=None,
@@ -1292,7 +1296,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -1503,7 +1507,7 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
         response = requests.post(posts_url, auth=auth, headers=headers, json=payload, timeout=20)
         if response.status_code != 201:
             logger.error(f"Failed to push post to WP site {wp_site.name}: {response.text}")
-            return None
+            raise Exception(f"رفض ووردبريس نشر المقال (كود {response.status_code}): {response.text[:300]}")
 
         post_data = response.json()
         post_id = post_data.get('id')
@@ -1539,8 +1543,9 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
         return published_url
     except Exception as e:
         logger.error(f"Error pushing post to WP: {e}")
-
-    return None
+        if str(e).startswith("رفض ووردبريس"):
+            raise
+        raise Exception(f"خطأ في الاتصال بووردبريس: {e}") from e
 
 
 def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str, wp_category_id=None):
@@ -1690,6 +1695,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
         published_url = None
+        wp_error_detail = None
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
@@ -1697,6 +1703,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
             )
         except Exception as wpe:
             logger.error(f"Error syndicating gold price article to WP site {wp_site.name}: {wpe}")
+            wp_error_detail = str(wpe)
 
         AIImportLog.objects.create(
             source=None,
@@ -1706,7 +1713,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -1869,6 +1876,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
         published_url = None
+        wp_error_detail = None
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
@@ -1876,6 +1884,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
             )
         except Exception as wpe:
             logger.error(f"Error syndicating silver price article to WP site {wp_site.name}: {wpe}")
+            wp_error_detail = str(wpe)
 
         AIImportLog.objects.create(
             source=None,
@@ -1885,7 +1894,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -2044,6 +2053,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
 
         tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
         published_url = None
+        wp_error_detail = None
         try:
             published_url = push_article_to_wordpress(
                 wp_site, article, extra_tag_names=tag_names,
@@ -2051,6 +2061,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
             )
         except Exception as wpe:
             logger.error(f"Error syndicating dollar price article to WP site {wp_site.name}: {wpe}")
+            wp_error_detail = str(wpe)
 
         AIImportLog.objects.create(
             source=None,
@@ -2060,7 +2071,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -2263,6 +2274,7 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
 
         # Push this unique version to this specific WP site
         published_url = None
+        wp_error_detail = None
         try:
             tag_names = (ai_tags if ai_tags else ([category.name] if category else [])) + wp_site.get_site_tags_list()
             published_url = push_article_to_wordpress(
@@ -2272,6 +2284,7 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             )
         except Exception as wpe:
             logger.error(f"Error syndicating to WP site {wp_site.name}: {wpe}")
+            wp_error_detail = str(wpe)
 
         AIImportLog.objects.create(
             source=source,
@@ -2281,7 +2294,7 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -2419,6 +2432,7 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
         article.save()
 
         published_url = None
+        wp_error_detail = None
         try:
             tag_names = (master['tags'] if master['tags'] else ([category.name] if category else [])) + wp_site.get_site_tags_list()
             published_url = push_article_to_wordpress(
@@ -2428,6 +2442,7 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
             )
         except Exception as wpe:
             logger.error(f"Error syndicating reworded article to WP site {wp_site.name}: {wpe}")
+            wp_error_detail = str(wpe)
 
         AIImportLog.objects.create(
             source=source,
@@ -2437,7 +2452,7 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
             published_url=published_url or '',
             title=new_title,
             status='success' if published_url else 'failed',
-            error_message='' if published_url else 'فشل النشر على ووردبريس',
+            error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
