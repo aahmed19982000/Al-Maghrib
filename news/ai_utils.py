@@ -160,6 +160,44 @@ def sanitize_ai_text(text):
     return bleach.clean(text or '', tags=[], attributes={}, strip=True)
 
 
+_ARABIC_DIACRITICS_RE = re.compile(r'[ً-ٰٟۖ-ۭ]')
+
+
+def _normalize_arabic_for_match(text):
+    """
+    Loosely normalizes Arabic (and Latin) text for substring comparison:
+    strips tashkeel/diacritics, unifies alef/yeh/teh-marbuta spelling
+    variants, collapses whitespace, and lowercases. Not a full Arabic
+    normalization library - just enough to catch minor spelling variants
+    Gemini might introduce when echoing a source name back.
+    """
+    if not text:
+        return ''
+    text = _ARABIC_DIACRITICS_RE.sub('', text)
+    text = text.replace('أ', 'ا').replace('إ', 'ا').replace('آ', 'ا')
+    text = text.replace('ى', 'ي').replace('ة', 'ه')
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip().lower()
+
+
+def title_contains_source_name(title, source_name):
+    """
+    Returns True if `source_name` (e.g. "الجزيرة", "سكاي نيوز عربية") appears
+    to be present inside `title` as a substring, using loose Arabic-aware
+    normalization so minor spelling variants still match.
+
+    Used to reject AI-generated regular-news titles that leak the source's
+    name back in (Gemini is told the source name as context via the prompt
+    and sometimes echoes it into the generated title, which client sites
+    don't want attributed to a specific news outlet).
+    """
+    norm_title = _normalize_arabic_for_match(title)
+    norm_source = _normalize_arabic_for_match(source_name)
+    if not norm_title or not norm_source:
+        return False
+    return norm_source in norm_title
+
+
 def apply_heading_color(html, color):
     """
     Applies the WordPress site's configured heading_color to every subheading tag.
@@ -2165,6 +2203,8 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
 
         if not new_title or not new_body:
             raise ValueError("بيانات العنوان أو المحتوى فارغة.")
+        if title_contains_source_name(new_title, source.name):
+            raise ValueError("العنوان يحتوي على اسم المصدر.")
 
         wp_category_id_for_push = None
         category_name_for_group = ''
@@ -2334,6 +2374,8 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
 
         if not new_title or not new_body:
             raise ValueError("بيانات العنوان أو المحتوى فارغة.")
+        if title_contains_source_name(new_title, source.name):
+            raise ValueError("العنوان يحتوي على اسم المصدر.")
 
         site_primary_cats = get_wp_primary_categories(wp_site)
         wp_category_id_for_push = None
@@ -2600,6 +2642,8 @@ def run_ai_generation_cycle(target_site_id=None):
 
                     if not new_title or not new_body:
                         raise ValueError("بيانات العنوان أو المحتوى فارغة في استجابة الذكاء الاصطناعي.")
+                    if title_contains_source_name(new_title, source.name):
+                        raise ValueError("العنوان يحتوي على اسم المصدر.")
 
                     category = None
                     if chosen_cat_id:
