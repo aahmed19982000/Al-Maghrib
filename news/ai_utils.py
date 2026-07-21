@@ -1302,6 +1302,7 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             wp_category_id=wp_category_id,
+            wp_category_name='أسعار',
             focus_keyword=focus_keyword,
             tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
@@ -1488,6 +1489,7 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             wp_category_id=wp_category_id,
+            wp_category_name='أسعار',
             focus_keyword=focus_keyword,
             tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
@@ -1800,7 +1802,9 @@ def _push_saved_log_to_site(log, target_site, category_rotation=None):
     *different* site could tag the wrong category (or one that doesn't
     exist there at all). When redistributing, the category is re-resolved
     against target_site's own primary categories instead, matching by the
-    article's local category name when one genuinely matches.
+    real WordPress category name Gemini picked at generation time
+    (wp_category_name) when target_site happens to offer a category with
+    that same name too.
 
     When nothing matches, per feedback: don't dump every unmatched article
     into a single fallback category when a site has several primary
@@ -1829,8 +1833,17 @@ def _push_saved_log_to_site(log, target_site, category_rotation=None):
         wp_category_id = None
         site_primary_cats = fetch_wp_primary_categories(target_site)
         if site_primary_cats:
-            local_cat_name = log.article.category.name if log.article.category else ''
-            match = next((c for c in site_primary_cats if c['name'].strip() == local_cat_name), None)
+            # log.article.category is NOT a meaningful topic category on
+            # sites using the plugin's real-category system - it's just a
+            # placeholder (the site's first locally-allowed category) that
+            # generate_regular_article_for_site sets purely because the
+            # local Article row needs *something* there; these WP-bound
+            # drafts are never shown publicly on this site. The actual
+            # category Gemini picked only ever existed as wp_category_name
+            # (a real WordPress category name, portable across sites, saved
+            # alongside wp_category_id specifically for this reuse).
+            wanted_name = (log.wp_category_name or '').strip()
+            match = next((c for c in site_primary_cats if c['name'].strip() == wanted_name), None) if wanted_name else None
             if match:
                 wp_category_id = match['id']
             else:
@@ -2107,6 +2120,7 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             wp_category_id=wp_category_id,
+            wp_category_name='أسعار',
             focus_keyword=focus_keyword,
             tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
@@ -2291,6 +2305,7 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             wp_category_id=wp_category_id,
+            wp_category_name='أسعار',
             focus_keyword=focus_keyword,
             tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
@@ -2471,6 +2486,7 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             wp_category_id=wp_category_id,
+            wp_category_name='أسعار',
             focus_keyword=focus_keyword,
             tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
@@ -2698,6 +2714,7 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             wp_category_id=wp_category_id_for_push,
+            wp_category_name=category_name_for_group,
             focus_keyword=focus_keyword,
             tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
@@ -2860,6 +2877,7 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
             wp_category_id=wp_category_id_for_push,
+            wp_category_name=master['category_name'],
             focus_keyword=master['focus_keyword'],
             tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),

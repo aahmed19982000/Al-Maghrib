@@ -357,6 +357,7 @@ class AIImportLog(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='success')
     error_message = models.TextField(blank=True, null=True, verbose_name="رسالة الخطأ")
     wp_category_id = models.PositiveIntegerField(null=True, blank=True, editable=False, verbose_name="معرّف القسم في ووردبريس")
+    wp_category_name = models.CharField(max_length=150, blank=True, default='', editable=False, verbose_name="اسم القسم في ووردبريس")
     focus_keyword = models.CharField(max_length=255, blank=True, default='', editable=False, verbose_name="الكلمة المفتاحية")
     tag_names = models.TextField(blank=True, default='', editable=False, verbose_name="الوسوم (مفصولة بفاصلة)")
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=6, default=0, editable=False, verbose_name="التكلفة الفعلية (USD)")
