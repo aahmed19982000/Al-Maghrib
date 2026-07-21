@@ -384,85 +384,141 @@ def _extract_search_phrases(text):
     return seen
 
 
-def _search_commons_image(query, min_width=500, min_height=300):
+def _title_is_relevant(title, q):
+    title_words = set(re.findall(r"[a-zA-Z]+", title.lower()))
+    query_words = [w.lower() for w in re.split(r'[-\s]+', q) if len(w) > 3]
+    return any(w in title_words for w in query_words) if query_words else True
+
+
+def _run_commons_search(q, min_width=500, min_height=300, limit=4):
+    """Free, keyless Commons search for one phrase. Returns up to `limit` (url, title) candidates."""
+    found = []
+    try:
+        resp = requests.get(
+            'https://commons.wikimedia.org/w/api.php',
+            params={
+                'action': 'query',
+                'generator': 'search',
+                # Quoted so Commons requires the words to appear together as a
+                # phrase, not just anywhere in a file's metadata - unquoted
+                # multi-word searches matched wildly unrelated files
+                # surprisingly often (verified live: "Qatar Stock Exchange"
+                # unquoted returned a Swiss chemical plant).
+                'gsrsearch': f'filetype:bitmap "{q}"',
+                'gsrnamespace': 6,
+                'gsrlimit': 8,
+                'prop': 'imageinfo',
+                'iiprop': 'url|size|mime',
+                'format': 'json',
+            },
+            headers={'User-Agent': 'AlmaghribNewsBot/1.0 (https://almaghrib.online)'},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        pages = (resp.json().get('query') or {}).get('pages') or {}
+        for page in pages.values():
+            info = (page.get('imageinfo') or [{}])[0]
+            url = info.get('url') or ''
+            mime = info.get('mime') or ''
+            title = page.get('title') or ''
+            if not url or not mime.startswith('image/') or mime == 'image/svg+xml':
+                continue
+            if (info.get('width') or 0) < min_width or (info.get('height') or 0) < min_height:
+                continue
+            if any(hint in url.lower() for hint in _SKIP_IMAGE_HINTS):
+                continue
+            # Verified live that Commons' own relevance ranking isn't
+            # trustworthy on its own: quoted phrase search still top-ranked a
+            # 1939 US Navy cruiser for "Ministry Information" and a maize
+            # crop for "Africa Day", scored via categories/descriptions that
+            # have nothing to do with the actual file. Requiring the search
+            # phrase's own words to appear in the *title* reliably rejects
+            # those coincidental mismatches.
+            if not _title_is_relevant(title, q):
+                continue
+            found.append((url, title))
+            if len(found) >= limit:
+                break
+    except Exception as e:
+        logger.warning(f"Commons image search failed for '{q}': {e}")
+    return found
+
+
+def _gather_image_candidates(query, max_total=8):
     """
-    Free, keyless topical image search against Wikimedia Commons - used only
-    when the RSS item and its own article page both have no usable photo at
-    all. Costs nothing (no API key, no rate-limited paid quota) and returns a
-    real, appropriately-licensed photo relevant to the article's subject
-    instead of jumping straight to a single generic placeholder.
-
-    Verified live against a batch of real failed headlines that Commons'
-    relevance ranking alone is not trustworthy: quoted phrase search still
-    returned a 1939 US Navy cruiser for "Ministry Information" and a maize
-    crop photo for "Africa Day" as the top-ranked hit, because Commons scores
-    on categories/descriptions too, not just the filename. So every
-    candidate is additionally required to have the search phrase's own
-    significant words actually appear in the *file's title* before it's
-    accepted - cheap, free, and it reliably rejects the coincidental
-    mismatches while still passing through genuine matches (re-verified:
-    "Federal Parliament" now correctly skips "Alan Kohler.jpg" and picks
-    "NewParliamentHouseInCanberra.jpg" instead).
-
-    Tries the proper-noun phrases extracted from the (translated) query,
-    longest/most specific first - a full headline is skipped entirely since
-    it essentially never has a genuinely matching title. Returns a direct
-    image URL, or '' if nothing suitable turns up.
+    Casts a wide net across every proper-noun phrase extracted from the
+    (translated) query - not just the first one that hits - collecting real
+    Commons candidates for _ai_pick_best_image to choose from below. Trying
+    harder here means fewer articles fall back to the generic default image.
     """
-    def _title_is_relevant(title, q):
-        title_words = set(re.findall(r"[a-zA-Z]+", title.lower()))
-        query_words = [w.lower() for w in re.split(r'[-\s]+', q) if len(w) > 3]
-        return any(w in title_words for w in query_words) if query_words else True
-
-    def _run_search(q):
-        try:
-            resp = requests.get(
-                'https://commons.wikimedia.org/w/api.php',
-                params={
-                    'action': 'query',
-                    'generator': 'search',
-                    # Quoted so Commons requires the words to appear together
-                    # as a phrase, not just anywhere in a file's metadata -
-                    # unquoted multi-word searches matched wildly unrelated
-                    # files surprisingly often (verified live: "Qatar Stock
-                    # Exchange" unquoted returned a Swiss chemical plant).
-                    'gsrsearch': f'filetype:bitmap "{q}"',
-                    'gsrnamespace': 6,
-                    'gsrlimit': 8,
-                    'prop': 'imageinfo',
-                    'iiprop': 'url|size|mime',
-                    'format': 'json',
-                },
-                headers={'User-Agent': 'AlmaghribNewsBot/1.0 (https://almaghrib.online)'},
-                timeout=8,
-            )
-            resp.raise_for_status()
-            pages = (resp.json().get('query') or {}).get('pages') or {}
-            for page in pages.values():
-                info = (page.get('imageinfo') or [{}])[0]
-                url = info.get('url') or ''
-                mime = info.get('mime') or ''
-                if not url or not mime.startswith('image/') or mime == 'image/svg+xml':
-                    continue
-                if (info.get('width') or 0) < min_width or (info.get('height') or 0) < min_height:
-                    continue
-                if any(hint in url.lower() for hint in _SKIP_IMAGE_HINTS):
-                    continue
-                if not _title_is_relevant(page.get('title') or '', q):
-                    continue
-                return url
-        except Exception as e:
-            logger.warning(f"Commons image search failed for '{q}': {e}")
-        return ""
-
     if not query or not query.strip():
-        return ""
+        return []
+    candidates = []
+    seen_urls = set()
+    for phrase in _extract_search_phrases(query):
+        for url, title in _run_commons_search(phrase):
+            if url not in seen_urls:
+                candidates.append((url, title))
+                seen_urls.add(url)
+        if len(candidates) >= max_total:
+            break
+    return candidates[:max_total]
 
-    for phrase in _extract_search_phrases(query)[:4]:
-        result = _run_search(phrase)
-        if result:
-            return result
-    return ""
+
+def _ai_pick_best_image(article_title, candidates):
+    """
+    One cheap Gemini text call (candidate *file titles* only - no image
+    bytes sent, so this stays a fraction of a cent) that picks whichever
+    Commons candidate is actually the best real match for this article, or
+    rejects all of them if none genuinely fit or one looks graphic/
+    unsuitable (e.g. a real attack/casualty photo) - a plain keyword search
+    has no way to judge either of those, but a cheap AI read of the
+    candidates' own titles does. Returns the chosen URL, or '' to fall
+    through to the next tier (never raises - a failure here just means no
+    AI-picked image, same as finding no candidates at all).
+    """
+    if not candidates:
+        return ''
+    listing = '\n'.join(f"{i + 1}. {title}" for i, (_, title) in enumerate(candidates))
+    prompt = (
+        f"مقال إخباري بعنوان (مترجم للإنجليزية): \"{article_title}\"\n\n"
+        f"القائمة التالية أسماء ملفات صور حقيقية من أرشيف Wikimedia Commons، اختر منها الأنسب "
+        f"لاستخدامها كصورة غلاف لهذا الخبر تحديداً:\n{listing}\n\n"
+        f"اختر رقم الصورة الأكثر صلة موضوعية حقيقية بمحتوى الخبر. ارفض الاختيار (اختر null) إذا: "
+        f"لا يوجد أي خيار له صلة حقيقية بالموضوع، أو كان الخيار الأنسب يبدو أنه صورة صادمة أو عنيفة "
+        f"(هجوم، انفجار، سلاح، مصابين أو قتلى) حتى لو كانت مرتبطة بموضوع الخبر - هذه الحالات يُفضّل "
+        f"فيها عدم اختيار أي صورة.\n\n"
+        f"أرجع الإجابة بتنسيق JSON فقط دون أي نص إضافي: {{\"choice\": الرقم أو null}}"
+    )
+    try:
+        text, _usage = call_gemini_api(prompt)
+        if not text:
+            return ''
+        cleaned = text.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        choice = json.loads(cleaned.strip()).get('choice')
+        if isinstance(choice, int) and 1 <= choice <= len(candidates):
+            return candidates[choice - 1][0]
+    except Exception as e:
+        logger.warning(f"AI image pick failed for '{article_title}': {e}")
+    return ''
+
+
+def _find_topical_image(article_title, translated_query):
+    """
+    Full free-search-then-cheap-AI-review chain used wherever an article has
+    no usable photo yet: gather real Commons candidates across every
+    extracted phrase, then let Gemini pick the best (or correctly reject all
+    of them). Returns a direct image URL, or '' if nothing suitable exists
+    at all - only then should a caller fall back to the generic default.
+    """
+    candidates = _gather_image_candidates(translated_query)
+    if not candidates:
+        return ''
+    return _ai_pick_best_image(article_title, candidates)
 
 
 def _scrape_image_from_article_page(link_url, headers):
@@ -567,7 +623,8 @@ def fetch_news_items_from_source(source_url):
 
                 if not image_url and title_text:
                     from core.utils import translate_text
-                    image_url = _search_commons_image(translate_text(title_text))
+                    translated_title = translate_text(title_text)
+                    image_url = _find_topical_image(translated_title, translated_title)
 
                 items.append({
                     'title': title_text,
@@ -1780,7 +1837,8 @@ def _backfill_missing_cover_image(log):
         return
     search_query = log.focus_keyword or log.title or log.article.title
     from core.utils import translate_text
-    commons_url = _search_commons_image(translate_text(search_query)) if search_query else ""
+    translated_query = translate_text(search_query) if search_query else ""
+    commons_url = _find_topical_image(translated_query, translated_query) if translated_query else ""
     img_file = fetch_image_file(commons_url) if commons_url else None
     if img_file:
         log.article.cover_image = img_file
