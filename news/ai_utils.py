@@ -1701,11 +1701,14 @@ def republish_ai_log(log):
 
     # Articles saved before the image fixes (or from a source that had no
     # image at all at generation time) may still have no cover_image - try a
-    # free topical Commons search using the saved focus keyword first, and
+    # free topical Commons search first (using the saved focus keyword, or
+    # the log/article title for older entries predating that field), and
     # only fall back to the generic bundled default if that also finds
     # nothing, same as a freshly-generated article would get.
     if not log.article.cover_image:
-        commons_url = _search_commons_image(log.focus_keyword) if log.focus_keyword else ""
+        search_query = log.focus_keyword or log.title or log.article.title
+        from core.utils import translate_text
+        commons_url = _search_commons_image(translate_text(search_query)) if search_query else ""
         img_file = fetch_image_file(commons_url) if commons_url else None
         if img_file:
             log.article.cover_image = img_file
