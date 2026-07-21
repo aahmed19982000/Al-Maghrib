@@ -1650,6 +1650,14 @@ def republish_ai_log(log):
         log.save(update_fields=['error_message'])
         return False
 
+    # Articles saved before the "always attach a fallback image" fix (or from
+    # a source that had no image at all at generation time) may still have no
+    # cover_image - give them the same free default now rather than
+    # re-publishing with none, same as a freshly-generated article would get.
+    if not log.article.cover_image:
+        attach_default_cover_image(log.article, 'general_news')
+        log.article.save()
+
     tag_names = [t for t in (log.tag_names or '').split(',') if t]
     try:
         published_url = push_article_to_wordpress(
