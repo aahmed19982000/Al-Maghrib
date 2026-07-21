@@ -60,7 +60,7 @@
                 <div class="space-y-2">
                     <label for="id_articles_per_day" class="block text-sm font-semibold text-slate-300">عدد الأخبار اليومي الإجمالي</label>
                     <input type="number" name="articles_per_day" id="id_articles_per_day" value="{{ form.articles_per_day.value }}" min="1" class="block w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 transition duration-150">
-                    <p class="text-xs text-slate-500">الحد الأقصى لعدد الأخبار التي سينشرها النظام تلقائياً على مدار اليوم.</p>
+                    <p class="text-xs text-slate-500">الحد الأقصى لعدد الأخبار التي سينشرها النظام تلقائياً على مدار اليوم. يتحدّث تلقائياً عند تعديل حدود المواقع أدناه، ويمكنك أيضاً تعديله يدوياً في أي وقت.</p>
                 </div>
 
                 <!-- Max word count -->
@@ -138,7 +138,7 @@
                             <span class="text-xs text-slate-500">{{ site.url }}</span>
                         </div>
                         <div class="w-32 mr-4">
-                            <input type="number" name="site_limit_{{ site.id }}" value="{{ site.daily_limit }}" min="0" class="block w-full px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 text-sm transition duration-150">
+                            <input type="number" name="site_limit_{{ site.id }}" value="{{ site.daily_limit }}" min="0" class="site-limit-input block w-full px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-slate-200 text-sm transition duration-150">
                         </div>
                     </div>
                     {% empty %}
@@ -155,4 +155,19 @@
         </form>
     </div>
 </div>
+<script>
+    // Keeps "عدد الأخبار اليومي الإجمالي" in sync with the sum of the
+    // per-site daily limits below it - only reacts to edits on the site
+    // inputs (never overwrites on page load), so a manually-typed total
+    // stays put until a site limit actually changes.
+    document.querySelectorAll('.site-limit-input').forEach(function (input) {
+        input.addEventListener('input', function () {
+            var total = 0;
+            document.querySelectorAll('.site-limit-input').forEach(function (el) {
+                total += parseInt(el.value, 10) || 0;
+            });
+            document.getElementById('id_articles_per_day').value = total;
+        });
+    });
+</script>
 {% endblock %}
