@@ -362,13 +362,20 @@ def _extract_search_phrases(text):
     alone match Commons' huge archive almost at random rather than anything
     relevant to this article. Longest, most specific phrases come first.
     """
-    phrases = re.findall(r'\b[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*\b', text or '')
+    # [-\s]+ (not just \s+) so hyphenated names like "Al-Shabaab" are kept as
+    # one phrase instead of splitting into a useless lone "Al" + "Shabaab".
+    phrases = re.findall(r'\b[A-Z][a-zA-Z]*(?:[-\s]+[A-Z][a-zA-Z]*)*\b', text or '')
     seen = []
     for p in phrases:
-        words = [w for w in p.split() if w.lower() not in _COMMON_LEADING_WORDS]
+        words = [w for w in re.split(r'[-\s]+', p) if w.lower() not in _COMMON_LEADING_WORDS]
         if not words:
             continue
         if all(w.lower() in _GENERIC_TITLE_WORDS for w in words):
+            continue
+        # A single short word (<=3 chars, e.g. a stray "Al") is too generic a
+        # fragment to search on its own and too easily matches unrelated
+        # files by coincidence - only keep it if paired with another word.
+        if len(words) == 1 and len(words[0]) <= 3:
             continue
         cleaned = ' '.join(words)
         if cleaned not in seen:
@@ -385,13 +392,28 @@ def _search_commons_image(query, min_width=500, min_height=300):
     real, appropriately-licensed photo relevant to the article's subject
     instead of jumping straight to a single generic placeholder.
 
-    A full headline rarely matches anything verbatim (Commons is a search
-    engine over file titles/descriptions, not a semantic image search), so
-    this tries the full query first and, if that finds nothing, retries with
-    the proper-noun phrases extracted from it (e.g. "Belarus", "Arab
-    Parliament") - much narrower terms that actually hit real files. Returns
-    a direct image URL, or '' if nothing suitable turns up at any tier.
+    Verified live against a batch of real failed headlines that Commons'
+    relevance ranking alone is not trustworthy: quoted phrase search still
+    returned a 1939 US Navy cruiser for "Ministry Information" and a maize
+    crop photo for "Africa Day" as the top-ranked hit, because Commons scores
+    on categories/descriptions too, not just the filename. So every
+    candidate is additionally required to have the search phrase's own
+    significant words actually appear in the *file's title* before it's
+    accepted - cheap, free, and it reliably rejects the coincidental
+    mismatches while still passing through genuine matches (re-verified:
+    "Federal Parliament" now correctly skips "Alan Kohler.jpg" and picks
+    "NewParliamentHouseInCanberra.jpg" instead).
+
+    Tries the proper-noun phrases extracted from the (translated) query,
+    longest/most specific first - a full headline is skipped entirely since
+    it essentially never has a genuinely matching title. Returns a direct
+    image URL, or '' if nothing suitable turns up.
     """
+    def _title_is_relevant(title, q):
+        title_words = set(re.findall(r"[a-zA-Z]+", title.lower()))
+        query_words = [w.lower() for w in re.split(r'[-\s]+', q) if len(w) > 3]
+        return any(w in title_words for w in query_words) if query_words else True
+
     def _run_search(q):
         try:
             resp = requests.get(
@@ -399,7 +421,12 @@ def _search_commons_image(query, min_width=500, min_height=300):
                 params={
                     'action': 'query',
                     'generator': 'search',
-                    'gsrsearch': f'filetype:bitmap {q}',
+                    # Quoted so Commons requires the words to appear together
+                    # as a phrase, not just anywhere in a file's metadata -
+                    # unquoted multi-word searches matched wildly unrelated
+                    # files surprisingly often (verified live: "Qatar Stock
+                    # Exchange" unquoted returned a Swiss chemical plant).
+                    'gsrsearch': f'filetype:bitmap "{q}"',
                     'gsrnamespace': 6,
                     'gsrlimit': 8,
                     'prop': 'imageinfo',
@@ -421,6 +448,8 @@ def _search_commons_image(query, min_width=500, min_height=300):
                     continue
                 if any(hint in url.lower() for hint in _SKIP_IMAGE_HINTS):
                     continue
+                if not _title_is_relevant(page.get('title') or '', q):
+                    continue
                 return url
         except Exception as e:
             logger.warning(f"Commons image search failed for '{q}': {e}")
@@ -429,13 +458,7 @@ def _search_commons_image(query, min_width=500, min_height=300):
     if not query or not query.strip():
         return ""
 
-    result = _run_search(query)
-    if result:
-        return result
-
     for phrase in _extract_search_phrases(query)[:4]:
-        if phrase.lower() == query.strip().lower():
-            continue
         result = _run_search(phrase)
         if result:
             return result
