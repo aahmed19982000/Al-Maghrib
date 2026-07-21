@@ -1840,13 +1840,21 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
 
 
 def _backfill_missing_cover_image(log):
-    """Shared by republish_ai_log/redistribute: same free image chain a fresh generation gets."""
+    """
+    Shared by republish_ai_log/redistribute: same free Commons search a
+    fresh generation gets, but deliberately WITHOUT the extra Gemini review
+    step (_ai_pick_best_image) - per feedback, failed-article republishing
+    should just take the first real candidate that clears the (free) title-
+    relevance filter rather than spend an extra AI call judging it. Falls
+    back to the generic default only when the search finds nothing at all.
+    """
     if log.article.cover_image:
         return
     search_query = log.focus_keyword or log.title or log.article.title
     from core.utils import translate_text
     translated_query = translate_text(search_query) if search_query else ""
-    commons_url = _find_topical_image(translated_query, translated_query) if translated_query else ""
+    candidates = _gather_image_candidates(translated_query) if translated_query else []
+    commons_url = candidates[0][0] if candidates else ""
     img_file = fetch_image_file(commons_url) if commons_url else None
     if img_file:
         log.article.cover_image = img_file
