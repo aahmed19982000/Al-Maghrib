@@ -5,9 +5,16 @@
 
 {% block content %}
 <div class="glass-panel p-6 rounded-2xl border border-slate-800">
-    <div class="mb-6">
-        <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-file-invoice text-teal-400 ml-2"></i>تفاصيل عمليات الجلب والتوليد</h3>
-        <p class="text-xs text-slate-400 mt-1">تتبع حالة فحص الأخبار، والنشر الناجح أو تفاصيل المشاكل والأخطاء التي يواجهها النظام.</p>
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-file-invoice text-teal-400 ml-2"></i>تفاصيل عمليات الجلب والتوليد</h3>
+            <p class="text-xs text-slate-400 mt-1">تتبع حالة فحص الأخبار، والنشر الناجح أو تفاصيل المشاكل والأخطاء التي يواجهها النظام.</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="?" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition {% if not status_filter %}bg-teal-500/10 text-teal-400 border-teal-500/30{% else %}bg-slate-800/60 text-slate-400 border-slate-700/50 hover:border-slate-600{% endif %}">الكل</a>
+            <a href="?status=success" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition {% if status_filter == 'success' %}bg-emerald-500/10 text-emerald-400 border-emerald-500/30{% else %}bg-slate-800/60 text-slate-400 border-slate-700/50 hover:border-slate-600{% endif %}"><i class="fa-solid fa-check ml-1"></i>نجح</a>
+            <a href="?status=failed" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition {% if status_filter == 'failed' %}bg-rose-500/10 text-rose-400 border-rose-500/30{% else %}bg-slate-800/60 text-slate-400 border-slate-700/50 hover:border-slate-600{% endif %}"><i class="fa-solid fa-xmark ml-1"></i>فشل</a>
+        </div>
     </div>
 
     {% if logs %}
@@ -130,10 +137,10 @@
         </div>
         <div class="flex space-x-2 space-x-reverse">
             {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition">السابق</a>
+                <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition">السابق</a>
             {% endif %}
             {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition">التالي</a>
+                <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition">التالي</a>
             {% endif %}
         </div>
     </div>
@@ -142,7 +149,13 @@
     {% else %}
     <div class="text-center py-16 text-slate-500">
         <i class="fa-solid fa-file-invoice text-5xl mb-4 block text-slate-600"></i>
-        <p>سجل العمليات فارغ تماماً.</p>
+        {% if status_filter == 'success' %}
+            <p>لا توجد عمليات ناجحة.</p>
+        {% elif status_filter == 'failed' %}
+            <p>لا توجد عمليات فاشلة.</p>
+        {% else %}
+            <p>سجل العمليات فارغ تماماً.</p>
+        {% endif %}
     </div>
     {% endif %}
 </div>

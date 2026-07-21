@@ -145,9 +145,17 @@ class ImportLogListView(StaffRequiredMixin, ListView):
     context_object_name = 'logs'
     paginate_by = 25
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        status = self.request.GET.get('status')
+        if status in ('success', 'failed'):
+            qs = qs.filter(status=status)
+        return qs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['all_sites'] = WordPressSite.objects.filter(is_active=True).order_by('name')
+        context['status_filter'] = self.request.GET.get('status', '')
         return context
 
 
