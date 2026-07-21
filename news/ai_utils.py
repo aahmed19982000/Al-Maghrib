@@ -333,48 +333,112 @@ _IMAGE_META_SELECTORS = [
 _SKIP_IMAGE_HINTS = ('logo', 'icon', 'avatar', 'sprite', 'placeholder', '.svg')
 
 
+_COMMON_LEADING_WORDS = {
+    'the', 'a', 'an', 'official', 'in', 'on', 'at', 'for', 'to', 'of', 'and', 'new', 'during', 'amid',
+}
+
+# Generic office/event nouns that are far too broad on their own - "The
+# President" alone matches almost anything famous (Lincoln, Biden, whoever)
+# regardless of the actual article's subject. A candidate phrase is only
+# useful if it also contains a genuine specific qualifier (a country, an
+# org name, a proper noun) beyond just one of these.
+_GENERIC_TITLE_WORDS = {
+    'president', 'minister', 'prime', 'government', 'parliament', 'chairman',
+    'king', 'queen', 'ambassador', 'official', 'delegation', 'committee',
+    'meeting', 'visit', 'cooperation', 'ceremony', 'conference', 'session',
+    'secretary', 'council', 'assembly', 'summit', 'agreement', 'deal', 'forces',
+    'authority', 'union', 'organization', 'republic', 'state', 'nation',
+}
+
+
+def _extract_search_phrases(text):
+    """
+    Pulls likely proper-noun phrases (consecutive capitalized words, e.g.
+    "Arab Parliament" or "Belarus") out of an English sentence. A full news
+    headline almost never matches anything on Commons verbatim, but the
+    country/organization/person names inside it usually do - see
+    _search_commons_image below. Phrases made entirely of generic office/
+    event words ("The President", "The Committee") are dropped since those
+    alone match Commons' huge archive almost at random rather than anything
+    relevant to this article. Longest, most specific phrases come first.
+    """
+    phrases = re.findall(r'\b[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*\b', text or '')
+    seen = []
+    for p in phrases:
+        words = [w for w in p.split() if w.lower() not in _COMMON_LEADING_WORDS]
+        if not words:
+            continue
+        if all(w.lower() in _GENERIC_TITLE_WORDS for w in words):
+            continue
+        cleaned = ' '.join(words)
+        if cleaned not in seen:
+            seen.append(cleaned)
+    seen.sort(key=lambda p: -len(p.split()))
+    return seen
+
+
 def _search_commons_image(query, min_width=500, min_height=300):
     """
     Free, keyless topical image search against Wikimedia Commons - used only
     when the RSS item and its own article page both have no usable photo at
     all. Costs nothing (no API key, no rate-limited paid quota) and returns a
     real, appropriately-licensed photo relevant to the article's subject
-    instead of jumping straight to a single generic placeholder. Returns a
-    direct image URL, or '' if nothing suitable turns up.
+    instead of jumping straight to a single generic placeholder.
+
+    A full headline rarely matches anything verbatim (Commons is a search
+    engine over file titles/descriptions, not a semantic image search), so
+    this tries the full query first and, if that finds nothing, retries with
+    the proper-noun phrases extracted from it (e.g. "Belarus", "Arab
+    Parliament") - much narrower terms that actually hit real files. Returns
+    a direct image URL, or '' if nothing suitable turns up at any tier.
     """
+    def _run_search(q):
+        try:
+            resp = requests.get(
+                'https://commons.wikimedia.org/w/api.php',
+                params={
+                    'action': 'query',
+                    'generator': 'search',
+                    'gsrsearch': f'filetype:bitmap {q}',
+                    'gsrnamespace': 6,
+                    'gsrlimit': 8,
+                    'prop': 'imageinfo',
+                    'iiprop': 'url|size|mime',
+                    'format': 'json',
+                },
+                headers={'User-Agent': 'AlmaghribNewsBot/1.0 (https://almaghrib.online)'},
+                timeout=8,
+            )
+            resp.raise_for_status()
+            pages = (resp.json().get('query') or {}).get('pages') or {}
+            for page in pages.values():
+                info = (page.get('imageinfo') or [{}])[0]
+                url = info.get('url') or ''
+                mime = info.get('mime') or ''
+                if not url or not mime.startswith('image/') or mime == 'image/svg+xml':
+                    continue
+                if (info.get('width') or 0) < min_width or (info.get('height') or 0) < min_height:
+                    continue
+                if any(hint in url.lower() for hint in _SKIP_IMAGE_HINTS):
+                    continue
+                return url
+        except Exception as e:
+            logger.warning(f"Commons image search failed for '{q}': {e}")
+        return ""
+
     if not query or not query.strip():
         return ""
-    try:
-        resp = requests.get(
-            'https://commons.wikimedia.org/w/api.php',
-            params={
-                'action': 'query',
-                'generator': 'search',
-                'gsrsearch': f'filetype:bitmap {query}',
-                'gsrnamespace': 6,
-                'gsrlimit': 8,
-                'prop': 'imageinfo',
-                'iiprop': 'url|size|mime',
-                'format': 'json',
-            },
-            headers={'User-Agent': 'AlmaghribNewsBot/1.0 (https://almaghrib.online)'},
-            timeout=8,
-        )
-        resp.raise_for_status()
-        pages = (resp.json().get('query') or {}).get('pages') or {}
-        for page in pages.values():
-            info = (page.get('imageinfo') or [{}])[0]
-            url = info.get('url') or ''
-            mime = info.get('mime') or ''
-            if not url or not mime.startswith('image/') or mime == 'image/svg+xml':
-                continue
-            if (info.get('width') or 0) < min_width or (info.get('height') or 0) < min_height:
-                continue
-            if any(hint in url.lower() for hint in _SKIP_IMAGE_HINTS):
-                continue
-            return url
-    except Exception as e:
-        logger.warning(f"Commons image search failed for '{query}': {e}")
+
+    result = _run_search(query)
+    if result:
+        return result
+
+    for phrase in _extract_search_phrases(query)[:4]:
+        if phrase.lower() == query.strip().lower():
+            continue
+        result = _run_search(phrase)
+        if result:
+            return result
     return ""
 
 
