@@ -1787,7 +1787,7 @@ def _backfill_missing_cover_image(log):
     log.article.save()
 
 
-def _push_saved_log_to_site(log, target_site):
+def _push_saved_log_to_site(log, target_site, category_rotation=None):
     """
     Core of both republish_ai_log (same site) and the bulk redistribution
     tool (a chosen, possibly different site): re-pushes log.article using
@@ -1800,9 +1800,17 @@ def _push_saved_log_to_site(log, target_site):
     *different* site could tag the wrong category (or one that doesn't
     exist there at all). When redistributing, the category is re-resolved
     against target_site's own primary categories instead, matching by the
-    article's local category name and falling back to that site's first
-    primary category - the same fallback generate_regular_article_for_site
-    itself uses when Gemini's pick doesn't match anything offered.
+    article's local category name when one genuinely matches.
+
+    When nothing matches, per feedback: don't dump every unmatched article
+    into a single fallback category when a site has several primary
+    categories configured in the WordPress plugin - that defeats the point
+    of having more than one. `category_rotation` (a dict the caller keeps
+    across a whole batch, keyed by site id) round-robins those unmatched
+    articles across all of that site's primary categories instead. A fresh
+    dict is used per call when the caller doesn't pass one (e.g. the
+    single-row republish button), which just means "first primary category"
+    for that one call - there's no batch to spread across anyway.
 
     Updates the log row in place (wp_site reassigned to wherever it actually
     landed; success clears error_message and fills published_url). Returns
@@ -1823,7 +1831,13 @@ def _push_saved_log_to_site(log, target_site):
         if site_primary_cats:
             local_cat_name = log.article.category.name if log.article.category else ''
             match = next((c for c in site_primary_cats if c['name'].strip() == local_cat_name), None)
-            wp_category_id = (match or site_primary_cats[0])['id']
+            if match:
+                wp_category_id = match['id']
+            else:
+                rotation = category_rotation if category_rotation is not None else {}
+                idx = rotation.get(target_site.id, 0)
+                wp_category_id = site_primary_cats[idx % len(site_primary_cats)]['id']
+                rotation[target_site.id] = idx + 1
 
     tag_names = [t for t in (log.tag_names or '').split(',') if t]
     try:
@@ -1900,6 +1914,11 @@ def redistribute_and_republish_logs(log_ids, target_site_ids):
         .select_related('article', 'wp_site')
     )
 
+    # Shared across the whole batch (not reset per-site) so unmatched
+    # articles landing on the same site spread across all of that site's
+    # primary categories instead of piling into just the first one.
+    category_rotation = {}
+
     site_idx = 0
     for log in logs:
         target_site = None
@@ -1913,7 +1932,7 @@ def redistribute_and_republish_logs(log_ids, target_site_ids):
             results['skipped'] += 1
             continue
 
-        if _push_saved_log_to_site(log, target_site):
+        if _push_saved_log_to_site(log, target_site, category_rotation=category_rotation):
             remaining[target_site.id] -= 1
             results['published'] += 1
         else:
