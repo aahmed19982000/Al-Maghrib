@@ -13,7 +13,8 @@ from bs4 import BeautifulSoup
 from django.utils import timezone
 from django.core.files.base import ContentFile
 from django.contrib.auth.models import User
-from django.db.models import Count, Q
+from decimal import Decimal
+from django.db.models import Count, Q, Sum
 from django.conf import settings
 from .models import Article, Category, AISettings, AISource, AIImportLog, WordPressSite, WordPressScheduleSlot
 
@@ -2973,6 +2974,68 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
         return None
 
 
+def get_today_total_cost():
+    """
+    Sum of AIImportLog.estimated_cost across every site/source for today,
+    used by the daily cost cap below. Includes failed rows deliberately - a
+    failed WordPress push after a paid Gemini call still cost real money
+    (see the AIImportLog.wp_site cost incident this cap exists to guard
+    against), so excluding failures would undercount the real spend.
+    """
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    total = AIImportLog.objects.filter(created_at__gte=today_start).aggregate(total=Sum('estimated_cost'))['total']
+    return total or Decimal('0')
+
+
+def send_telegram_alert(text):
+    """Best-effort one-shot Telegram notification to every configured allowed chat - never raises."""
+    ai_settings = AISettings.get_settings()
+    bot_token = ai_settings.telegram_bot_token
+    chat_ids = [c.strip() for c in (ai_settings.telegram_allowed_chats or '').split(',') if c.strip()]
+    if not bot_token or not chat_ids:
+        return
+    for chat_id in chat_ids:
+        try:
+            requests.post(
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                json={'chat_id': chat_id, 'text': text},
+                timeout=10,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send Telegram cost-cap alert to {chat_id}: {e}")
+
+
+def is_daily_cost_cap_exceeded(ai_settings):
+    """
+    Hard circuit breaker independent of any specific bug: if today's real
+    total spend (across every site/source, success or failed) has reached
+    the configured daily_cost_limit_usd, every further generation this
+    cycle - and every cycle for the rest of the day - is skipped outright,
+    regardless of cause. Sends one Telegram alert the first time the cap
+    trips each day (deduped via cost_cap_alert_sent_date) rather than
+    spamming one every 10-minute cycle. No-op (returns False) when no cap
+    is configured.
+    """
+    if not ai_settings.daily_cost_limit_usd:
+        return False
+
+    today = timezone.now().date()
+    total_today = get_today_total_cost()
+    if total_today < ai_settings.daily_cost_limit_usd:
+        return False
+
+    if ai_settings.cost_cap_alert_sent_date != today:
+        send_telegram_alert(
+            f"⚠️ تم الوصول للحد الأقصى اليومي لتكلفة الذكاء الاصطناعي "
+            f"(${total_today:.2f} من ${ai_settings.daily_cost_limit_usd}). "
+            f"تم إيقاف التوليد التلقائي حتى بداية اليوم التالي."
+        )
+        ai_settings.cost_cap_alert_sent_date = today
+        ai_settings.save(update_fields=['cost_cap_alert_sent_date'])
+
+    return True
+
+
 def run_ai_generation_cycle(target_site_id=None):
     """
     Executes a complete AI generation cycle:
@@ -2998,7 +3061,11 @@ def run_ai_generation_cycle(target_site_id=None):
     if not ai_settings.is_active:
         logger.info("AI Generation system is inactive.")
         return 0
-        
+
+    if is_daily_cost_cap_exceeded(ai_settings):
+        logger.warning("Daily AI cost cap reached - skipping this generation cycle entirely.")
+        return 0
+
     api_key = ai_settings.gemini_api_key or getattr(settings, 'GEMINI_API_KEY', None)
     if not api_key:
         logger.error("Gemini API key is not configured. Aborting run.")
@@ -3078,7 +3145,10 @@ def run_ai_generation_cycle(target_site_id=None):
     for source in sources:
         if generated_count >= limit:
             break
-            
+        if is_daily_cost_cap_exceeded(ai_settings):
+            logger.warning("Daily AI cost cap reached mid-cycle - stopping the rest of this run.")
+            break
+
         items = fetch_news_items_from_source(source.url)
         if not items:
             continue

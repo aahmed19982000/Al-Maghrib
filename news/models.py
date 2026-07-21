@@ -310,6 +310,18 @@ class AISettings(models.Model):
     last_vegetable_price_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لأسعار الخضار", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
     last_arab_currencies_at = models.DateTimeField(blank=True, null=True, verbose_name="وقت آخر نشر لأسعار العملات العربية", help_text="يُستخدم داخلياً لتقييد النشر لمرة واحدة يومياً.")
 
+    daily_cost_limit_usd = models.DecimalField(
+        max_digits=6, decimal_places=2, blank=True, null=True,
+        verbose_name="الحد الأقصى اليومي لتكلفة الذكاء الاصطناعي (USD)",
+        help_text="عند وصول إجمالي تكلفة اليوم لهذا الرقم، يتوقف النظام تلقائياً عن أي توليد جديد "
+                   "حتى بداية اليوم التالي، بغض النظر عن السبب - حماية من أي خلل غير متوقع يستهلك "
+                   "الميزانية. اتركه فارغاً لتعطيل هذا الحد.",
+    )
+    cost_cap_alert_sent_date = models.DateField(
+        blank=True, null=True, editable=False,
+        verbose_name="تاريخ آخر تنبيه لوصول الحد الأقصى",
+    )
+
     class Meta:
         verbose_name = "AI Global Settings"
         verbose_name_plural = "AI Global Settings"

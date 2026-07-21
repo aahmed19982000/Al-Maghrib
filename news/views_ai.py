@@ -47,7 +47,7 @@ class DashboardIndexView(StaffRequiredMixin, TemplateView):
 
 class SettingsUpdateView(StaffRequiredMixin, UpdateView):
     model = AISettings
-    fields = ['gemini_api_key', 'telegram_bot_token', 'telegram_allowed_chats', 'articles_per_day', 'max_words', 'is_active', 'publish_to_main_site']
+    fields = ['gemini_api_key', 'telegram_bot_token', 'telegram_allowed_chats', 'articles_per_day', 'max_words', 'is_active', 'publish_to_main_site', 'daily_cost_limit_usd']
     template_name = 'ai_dashboard/settings.html'
     success_url = reverse_lazy('news_ai:index')
 
@@ -63,6 +63,8 @@ class SettingsUpdateView(StaffRequiredMixin, UpdateView):
         context['local_source_ids'] = list(self.get_object().local_sources.values_list('id', flat=True))
         context['staff_authors'] = User.objects.filter(is_staff=True)
         context['default_author_ids'] = list(self.get_object().default_authors.values_list('id', flat=True))
+        from .ai_utils import get_today_total_cost
+        context['today_total_cost'] = get_today_total_cost()
         return context
 
     def form_valid(self, form):

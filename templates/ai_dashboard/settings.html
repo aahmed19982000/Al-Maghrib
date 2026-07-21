@@ -71,6 +71,16 @@
                 </div>
             </div>
 
+            <!-- Daily cost cap (safety net) -->
+            <div class="space-y-2 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
+                <label for="id_daily_cost_limit_usd" class="block text-sm font-semibold text-amber-400"><i class="fa-solid fa-shield-halved ml-1.5"></i>الحد الأقصى اليومي لتكلفة الذكاء الاصطناعي (دولار)</label>
+                <div class="flex items-center gap-4">
+                    <input type="number" step="0.01" name="daily_cost_limit_usd" id="id_daily_cost_limit_usd" value="{{ form.daily_cost_limit_usd.value|default_if_none:'' }}" min="0" placeholder="بلا حد (اتركه فارغاً)" class="block w-full max-w-xs px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-slate-200 transition duration-150">
+                    <span class="text-xs text-slate-400 whitespace-nowrap">التكلفة الفعلية اليوم حتى الآن: <strong class="text-slate-200 font-mono">${{ today_total_cost|floatformat:4 }}</strong></span>
+                </div>
+                <p class="text-xs text-slate-500">عند وصول إجمالي تكلفة اليوم لهذا الرقم، يتوقف النظام تلقائياً عن أي توليد جديد بغض النظر عن السبب - حماية من أي خلل غير متوقع يستهلك الميزانية دون ملاحظة، حتى بداية اليوم التالي. لو عندك بوت تليجرام مفعّل أعلاه، هيوصلك تنبيه فور الوصول للحد.</p>
+            </div>
+
             <!-- Active Checkbox toggle -->
             <div class="flex items-center space-x-3 space-x-reverse bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
                 <input type="checkbox" name="is_active" id="id_is_active" {% if form.is_active.value %}checked{% endif %} class="w-5 h-5 text-teal-600 bg-slate-900 border-slate-800 rounded focus:ring-teal-500 focus:ring-2 focus:ring-offset-0">
