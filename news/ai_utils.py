@@ -8,7 +8,7 @@ import bleach
 import requests
 from datetime import timedelta
 from zoneinfo import ZoneInfo
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 from django.utils import timezone
 from django.core.files.base import ContentFile
@@ -320,6 +320,57 @@ def fetch_google_trends_items(source_url):
     return items
 
 
+_IMAGE_META_SELECTORS = [
+    ('meta', {'property': 'og:image'}),
+    ('meta', {'property': 'og:image:secure_url'}),
+    ('meta', {'name': 'twitter:image'}),
+    ('meta', {'name': 'twitter:image:src'}),
+    ('meta', {'itemprop': 'image'}),
+    ('meta', {'name': 'thumbnail'}),
+    ('link', {'rel': 'image_src'}),
+]
+
+_SKIP_IMAGE_HINTS = ('logo', 'icon', 'avatar', 'sprite', 'placeholder', '.svg')
+
+
+def _scrape_image_from_article_page(link_url, headers):
+    """
+    Best-effort fallback for RSS items with no usable image in the feed
+    itself: fetches the linked article page and looks for a real photo on
+    it, since many sources omit <enclosure>/<media:content> from their feed
+    even though the article page itself has a perfectly good cover image.
+    Tries every common "social preview" meta tag first (og:image and its
+    common variants across sites), then falls back to the first
+    reasonably-named <img> inside the page's main content area. Returns ''
+    if nothing usable is found - callers fall back further from there.
+    """
+    try:
+        page_res = requests.get(link_url, headers=headers, timeout=8)
+        if page_res.status_code != 200:
+            return ""
+        page_soup = BeautifulSoup(page_res.content, 'html.parser')
+
+        for tag_name, attrs in _IMAGE_META_SELECTORS:
+            tag = page_soup.find(tag_name, attrs=attrs)
+            value = tag.get('content') or tag.get('href') if tag else None
+            if value:
+                return value
+
+        content_root = (
+            page_soup.find('article')
+            or page_soup.find('main')
+            or page_soup.find(class_=re.compile(r'article-body|post-content|entry-content'))
+        )
+        if content_root:
+            for img in content_root.find_all('img'):
+                src = img.get('src') or img.get('data-src') or ''
+                if src and not any(hint in src.lower() for hint in _SKIP_IMAGE_HINTS):
+                    return urljoin(link_url, src)
+    except Exception as pe:
+        logger.warning(f"Failed to scrape a cover image from {link_url}: {pe}")
+    return ""
+
+
 def fetch_news_items_from_source(source_url):
     """
     Fetches news items from an RSS feed or webpage.
@@ -380,16 +431,8 @@ def fetch_news_items_from_source(source_url):
                                 image_url = img.get('src')
                                 
                 if not image_url and link_text:
-                    try:
-                        page_res = requests.get(link_text, headers=headers, timeout=5)
-                        if page_res.status_code == 200:
-                            page_soup = BeautifulSoup(page_res.content, 'html.parser')
-                            og_img = page_soup.find('meta', property='og:image') or page_soup.find('meta', attrs={'name': 'twitter:image'})
-                            if og_img and og_img.get('content'):
-                                image_url = og_img.get('content')
-                    except Exception as pe:
-                        logger.warning(f"Failed to scrape og:image from {link_text}: {pe}")
-                                
+                    image_url = _scrape_image_from_article_page(link_text, headers)
+
                 items.append({
                     'title': title_text,
                     'link': link_text,
@@ -549,7 +592,15 @@ def fetch_image_file(image_url):
 # the official price APIs. Bundled locally (rather than hotlinked) because
 # Wikimedia's own file host rate-limits repeated direct requests.
 DEFAULT_COVER_IMAGE_DIR = os.path.join(settings.BASE_DIR, 'static', 'images', 'price_covers')
-DEFAULT_COVER_IMAGE_TYPES = {'gold', 'silver', 'dollar', 'iron', 'cement', 'poultry', 'fish', 'vegetable', 'arab_currencies'}
+DEFAULT_COVER_IMAGE_TYPES = {
+    'gold', 'silver', 'dollar', 'iron', 'cement', 'poultry', 'fish', 'vegetable', 'arab_currencies',
+    # Last-resort fallback for regular RSS-sourced articles when neither the
+    # feed nor the linked article page (see _scrape_image_from_article_page)
+    # has any usable photo - keeps every published post carrying a real
+    # featured image instead of none at all (see push_article_to_wordpress's
+    # Facebook/Jetpack og:image handling for why that matters).
+    'general_news',
+}
 
 
 def attach_default_cover_image(article, content_type):
@@ -2351,10 +2402,11 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             is_breaking=False,
             auto_translate=False
         )
-        if item.get('image_url'):
-            img_file = fetch_image_file(item['image_url'])
-            if img_file:
-                article.cover_image = img_file
+        img_file = fetch_image_file(item['image_url']) if item.get('image_url') else None
+        if img_file:
+            article.cover_image = img_file
+        else:
+            attach_default_cover_image(article, 'general_news')
 
         article.save()
 
@@ -2513,10 +2565,11 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
             is_breaking=False,
             auto_translate=False
         )
-        if item.get('image_url'):
-            img_file = fetch_image_file(item['image_url'])
-            if img_file:
-                article.cover_image = img_file
+        img_file = fetch_image_file(item['image_url']) if item.get('image_url') else None
+        if img_file:
+            article.cover_image = img_file
+        else:
+            attach_default_cover_image(article, 'general_news')
 
         article.save()
 
@@ -2784,10 +2837,11 @@ def run_ai_generation_cycle(target_site_id=None):
                         is_breaking=False,
                         auto_translate=False
                     )
-                    if item.get('image_url'):
-                        img_file = fetch_image_file(item['image_url'])
-                        if img_file:
-                            article.cover_image = img_file
+                    img_file = fetch_image_file(item['image_url']) if item.get('image_url') else None
+                    if img_file:
+                        article.cover_image = img_file
+                    else:
+                        attach_default_cover_image(article, 'general_news')
 
                     article.save()
                     
