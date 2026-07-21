@@ -10,12 +10,42 @@
         <p class="text-xs text-slate-400 mt-1">تتبع حالة فحص الأخبار، والنشر الناجح أو تفاصيل المشاكل والأخطاء التي يواجهها النظام.</p>
     </div>
 
+    {% if logs %}
+    <!-- Bulk redistribute: pick target sites here, check rows below (checkboxes
+         submit into this form via the form="" attribute even though they live
+         inside the table further down), then submit once. -->
+    <form id="bulk-redistribute-form" method="post" action="{% url 'news_ai:logs_bulk_redistribute' %}"
+          class="mb-4 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
+        {% csrf_token %}
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+            <span class="text-xs font-bold text-amber-400 whitespace-nowrap">
+                <i class="fa-solid fa-shuffle ml-1.5"></i>توزيع وإعادة نشر المحدد دفعة واحدة على:
+            </span>
+            <div class="flex flex-wrap gap-3">
+                {% for site in all_sites %}
+                <label class="inline-flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800/60 border border-slate-700/50 px-2.5 py-1.5 rounded-lg cursor-pointer hover:border-amber-500/40">
+                    <input type="checkbox" name="site_ids" value="{{ site.pk }}" class="accent-amber-500">
+                    {{ site.name }}
+                </label>
+                {% endfor %}
+            </div>
+            <button type="submit" class="mr-auto px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-lg transition whitespace-nowrap">
+                توزيع ونشر بدون تكلفة إضافية
+            </button>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-2">يوزّع المقالات المحددة تناوبياً على المواقع المختارة أعلاه، مع احترام الحد اليومي المسموح لكل موقع.</p>
+    </form>
+    {% endif %}
+
     <!-- Logs Table -->
     {% if logs %}
     <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/40">
         <table class="w-full text-right border-collapse">
             <thead>
                 <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase bg-slate-900/80">
+                    <th scope="col" class="px-4 py-4 font-bold text-center">
+                        <input type="checkbox" onclick="document.querySelectorAll('.log-select-cb').forEach(cb => cb.checked = this.checked)" class="accent-amber-500" title="تحديد كل الفاشلة">
+                    </th>
                     <th scope="col" class="px-6 py-4 font-bold">التاريخ والوقت</th>
                     <th scope="col" class="px-6 py-4 font-bold">الموقع المصدر</th>
                     <th scope="col" class="px-6 py-4 font-bold">الخبر المستهدف / الأصلي</th>
@@ -27,6 +57,11 @@
             <tbody class="divide-y divide-slate-800/60 text-sm text-slate-300">
                 {% for log in logs %}
                 <tr class="hover:bg-slate-800/30 transition duration-150 align-top">
+                    <td class="px-4 py-4 text-center">
+                        {% if log.status == 'failed' and log.article %}
+                        <input type="checkbox" name="log_ids" value="{{ log.pk }}" form="bulk-redistribute-form" class="log-select-cb accent-amber-500">
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4 text-xs font-mono text-slate-400 whitespace-nowrap">{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
                     <td class="px-6 py-4 font-semibold text-slate-200 whitespace-nowrap">{{ log.source.name|default:"مصدر محذوف" }}</td>
                     <td class="px-6 py-4 max-w-xs">
@@ -103,7 +138,7 @@
         </div>
     </div>
     {% endif %}
-    
+
     {% else %}
     <div class="text-center py-16 text-slate-500">
         <i class="fa-solid fa-file-invoice text-5xl mb-4 block text-slate-600"></i>

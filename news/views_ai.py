@@ -145,6 +145,11 @@ class ImportLogListView(StaffRequiredMixin, ListView):
     context_object_name = 'logs'
     paginate_by = 25
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['all_sites'] = WordPressSite.objects.filter(is_active=True).order_by('name')
+        return context
+
 
 class RepublishLogView(StaffRequiredMixin, View):
     """
@@ -168,6 +173,38 @@ class RepublishLogView(StaffRequiredMixin, View):
         return redirect('news_ai:logs')
 
     def get(self, request, pk, *args, **kwargs):
+        return redirect('news_ai:logs')
+
+
+class BulkRedistributeLogsView(StaffRequiredMixin, View):
+    """
+    Bulk-republishes a staff-picked set of failed AIImportLog entries across
+    a staff-picked set of WordPress sites in one action, instead of clicking
+    "republish" on each row individually - see
+    redistribute_and_republish_logs() for the distribution mechanics (round-
+    robin, respecting each site's daily_limit, no extra Gemini cost).
+    """
+    def post(self, request, *args, **kwargs):
+        from .ai_utils import redistribute_and_republish_logs
+        log_ids = request.POST.getlist('log_ids')
+        site_ids = request.POST.getlist('site_ids')
+
+        if not log_ids:
+            messages.error(request, "لم تحدد أي مقالات فاشلة لإعادة نشرها.")
+        elif not site_ids:
+            messages.error(request, "لم تحدد أي مواقع ووردبريس للتوزيع عليها.")
+        else:
+            results = redistribute_and_republish_logs(log_ids, site_ids)
+            messages.success(
+                request,
+                f"تم توزيع {len(log_ids)} مقالاً: نُشر {results['published']} بنجاح، "
+                f"فشل {results['failed']} مرة أخرى، وتم تخطي {results['skipped']} "
+                f"(المواقع المختارة وصلت للحد اليومي المسموح به)."
+            )
+
+        return redirect('news_ai:logs')
+
+    def get(self, request, *args, **kwargs):
         return redirect('news_ai:logs')
 
 

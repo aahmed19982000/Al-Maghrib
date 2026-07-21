@@ -1772,61 +1772,153 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
         raise Exception(f"خطأ في الاتصال بووردبريس: {e}") from e
 
 
-def republish_ai_log(log):
+def _backfill_missing_cover_image(log):
+    """Shared by republish_ai_log/redistribute: same free image chain a fresh generation gets."""
+    if log.article.cover_image:
+        return
+    search_query = log.focus_keyword or log.title or log.article.title
+    from core.utils import translate_text
+    commons_url = _search_commons_image(translate_text(search_query)) if search_query else ""
+    img_file = fetch_image_file(commons_url) if commons_url else None
+    if img_file:
+        log.article.cover_image = img_file
+    else:
+        attach_default_cover_image(log.article, 'general_news')
+    log.article.save()
+
+
+def _push_saved_log_to_site(log, target_site):
     """
-    Re-attempts the WordPress push for a previously failed AIImportLog entry
-    using the article/tags/category/focus-keyword already saved from the
-    original generation - no new Gemini call, so no additional API cost.
-    Updates the same log row in place (success clears error_message and
-    fills published_url; a renewed failure records the new error detail).
-    Returns True on success, False otherwise.
+    Core of both republish_ai_log (same site) and the bulk redistribution
+    tool (a chosen, possibly different site): re-pushes log.article using
+    the focus keyword/tags already saved from the original generation - no
+    new Gemini call, so no additional API cost either way.
+
+    wp_category_id is only reused as-is when target_site is the log's
+    original site - that id is a real WordPress term id specific to one
+    site's own category taxonomy, so reusing it verbatim against a
+    *different* site could tag the wrong category (or one that doesn't
+    exist there at all). When redistributing, the category is re-resolved
+    against target_site's own primary categories instead, matching by the
+    article's local category name and falling back to that site's first
+    primary category - the same fallback generate_regular_article_for_site
+    itself uses when Gemini's pick doesn't match anything offered.
+
+    Updates the log row in place (wp_site reassigned to wherever it actually
+    landed; success clears error_message and fills published_url). Returns
+    True on success, False otherwise.
     """
-    if not log.article or not log.wp_site:
-        log.error_message = "لا يمكن إعادة النشر: المقال أو الموقع المستهدف غير موجود (ربما تم حذفه)."
+    if not log.article:
+        log.error_message = "لا يمكن إعادة النشر: المقال غير موجود (ربما تم حذفه)."
         log.save(update_fields=['error_message'])
         return False
 
-    # Articles saved before the image fixes (or from a source that had no
-    # image at all at generation time) may still have no cover_image - try a
-    # free topical Commons search first (using the saved focus keyword, or
-    # the log/article title for older entries predating that field), and
-    # only fall back to the generic bundled default if that also finds
-    # nothing, same as a freshly-generated article would get.
-    if not log.article.cover_image:
-        search_query = log.focus_keyword or log.title or log.article.title
-        from core.utils import translate_text
-        commons_url = _search_commons_image(translate_text(search_query)) if search_query else ""
-        img_file = fetch_image_file(commons_url) if commons_url else None
-        if img_file:
-            log.article.cover_image = img_file
-        else:
-            attach_default_cover_image(log.article, 'general_news')
-        log.article.save()
+    _backfill_missing_cover_image(log)
+
+    if log.wp_site_id == target_site.id:
+        wp_category_id = log.wp_category_id
+    else:
+        wp_category_id = None
+        site_primary_cats = fetch_wp_primary_categories(target_site)
+        if site_primary_cats:
+            local_cat_name = log.article.category.name if log.article.category else ''
+            match = next((c for c in site_primary_cats if c['name'].strip() == local_cat_name), None)
+            wp_category_id = (match or site_primary_cats[0])['id']
 
     tag_names = [t for t in (log.tag_names or '').split(',') if t]
     try:
         published_url = push_article_to_wordpress(
-            log.wp_site, log.article, extra_tag_names=tag_names,
+            target_site, log.article, extra_tag_names=tag_names,
             focus_keyword=log.focus_keyword or None,
             meta_description=log.article.meta_desc or None,
-            wp_category_id=log.wp_category_id,
+            wp_category_id=wp_category_id,
         )
     except Exception as wpe:
-        logger.error(f"Republish failed for AIImportLog {log.pk} on {log.wp_site.name}: {wpe}")
+        logger.error(f"Republish failed for AIImportLog {log.pk} on {target_site.name}: {wpe}")
+        log.wp_site = target_site
         log.error_message = str(wpe)
-        log.save(update_fields=['error_message'])
+        log.save(update_fields=['wp_site', 'error_message'])
         return False
 
     if published_url:
+        log.wp_site = target_site
         log.status = 'success'
         log.published_url = published_url
         log.error_message = ''
-        log.save(update_fields=['status', 'published_url', 'error_message'])
+        log.wp_category_id = wp_category_id
+        log.save(update_fields=['wp_site', 'status', 'published_url', 'error_message', 'wp_category_id'])
         return True
 
+    log.wp_site = target_site
     log.error_message = 'فشل النشر على ووردبريس'
-    log.save(update_fields=['error_message'])
+    log.save(update_fields=['wp_site', 'error_message'])
     return False
+
+
+def republish_ai_log(log):
+    """
+    Re-attempts the WordPress push for a previously failed AIImportLog entry
+    on the same site it originally failed on. See _push_saved_log_to_site
+    for the shared mechanics. Returns True on success, False otherwise.
+    """
+    if not log.wp_site:
+        log.error_message = "لا يمكن إعادة النشر: الموقع المستهدف غير موجود (ربما تم حذفه)."
+        log.save(update_fields=['error_message'])
+        return False
+    return _push_saved_log_to_site(log, log.wp_site)
+
+
+def redistribute_and_republish_logs(log_ids, target_site_ids):
+    """
+    Bulk-redistributes a chosen set of failed AIImportLog entries across a
+    chosen set of WordPress sites in one batch, instead of retrying each one
+    individually back onto whatever site it originally failed on. Splits
+    round-robin across the target sites while respecting each site's own
+    remaining daily_limit for today (same accounting the main generation
+    cycle itself uses - see run_ai_generation_cycle's wp_site_counts), so a
+    bulk redistribution can't blow past a site's normal daily cap. No new
+    Gemini calls - reuses each article's already-paid-for content.
+    Returns {'published': int, 'failed': int, 'skipped': int} - 'skipped'
+    counts logs left over once every target site hit its daily cap.
+    """
+    sites = list(WordPressSite.objects.filter(id__in=target_site_ids, is_active=True))
+    results = {'published': 0, 'failed': 0, 'skipped': 0}
+    if not sites:
+        results['skipped'] = len(log_ids)
+        return results
+
+    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    remaining = {}
+    for site in sites:
+        published_today = AIImportLog.objects.filter(
+            wp_site=site, status='success', created_at__gte=today_start
+        ).count()
+        remaining[site.id] = max(0, (site.daily_limit or 0) - published_today)
+
+    logs = list(
+        AIImportLog.objects.filter(id__in=log_ids, status='failed')
+        .select_related('article', 'wp_site')
+    )
+
+    site_idx = 0
+    for log in logs:
+        target_site = None
+        for _ in range(len(sites)):
+            candidate = sites[site_idx % len(sites)]
+            site_idx += 1
+            if remaining.get(candidate.id, 0) > 0:
+                target_site = candidate
+                break
+        if not target_site:
+            results['skipped'] += 1
+            continue
+
+        if _push_saved_log_to_site(log, target_site):
+            remaining[target_site.id] -= 1
+            results['published'] += 1
+        else:
+            results['failed'] += 1
+    return results
 
 
 def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str, wp_category_id=None):
