@@ -18,29 +18,30 @@
     </div>
 
     {% if logs %}
-    <!-- Bulk redistribute: pick target sites here, check rows below (checkboxes
-         submit into this form via the form="" attribute even though they live
-         inside the table further down), then submit once. -->
+    <!-- Bulk redistribute: type how many of the checked failed articles below
+         each site should get here, check rows below (checkboxes submit into
+         this form via the form="" attribute even though they live inside the
+         table further down), then submit once. -->
     <form id="bulk-redistribute-form" method="post" action="{% url 'news_ai:logs_bulk_redistribute' %}"
           class="mb-4 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
         {% csrf_token %}
-        <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-amber-400 whitespace-nowrap">
-                <i class="fa-solid fa-shuffle ml-1.5"></i>توزيع وإعادة نشر المحدد دفعة واحدة على:
+                <i class="fa-solid fa-shuffle ml-1.5"></i>توزيع وإعادة نشر المحدد دفعة واحدة - حدد كم خبر ياخذ كل موقع:
             </span>
-            <div class="flex flex-wrap gap-3">
-                {% for site in all_sites %}
-                <label class="inline-flex items-center gap-1.5 text-xs text-slate-300 bg-slate-800/60 border border-slate-700/50 px-2.5 py-1.5 rounded-lg cursor-pointer hover:border-amber-500/40">
-                    <input type="checkbox" name="site_ids" value="{{ site.pk }}" class="accent-amber-500">
-                    {{ site.name }}
-                </label>
-                {% endfor %}
-            </div>
-            <button type="submit" class="mr-auto px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-lg transition whitespace-nowrap">
+            <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold rounded-lg transition whitespace-nowrap">
                 توزيع ونشر بدون تكلفة إضافية
             </button>
         </div>
-        <p class="text-[11px] text-slate-500 mt-2">يوزّع المقالات المحددة تناوبياً على المواقع المختارة أعلاه، مع احترام الحد اليومي المسموح لكل موقع.</p>
+        <div class="flex flex-wrap gap-3">
+            {% for site in all_sites %}
+            <label class="inline-flex items-center gap-2 text-xs text-slate-300 bg-slate-800/60 border border-slate-700/50 px-2.5 py-1.5 rounded-lg">
+                <span>{{ site.name }}</span>
+                <input type="number" name="site_count_{{ site.pk }}" min="0" placeholder="0" class="w-16 px-2 py-1 bg-slate-900 border border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 text-slate-200 text-center">
+            </label>
+            {% endfor %}
+        </div>
+        <p class="text-[11px] text-slate-500 mt-2">يوزّع المقالات المحددة على المواقع بالعدد المحدد لكل واحد بالضبط، بدون أي اعتماد على الحد اليومي المسموح للموقع. اترك الحقل فارغاً أو صفر لاستبعاد الموقع.</p>
     </form>
     {% endif %}
 

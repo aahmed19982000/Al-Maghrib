@@ -1969,32 +1969,37 @@ def republish_ai_log(log):
     return _push_saved_log_to_site(log, log.wp_site)
 
 
-def redistribute_and_republish_logs(log_ids, target_site_ids):
+def redistribute_and_republish_logs(log_ids, site_counts):
     """
-    Bulk-redistributes a chosen set of failed AIImportLog entries across a
-    chosen set of WordPress sites in one batch, instead of retrying each one
-    individually back onto whatever site it originally failed on. Splits
-    round-robin across the target sites while respecting each site's own
-    remaining daily_limit for today (same accounting the main generation
-    cycle itself uses - see run_ai_generation_cycle's wp_site_counts), so a
-    bulk redistribution can't blow past a site's normal daily cap. No new
-    Gemini calls - reuses each article's already-paid-for content.
+    Bulk-redistributes a chosen set of failed AIImportLog entries according
+    to an explicit admin-specified count per WordPress site (e.g. "Site A
+    gets 5, Site B gets 3 of the selected articles"). Per request, this is a
+    deliberate manual allocation and does NOT check any site's daily_limit -
+    the admin is explicitly directing this batch, so the normal automatic-
+    generation daily cap doesn't apply here. No new Gemini calls - reuses
+    each article's already-paid-for content.
+
+    `site_counts`: {site_id: count}. Sites with a count of 0 or less are
+    ignored. Each count is consumed on every *attempt* at that site
+    (success or failure) - it's an allocation of which articles go where,
+    not a "keep retrying until N succeed" guarantee.
+
     Returns {'published': int, 'failed': int, 'skipped': int} - 'skipped'
-    counts logs left over once every target site hit its daily cap.
+    counts logs left over once every site's requested count is used up.
     """
-    sites = list(WordPressSite.objects.filter(id__in=target_site_ids, is_active=True))
+    # Normalize keys to int - this crosses a Celery task boundary (see
+    # redistribute_and_republish_logs_task), and JSON (Celery's default
+    # serializer) always turns dict keys into strings.
+    site_counts = {int(sid): count for sid, count in site_counts.items()}
+    wanted_site_ids = [sid for sid, count in site_counts.items() if count and int(count) > 0]
+    sites_by_id = {s.id: s for s in WordPressSite.objects.filter(id__in=wanted_site_ids, is_active=True)}
     results = {'published': 0, 'failed': 0, 'skipped': 0}
-    if not sites:
+    if not sites_by_id:
         results['skipped'] = len(log_ids)
         return results
 
-    today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    remaining = {}
-    for site in sites:
-        published_today = AIImportLog.objects.filter(
-            wp_site=site, status='success', created_at__gte=today_start
-        ).count()
-        remaining[site.id] = max(0, (site.daily_limit or 0) - published_today)
+    remaining = {sid: int(site_counts[sid]) for sid in sites_by_id}
+    sites_order = list(sites_by_id.values())
 
     logs = list(
         AIImportLog.objects.filter(id__in=log_ids, status='failed')
@@ -2009,8 +2014,8 @@ def redistribute_and_republish_logs(log_ids, target_site_ids):
     site_idx = 0
     for log in logs:
         target_site = None
-        for _ in range(len(sites)):
-            candidate = sites[site_idx % len(sites)]
+        for _ in range(len(sites_order)):
+            candidate = sites_order[site_idx % len(sites_order)]
             site_idx += 1
             if remaining.get(candidate.id, 0) > 0:
                 target_site = candidate
@@ -2019,8 +2024,8 @@ def redistribute_and_republish_logs(log_ids, target_site_ids):
             results['skipped'] += 1
             continue
 
+        remaining[target_site.id] -= 1
         if _push_saved_log_to_site(log, target_site, category_rotation=category_rotation):
-            remaining[target_site.id] -= 1
             results['published'] += 1
         else:
             results['failed'] += 1

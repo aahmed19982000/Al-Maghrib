@@ -189,10 +189,11 @@ class RepublishLogView(StaffRequiredMixin, View):
 class BulkRedistributeLogsView(StaffRequiredMixin, View):
     """
     Bulk-republishes a staff-picked set of failed AIImportLog entries across
-    a staff-picked set of WordPress sites in one action, instead of clicking
-    "republish" on each row individually - see
-    redistribute_and_republish_logs() for the distribution mechanics (round-
-    robin, respecting each site's daily_limit, no extra Gemini cost).
+    an explicit staff-specified count per WordPress site (e.g. "Site A gets
+    5, Site B gets 3") in one action, instead of clicking "republish" on
+    each row individually - see redistribute_and_republish_logs() for the
+    distribution mechanics. This manual allocation deliberately ignores
+    each site's daily_limit entirely, per request.
 
     Dispatched to Celery rather than run inline: each article is a full
     WordPress round-trip, so redistributing more than a few at once in the
@@ -202,18 +203,24 @@ class BulkRedistributeLogsView(StaffRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         from .tasks import redistribute_and_republish_logs_task
         log_ids = request.POST.getlist('log_ids')
-        site_ids = request.POST.getlist('site_ids')
+
+        site_counts = {}
+        for site in WordPressSite.objects.filter(is_active=True):
+            raw = request.POST.get(f'site_count_{site.id}', '').strip()
+            if raw.isdigit() and int(raw) > 0:
+                site_counts[site.id] = int(raw)
 
         if not log_ids:
             messages.error(request, "لم تحدد أي مقالات فاشلة لإعادة نشرها.")
-        elif not site_ids:
-            messages.error(request, "لم تحدد أي مواقع ووردبريس للتوزيع عليها.")
+        elif not site_counts:
+            messages.error(request, "لم تحدد عدد الأخبار لأي موقع ووردبريس.")
         else:
-            redistribute_and_republish_logs_task.delay(log_ids, site_ids)
+            redistribute_and_republish_logs_task.delay(log_ids, site_counts)
+            total_allocated = sum(site_counts.values())
             messages.success(
                 request,
-                f"تم إرسال طلب توزيع {len(log_ids)} مقالاً إلى الخلفية، وسيتم تنفيذه خلال دقائق قليلة. "
-                f"تحقّق من سجل العمليات بعد قليل لمتابعة النتيجة."
+                f"تم إرسال طلب توزيع {min(total_allocated, len(log_ids))} من أصل {len(log_ids)} مقالاً محدداً "
+                f"إلى الخلفية، وسيتم تنفيذه خلال دقائق قليلة. تحقّق من سجل العمليات بعد قليل لمتابعة النتيجة."
             )
 
         return redirect('news_ai:logs')

@@ -71,7 +71,7 @@ def scrape_and_generate_news_task(self, target_site_id=None):
 
 
 @shared_task(bind=True, max_retries=1, default_retry_delay=30)
-def redistribute_and_republish_logs_task(self, log_ids, target_site_ids):
+def redistribute_and_republish_logs_task(self, log_ids, site_counts):
     """
     Runs the bulk log-redistribution in the background instead of inline in
     the request/response cycle - each article involves a full WordPress
@@ -79,10 +79,13 @@ def redistribute_and_republish_logs_task(self, log_ids, target_site_ids):
     5s wait for the featured image), so redistributing more than a handful
     at once easily exceeds Cloudflare's gateway timeout if done synchronously
     (see BulkRedistributeLogsView, which now just queues this task).
+
+    `site_counts`: {site_id: count} - how many of the selected failed
+    articles each site should get, per admin's explicit manual allocation.
     """
     try:
         from news.ai_utils import redistribute_and_republish_logs
-        results = redistribute_and_republish_logs(log_ids, target_site_ids)
+        results = redistribute_and_republish_logs(log_ids, site_counts)
         logger.info(f"Bulk redistribute finished: {results}")
         return results
     except Exception as exc:
