@@ -621,10 +621,17 @@ def fetch_news_items_from_source(source_url):
                 if not image_url and link_text:
                     image_url = _scrape_image_from_article_page(link_text, headers)
 
-                if not image_url and title_text:
-                    from core.utils import translate_text
-                    translated_title = translate_text(title_text)
-                    image_url = _find_topical_image(translated_title, translated_title)
+                # NOTE: deliberately NOT calling the AI-reviewed Commons search
+                # (_find_topical_image) here - this function runs for every
+                # single item in the feed on every scheduled poll (every 10
+                # minutes, see scrape_and_generate_news_task's crontab),
+                # regardless of whether an item ends up actually being
+                # generated (most are skipped later as duplicates or excluded
+                # topics). Doing a Gemini call per item here silently multiplied
+                # into a real, unbounded cost spike. The AI search only runs
+                # later, in generate_regular_article_for_site/reword_regular_
+                # article_for_site, once an item has already survived the
+                # duplicate/exclusion checks and is about to actually publish.
 
                 items.append({
                     'title': title_text,
@@ -2741,6 +2748,11 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             auto_translate=False
         )
         img_file = fetch_image_file(item['image_url']) if item.get('image_url') else None
+        if not img_file:
+            from core.utils import translate_text
+            translated_title = translate_text(new_title)
+            commons_url = _find_topical_image(translated_title, translated_title)
+            img_file = fetch_image_file(commons_url) if commons_url else None
         if img_file:
             article.cover_image = img_file
         else:
@@ -2905,6 +2917,11 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
             auto_translate=False
         )
         img_file = fetch_image_file(item['image_url']) if item.get('image_url') else None
+        if not img_file:
+            from core.utils import translate_text
+            translated_title = translate_text(new_title)
+            commons_url = _find_topical_image(translated_title, translated_title)
+            img_file = fetch_image_file(commons_url) if commons_url else None
         if img_file:
             article.cover_image = img_file
         else:
@@ -3178,6 +3195,9 @@ def run_ai_generation_cycle(target_site_id=None):
                         auto_translate=False
                     )
                     img_file = fetch_image_file(item['image_url']) if item.get('image_url') else None
+                    if not img_file:
+                        commons_url = _find_topical_image(title_en, title_en)
+                        img_file = fetch_image_file(commons_url) if commons_url else None
                     if img_file:
                         article.cover_image = img_file
                     else:
