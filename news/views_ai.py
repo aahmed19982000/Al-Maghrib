@@ -146,6 +146,31 @@ class ImportLogListView(StaffRequiredMixin, ListView):
     paginate_by = 25
 
 
+class RepublishLogView(StaffRequiredMixin, View):
+    """
+    Re-attempts the WordPress push for a single failed AIImportLog entry
+    using the article/tags/category already saved from the original
+    generation - see republish_ai_log() for why this costs nothing extra.
+    """
+    def post(self, request, pk, *args, **kwargs):
+        from .ai_utils import republish_ai_log
+        log = get_object_or_404(AIImportLog, pk=pk)
+        if log.status != 'failed':
+            messages.info(request, "هذا السجل ليس فاشلاً بالفعل.")
+        elif republish_ai_log(log):
+            messages.success(request, f"تم نشر المقال بنجاح على '{log.wp_site.name if log.wp_site else ''}'.")
+        else:
+            messages.error(request, f"فشلت إعادة النشر مرة أخرى: {log.error_message}")
+
+        referer = request.META.get('HTTP_REFERER')
+        if referer and url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
+            return redirect(referer)
+        return redirect('news_ai:logs')
+
+    def get(self, request, pk, *args, **kwargs):
+        return redirect('news_ai:logs')
+
+
 class TriggerScraperView(StaffRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         try:

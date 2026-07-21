@@ -69,6 +69,14 @@
                             <div class="text-xs text-rose-450 bg-rose-950/30 p-2.5 rounded-lg border border-rose-900/50 break-words font-mono">
                                 {% if log.wp_site %}<strong>[{{ log.wp_site.name }}]</strong> {% endif %}{{ log.error_message }}
                             </div>
+                            {% if log.article and log.wp_site %}
+                            <form method="post" action="{% url 'news_ai:log_republish' log.pk %}" class="mt-2">
+                                {% csrf_token %}
+                                <button type="submit" class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition">
+                                    <i class="fa-solid fa-rotate-right ml-1.5"></i>إعادة نشر بدون تكلفة إضافية
+                                </button>
+                            </form>
+                            {% endif %}
                         {% else %}
                             <span class="text-xs text-slate-500 italic">لا يوجد سجل منشور أو محذوف</span>
                         {% endif %}

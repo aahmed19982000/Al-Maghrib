@@ -11,6 +11,7 @@ urlpatterns = [
     path('sources/<int:pk>/edit/', views_ai.SourceUpdateView.as_view(), name='source_edit'),
     path('sources/<int:pk>/delete/', views_ai.SourceDeleteView.as_view(), name='source_delete'),
     path('logs/', views_ai.ImportLogListView.as_view(), name='logs'),
+    path('logs/<int:pk>/republish/', views_ai.RepublishLogView.as_view(), name='log_republish'),
     path('trigger/', views_ai.TriggerScraperView.as_view(), name='trigger'),
     # WordPress Sites
     path('wp-sites/', views_ai.WordPressSiteListView.as_view(), name='wp_sites'),

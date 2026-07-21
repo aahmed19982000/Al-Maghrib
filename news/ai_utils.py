@@ -1114,6 +1114,9 @@ def generate_official_commodity_article_for_site(wp_site, topic_title, items, so
             title=new_title,
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
+            wp_category_id=wp_category_id,
+            focus_keyword=focus_keyword,
+            tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -1297,6 +1300,9 @@ def generate_arab_currencies_article_for_site(wp_site, currency_items, source_ur
             title=new_title,
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
+            wp_category_id=wp_category_id,
+            focus_keyword=focus_keyword,
+            tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -1367,6 +1373,38 @@ def fetch_wp_primary_categories(wp_site):
         logger.warning(f"Failed to fetch primary categories from plugin on {wp_site.name}: {e}")
         return []
     return [{'id': c['id'], 'name': c['name']} for c in data if c.get('is_primary')]
+
+
+def _wp_post_with_retry(url, auth, headers, payload, timeout, max_retries=2):
+    """
+    POSTs to a WordPress REST endpoint, retrying only failures that look
+    transient (connection/timeout errors, or 5xx/429 responses) with a short
+    backoff. Permanent-looking failures (4xx - bad auth, validation
+    rejections, etc.) are returned immediately on the first attempt since
+    retrying an identical request can't fix those and would only burn more
+    time waiting on a doomed call.
+    """
+    attempt = 0
+    while True:
+        try:
+            response = requests.post(url, auth=auth, headers=headers, json=payload, timeout=timeout)
+        except requests.exceptions.RequestException as e:
+            if attempt >= max_retries:
+                raise
+            attempt += 1
+            logger.warning(f"Transient network error posting to {url} (attempt {attempt}/{max_retries}): {e}")
+            time.sleep(3 * attempt)
+            continue
+
+        if response.status_code >= 500 or response.status_code == 429:
+            if attempt >= max_retries:
+                return response
+            attempt += 1
+            logger.warning(f"WP returned {response.status_code} from {url} (attempt {attempt}/{max_retries}), retrying")
+            time.sleep(3 * attempt)
+            continue
+
+        return response
 
 
 def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyword=None, meta_description=None, wp_category_id=None):
@@ -1504,7 +1542,7 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
     # Facebook share preview.
     try:
         headers = {'Content-Type': 'application/json'}
-        response = requests.post(posts_url, auth=auth, headers=headers, json=payload, timeout=20)
+        response = _wp_post_with_retry(posts_url, auth, headers, payload, timeout=20)
         if response.status_code != 201:
             logger.error(f"Failed to push post to WP site {wp_site.name}: {response.text}")
             raise Exception(f"رفض ووردبريس نشر المقال (كود {response.status_code}): {response.text[:300]}")
@@ -1517,9 +1555,8 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
             time.sleep(5)
 
         try:
-            publish_response = requests.post(
-                f"{posts_url}/{post_id}", auth=auth, headers=headers,
-                json={'status': 'publish'}, timeout=20,
+            publish_response = _wp_post_with_retry(
+                f"{posts_url}/{post_id}", auth, headers, {'status': 'publish'}, timeout=20,
             )
             if publish_response.status_code == 200:
                 published_url = publish_response.json().get('link', published_url)
@@ -1546,6 +1583,46 @@ def push_article_to_wordpress(wp_site, article, extra_tag_names=None, focus_keyw
         if str(e).startswith("رفض ووردبريس"):
             raise
         raise Exception(f"خطأ في الاتصال بووردبريس: {e}") from e
+
+
+def republish_ai_log(log):
+    """
+    Re-attempts the WordPress push for a previously failed AIImportLog entry
+    using the article/tags/category/focus-keyword already saved from the
+    original generation - no new Gemini call, so no additional API cost.
+    Updates the same log row in place (success clears error_message and
+    fills published_url; a renewed failure records the new error detail).
+    Returns True on success, False otherwise.
+    """
+    if not log.article or not log.wp_site:
+        log.error_message = "لا يمكن إعادة النشر: المقال أو الموقع المستهدف غير موجود (ربما تم حذفه)."
+        log.save(update_fields=['error_message'])
+        return False
+
+    tag_names = [t for t in (log.tag_names or '').split(',') if t]
+    try:
+        published_url = push_article_to_wordpress(
+            log.wp_site, log.article, extra_tag_names=tag_names,
+            focus_keyword=log.focus_keyword or None,
+            meta_description=log.article.meta_desc or None,
+            wp_category_id=log.wp_category_id,
+        )
+    except Exception as wpe:
+        logger.error(f"Republish failed for AIImportLog {log.pk} on {log.wp_site.name}: {wpe}")
+        log.error_message = str(wpe)
+        log.save(update_fields=['error_message'])
+        return False
+
+    if published_url:
+        log.status = 'success'
+        log.published_url = published_url
+        log.error_message = ''
+        log.save(update_fields=['status', 'published_url', 'error_message'])
+        return True
+
+    log.error_message = 'فشل النشر على ووردبريس'
+    log.save(update_fields=['error_message'])
+    return False
 
 
 def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai_settings, api_key, allowed_cats, categories_list_str, wp_category_id=None):
@@ -1714,6 +1791,9 @@ def generate_gold_price_article_for_site(wp_site, gold_data, comparison_text, ai
             title=new_title,
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
+            wp_category_id=wp_category_id,
+            focus_keyword=focus_keyword,
+            tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -1895,6 +1975,9 @@ def generate_silver_price_article_for_site(wp_site, silver_data, comparison_text
             title=new_title,
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
+            wp_category_id=wp_category_id,
+            focus_keyword=focus_keyword,
+            tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -2072,6 +2155,9 @@ def generate_dollar_price_article_for_site(wp_site, dollar_data, comparison_text
             title=new_title,
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
+            wp_category_id=wp_category_id,
+            focus_keyword=focus_keyword,
+            tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -2295,6 +2381,9 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             title=new_title,
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
+            wp_category_id=wp_category_id_for_push,
+            focus_keyword=focus_keyword,
+            tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
@@ -2453,6 +2542,9 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
             title=new_title,
             status='success' if published_url else 'failed',
             error_message='' if published_url else (wp_error_detail or 'فشل النشر على ووردبريس'),
+            wp_category_id=wp_category_id_for_push,
+            focus_keyword=master['focus_keyword'],
+            tag_names=','.join(tag_names) if tag_names else '',
             input_tokens=ai_usage.get('input_tokens'),
             output_tokens=ai_usage.get('output_tokens'),
         )
