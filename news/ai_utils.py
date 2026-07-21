@@ -108,6 +108,20 @@ IMAGE_ALT_INSTRUCTION = (
     "مختصراً ومباشراً يخدم السيو (SEO) وقارئ الشاشة معاً."
 )
 
+# Shared instruction added to every generation prompt that could otherwise
+# echo the original outlet's name back (either because it's given as context,
+# or because the source article/master text already mentions it) - covers
+# both the title AND the body, since Gemini has been observed slipping the
+# outlet name into a body sentence (e.g. "وبحسب موقع كذا...") even when the
+# title itself is clean. Paired with a post-generation body check further
+# down using title_contains_source_name() as a safety net.
+NO_SOURCE_NAME_INSTRUCTION = (
+    "لا تذكر اسم الموقع أو الوكالة الإخبارية أو الصحيفة التي نُقل عنها هذا الخبر إطلاقاً - لا في العنوان ولا في أي "
+    "جملة من نص الخبر (تجنّب عبارات مثل \"بحسب موقع...\" أو \"ونقلت وكالة...\" أو \"وفقاً لما ذكرته منصة...\" "
+    "أو \"وبحسب ما نشره...\"). تأكد من حذف أي أسماء مثل (اليوم السابع، الجزيرة، العربية، بلومبرغ، رويترز، بانكرز توداي... الخ) "
+    "من النص المكتوب. اكتب الخبر مباشرة كحقيقة مستقلة وموثوقة دون الإشارة إلى أي جهة إعلامية بعينها."
+)
+
 
 def build_seo_keyphrase_instruction(use_rich_formatting):
     """
@@ -269,6 +283,34 @@ def call_gemini_api(prompt, api_key=None):
         if 'response' in locals():
             logger.error(f"Response: {response.text}")
     return None, {}
+
+
+def fetch_full_article_text(url):
+    """
+    Fetches the full article body from a given URL to provide better context for the AI.
+    """
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code != 200:
+            return ""
+        soup = BeautifulSoup(res.content, 'html.parser')
+        
+        # Look for main article body
+        article = soup.find('article') or soup.find('div', id='articleBody') or soup.find('div', class_=re.compile(r'article.*body|content|story', re.I))
+        if not article:
+            article = soup
+            
+        paragraphs = article.find_all(['p', 'li', 'h2', 'h3'])
+        text_parts = []
+        for p in paragraphs:
+            text = p.get_text(separator=' ', strip=True)
+            if len(text) > 30 and text not in text_parts:
+                text_parts.append(text)
+        return '\n\n'.join(text_parts)
+    except Exception as e:
+        logger.warning(f"Could not fetch full article body from {url}: {e}")
+        return ""
 
 
 def fetch_google_trends_items(source_url):
@@ -2643,8 +2685,8 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
 
     prompt = (
         f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
-        f"استناداً إلى المعلومات والخبر التالي:\n"
-        f"المصدر: {source.name}\n"
+        f"استناداً إلى المعلومات والخبر التالي (المصدر الأصلي غير مذكور هنا عمداً - لا تحاول تخمينه أو "
+        f"ذكر أي جهة إعلامية):\n"
         f"عنوان الخبر الأصلي: {item['title']}\n"
         f"تفاصيل الخبر: {item['description']}\n\n"
         f"الرجاء الالتزام التام بالتعليمات التالية:\n"
@@ -2668,6 +2710,7 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
         f"جوجل عن هذا الموضوع بالذات (مثال لخبر عن سعر اليورو: \"سعر اليورو اليوم\"، \"اليورو مقابل "
         f"الجنيه\")، بدون ذكر اسم أي موقع إخباري.\n\n"
         f"8. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{site_categories_list_str}\n"
+        f"9. {NO_SOURCE_NAME_INSTRUCTION}\n"
         f"{internal_link_instruction}"
         f"{explainer_instruction}\n\n"
         f"هام جداً: صغ هذا الخبر بصياغة فريدة ومختلفة تماماً عن أي صياغات سابقة، باستخدام هيكل ومترادفات مختلفة لموقع الويب المحدد: {wp_site.name}."
@@ -2712,6 +2755,8 @@ def generate_regular_article_for_site(wp_site, source, item, ai_settings, api_ke
             raise ValueError("بيانات العنوان أو المحتوى فارغة.")
         if title_contains_source_name(new_title, source.name):
             raise ValueError("العنوان يحتوي على اسم المصدر.")
+        if title_contains_source_name(new_body, source.name):
+            raise ValueError("محتوى الخبر يحتوي على اسم المصدر.")
 
         wp_category_id_for_push = None
         category_name_for_group = ''
@@ -2863,6 +2908,8 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
         f"- \"title\": العنوان الجديد بالصياغة المختلفة\n"
         f"- \"excerpt\": الملخص الجديد\n"
         f"- \"body\": {body_format_instruction}\n\n"
+        f"5. {NO_SOURCE_NAME_INSTRUCTION} إن كان النص الأصلي أعلاه يذكر اسم أي موقع أو وكالة إخبارية بالخطأ، "
+        f"احذف الإشارة إليها تماماً في الصياغة الجديدة دون الإخلال بالمعنى.\n\n"
         f"هام جداً: يجب أن تكون الصياغة فريدة تماماً ومختلفة عن النص الأصلي أعلاه لموقع الويب المحدد: {wp_site.name}، "
         f"مع عدم تغيير أي معلومة أو رقم أو حقيقة واردة في النص الأصلي."
     )
@@ -2895,6 +2942,8 @@ def reword_regular_article_for_site(wp_site, source, item, master, ai_settings, 
             raise ValueError("بيانات العنوان أو المحتوى فارغة.")
         if title_contains_source_name(new_title, source.name):
             raise ValueError("العنوان يحتوي على اسم المصدر.")
+        if title_contains_source_name(new_body, source.name):
+            raise ValueError("محتوى الخبر يحتوي على اسم المصدر.")
 
         site_primary_cats = get_wp_primary_categories(wp_site)
         wp_category_id_for_push = None
@@ -3186,13 +3235,22 @@ def run_ai_generation_cycle(target_site_id=None):
             if is_excluded_price_topic(item['title'], item.get('description')):
                 continue
 
+            # Fetch full text to ensure AI has enough useful info
+            try:
+                if item.get('link'):
+                    full_text = fetch_full_article_text(item['link'])
+                    if full_text and len(full_text) > len(item.get('description', '')):
+                        item['description'] = full_text
+            except Exception as e:
+                pass
+
             source_allowed_for_local = not local_sources_restricted or source.id in local_source_ids
             if ai_settings.publish_to_main_site and source_allowed_for_local and not target_site_id:
                 # Always generate and publish locally first (Case 1)
                 prompt = (
                     f"بصفتك محررًا صحفيًا محترفًا باللغة العربية، يرجى كتابة خبر صحفي جديد ومصاغ بأسلوبك الخاص بالكامل "
-                    f"استناداً إلى المعلومات والخبر التالي:\n"
-                    f"المصدر: {source.name}\n"
+                    f"استناداً إلى المعلومات والخبر التالي (المصدر الأصلي غير مذكور هنا عمداً - لا تحاول تخمينه "
+                    f"أو ذكر أي جهة إعلامية):\n"
                     f"عنوان الخبر الأصلي: {item['title']}\n"
                     f"تفاصيل الخبر: {item['description']}\n\n"
                     f"الرجاء الالتزام التام بالتعليمات التالية:\n"
@@ -3208,7 +3266,8 @@ def run_ai_generation_cycle(target_site_id=None):
                     f"- \"body\": محتوى الخبر الكامل بالتنسيق الصحفي مقسماً إلى فقرات باستخدام وسوم HTML للفقرات <p>...</p> حصراً.\n"
                     f"- \"category_id\": الرقم التعريفي (ID) للقسم المختار من القائمة المتاحة أدناه.\n"
                     f"- \"image_alt\": النص البديل لصورة الغلاف كما هو موضح أعلاه.\n\n"
-                    f"7. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}"
+                    f"7. اختر القسم الأنسب لموضوع الخبر من قائمة الأقسام المتاحة التالية حصرياً:\n{categories_list_str}\n"
+                    f"8. {NO_SOURCE_NAME_INSTRUCTION}"
                 )
                 
                 ai_response, ai_usage = call_gemini_api(prompt, api_key=api_key)
