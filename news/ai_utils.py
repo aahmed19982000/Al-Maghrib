@@ -333,6 +333,51 @@ _IMAGE_META_SELECTORS = [
 _SKIP_IMAGE_HINTS = ('logo', 'icon', 'avatar', 'sprite', 'placeholder', '.svg')
 
 
+def _search_commons_image(query, min_width=500, min_height=300):
+    """
+    Free, keyless topical image search against Wikimedia Commons - used only
+    when the RSS item and its own article page both have no usable photo at
+    all. Costs nothing (no API key, no rate-limited paid quota) and returns a
+    real, appropriately-licensed photo relevant to the article's subject
+    instead of jumping straight to a single generic placeholder. Returns a
+    direct image URL, or '' if nothing suitable turns up.
+    """
+    if not query or not query.strip():
+        return ""
+    try:
+        resp = requests.get(
+            'https://commons.wikimedia.org/w/api.php',
+            params={
+                'action': 'query',
+                'generator': 'search',
+                'gsrsearch': f'filetype:bitmap {query}',
+                'gsrnamespace': 6,
+                'gsrlimit': 8,
+                'prop': 'imageinfo',
+                'iiprop': 'url|size|mime',
+                'format': 'json',
+            },
+            headers={'User-Agent': 'AlmaghribNewsBot/1.0 (https://almaghrib.online)'},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        pages = (resp.json().get('query') or {}).get('pages') or {}
+        for page in pages.values():
+            info = (page.get('imageinfo') or [{}])[0]
+            url = info.get('url') or ''
+            mime = info.get('mime') or ''
+            if not url or not mime.startswith('image/') or mime == 'image/svg+xml':
+                continue
+            if (info.get('width') or 0) < min_width or (info.get('height') or 0) < min_height:
+                continue
+            if any(hint in url.lower() for hint in _SKIP_IMAGE_HINTS):
+                continue
+            return url
+    except Exception as e:
+        logger.warning(f"Commons image search failed for '{query}': {e}")
+    return ""
+
+
 def _scrape_image_from_article_page(link_url, headers):
     """
     Best-effort fallback for RSS items with no usable image in the feed
@@ -432,6 +477,10 @@ def fetch_news_items_from_source(source_url):
                                 
                 if not image_url and link_text:
                     image_url = _scrape_image_from_article_page(link_text, headers)
+
+                if not image_url and title_text:
+                    from core.utils import translate_text
+                    image_url = _search_commons_image(translate_text(title_text))
 
                 items.append({
                     'title': title_text,
@@ -1650,12 +1699,18 @@ def republish_ai_log(log):
         log.save(update_fields=['error_message'])
         return False
 
-    # Articles saved before the "always attach a fallback image" fix (or from
-    # a source that had no image at all at generation time) may still have no
-    # cover_image - give them the same free default now rather than
-    # re-publishing with none, same as a freshly-generated article would get.
+    # Articles saved before the image fixes (or from a source that had no
+    # image at all at generation time) may still have no cover_image - try a
+    # free topical Commons search using the saved focus keyword first, and
+    # only fall back to the generic bundled default if that also finds
+    # nothing, same as a freshly-generated article would get.
     if not log.article.cover_image:
-        attach_default_cover_image(log.article, 'general_news')
+        commons_url = _search_commons_image(log.focus_keyword) if log.focus_keyword else ""
+        img_file = fetch_image_file(commons_url) if commons_url else None
+        if img_file:
+            log.article.cover_image = img_file
+        else:
+            attach_default_cover_image(log.article, 'general_news')
         log.article.save()
 
     tag_names = [t for t in (log.tag_names or '').split(',') if t]
