@@ -183,9 +183,14 @@ class BulkRedistributeLogsView(StaffRequiredMixin, View):
     "republish" on each row individually - see
     redistribute_and_republish_logs() for the distribution mechanics (round-
     robin, respecting each site's daily_limit, no extra Gemini cost).
+
+    Dispatched to Celery rather than run inline: each article is a full
+    WordPress round-trip, so redistributing more than a few at once in the
+    request/response cycle risks a Cloudflare gateway timeout well before
+    Django itself would give up.
     """
     def post(self, request, *args, **kwargs):
-        from .ai_utils import redistribute_and_republish_logs
+        from .tasks import redistribute_and_republish_logs_task
         log_ids = request.POST.getlist('log_ids')
         site_ids = request.POST.getlist('site_ids')
 
@@ -194,12 +199,11 @@ class BulkRedistributeLogsView(StaffRequiredMixin, View):
         elif not site_ids:
             messages.error(request, "لم تحدد أي مواقع ووردبريس للتوزيع عليها.")
         else:
-            results = redistribute_and_republish_logs(log_ids, site_ids)
+            redistribute_and_republish_logs_task.delay(log_ids, site_ids)
             messages.success(
                 request,
-                f"تم توزيع {len(log_ids)} مقالاً: نُشر {results['published']} بنجاح، "
-                f"فشل {results['failed']} مرة أخرى، وتم تخطي {results['skipped']} "
-                f"(المواقع المختارة وصلت للحد اليومي المسموح به)."
+                f"تم إرسال طلب توزيع {len(log_ids)} مقالاً إلى الخلفية، وسيتم تنفيذه خلال دقائق قليلة. "
+                f"تحقّق من سجل العمليات بعد قليل لمتابعة النتيجة."
             )
 
         return redirect('news_ai:logs')
