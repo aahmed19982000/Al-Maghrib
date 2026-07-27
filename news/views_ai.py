@@ -152,6 +152,10 @@ class ImportLogListView(StaffRequiredMixin, ListView):
         status = self.request.GET.get('status')
         if status in ('success', 'failed'):
             qs = qs.filter(status=status)
+        elif status == 'republishable':
+            # Failed logs that still have their generated article saved, i.e. the
+            # subset actually eligible for free bulk redistribution below.
+            qs = qs.filter(status='failed', article__isnull=False)
         return qs
 
     def get_context_data(self, **kwargs):

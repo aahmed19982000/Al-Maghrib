@@ -14,6 +14,7 @@
             <a href="?" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition {% if not status_filter %}bg-teal-500/10 text-teal-400 border-teal-500/30{% else %}bg-slate-800/60 text-slate-400 border-slate-700/50 hover:border-slate-600{% endif %}">الكل</a>
             <a href="?status=success" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition {% if status_filter == 'success' %}bg-emerald-500/10 text-emerald-400 border-emerald-500/30{% else %}bg-slate-800/60 text-slate-400 border-slate-700/50 hover:border-slate-600{% endif %}"><i class="fa-solid fa-check ml-1"></i>نجح</a>
             <a href="?status=failed" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition {% if status_filter == 'failed' %}bg-rose-500/10 text-rose-400 border-rose-500/30{% else %}bg-slate-800/60 text-slate-400 border-slate-700/50 hover:border-slate-600{% endif %}"><i class="fa-solid fa-xmark ml-1"></i>فشل</a>
+            <a href="?status=republishable" class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition {% if status_filter == 'republishable' %}bg-amber-500/10 text-amber-400 border-amber-500/30{% else %}bg-slate-800/60 text-slate-400 border-slate-700/50 hover:border-slate-600{% endif %}"><i class="fa-solid fa-rotate-right ml-1"></i>قابلة لإعادة النشر بدون تكلفة</a>
         </div>
     </div>
 
@@ -161,6 +162,8 @@
             <p>لا توجد عمليات ناجحة.</p>
         {% elif status_filter == 'failed' %}
             <p>لا توجد عمليات فاشلة.</p>
+        {% elif status_filter == 'republishable' %}
+            <p>لا توجد مقالات فاشلة قابلة لإعادة النشر بدون تكلفة حالياً.</p>
         {% else %}
             <p>سجل العمليات فارغ تماماً.</p>
         {% endif %}
