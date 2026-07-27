@@ -158,6 +158,10 @@ class ImportLogListView(StaffRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['all_sites'] = WordPressSite.objects.filter(is_active=True).order_by('name')
         context['status_filter'] = self.request.GET.get('status', '')
+        # Total failed logs that still have their generated article saved (so they're
+        # republishable at no extra cost), across ALL pages - not just the current one -
+        # so the "select all pages" bulk-redistribute option can show/act on the true total.
+        context['failed_republishable_count'] = AIImportLog.objects.filter(status='failed', article__isnull=False).count()
         return context
 
 
@@ -202,7 +206,15 @@ class BulkRedistributeLogsView(StaffRequiredMixin, View):
     """
     def post(self, request, *args, **kwargs):
         from .tasks import redistribute_and_republish_logs_task
-        log_ids = request.POST.getlist('log_ids')
+
+        if request.POST.get('select_all_failed') == '1':
+            # Staff opted to redistribute every eligible failed log across all pages,
+            # not just the ones checked on the currently-rendered page.
+            log_ids = list(
+                AIImportLog.objects.filter(status='failed', article__isnull=False).values_list('id', flat=True)
+            )
+        else:
+            log_ids = request.POST.getlist('log_ids')
 
         site_counts = {}
         for site in WordPressSite.objects.filter(is_active=True):

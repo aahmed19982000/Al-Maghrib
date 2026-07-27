@@ -25,6 +25,7 @@
     <form id="bulk-redistribute-form" method="post" action="{% url 'news_ai:logs_bulk_redistribute' %}"
           class="mb-4 p-4 rounded-xl border border-amber-500/20 bg-amber-500/5">
         {% csrf_token %}
+        <input type="hidden" name="select_all_failed" id="select_all_failed_input" value="">
         <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-bold text-amber-400 whitespace-nowrap">
                 <i class="fa-solid fa-shuffle ml-1.5"></i>توزيع وإعادة نشر المحدد دفعة واحدة - حدد كم خبر ياخذ كل موقع:
@@ -33,6 +34,12 @@
                 توزيع ونشر بدون تكلفة إضافية
             </button>
         </div>
+        {% if failed_republishable_count %}
+        <label class="flex items-center gap-2 text-xs text-amber-300 mb-3 cursor-pointer w-fit">
+            <input type="checkbox" id="select-all-pages-cb" onclick="toggleSelectAllFailedPages(this)" class="accent-amber-500">
+            <span>تحديد كل المقالات الفاشلة القابلة لإعادة النشر بدون تكلفة من كل الصفحات ({{ failed_republishable_count }} مقالاً)</span>
+        </label>
+        {% endif %}
         <div class="flex flex-wrap gap-3">
             {% for site in all_sites %}
             <label class="inline-flex items-center gap-2 text-xs text-slate-300 bg-slate-800/60 border border-slate-700/50 px-2.5 py-1.5 rounded-lg">
@@ -52,7 +59,7 @@
             <thead>
                 <tr class="border-b border-slate-800 text-xs text-slate-400 uppercase bg-slate-900/80">
                     <th scope="col" class="px-4 py-4 font-bold text-center">
-                        <input type="checkbox" onclick="document.querySelectorAll('.log-select-cb').forEach(cb => cb.checked = this.checked)" class="accent-amber-500" title="تحديد كل الفاشلة">
+                        <input type="checkbox" id="select-all-page-cb" onclick="document.querySelectorAll('.log-select-cb').forEach(cb => cb.checked = this.checked)" class="accent-amber-500" title="تحديد كل الفاشلة في هذه الصفحة">
                     </th>
                     <th scope="col" class="px-6 py-4 font-bold">التاريخ والوقت</th>
                     <th scope="col" class="px-6 py-4 font-bold">الموقع المصدر</th>
@@ -160,4 +167,18 @@
     </div>
     {% endif %}
 </div>
+<script>
+function toggleSelectAllFailedPages(cb) {
+    document.getElementById('select_all_failed_input').value = cb.checked ? '1' : '';
+    document.querySelectorAll('.log-select-cb').forEach(rowCb => {
+        rowCb.checked = cb.checked;
+        rowCb.disabled = cb.checked;
+    });
+    const pageCb = document.getElementById('select-all-page-cb');
+    if (pageCb) {
+        pageCb.checked = cb.checked;
+        pageCb.disabled = cb.checked;
+    }
+}
+</script>
 {% endblock %}
